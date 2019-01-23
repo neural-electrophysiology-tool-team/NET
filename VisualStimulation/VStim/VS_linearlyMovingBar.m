@@ -177,6 +177,7 @@ classdef VS_linearlyMovingBar < VStim
                 [keyIsDown, ~, keyCode] = KbCheck;
                 if keyCode(obj.escapeKeyCode)
                     obj.lastExcecutedTrial=i;
+                    obj.sendTTL(1,false);
                     return;
                 end
                 

@@ -100,7 +100,7 @@ classdef VS_rectGrid < VStim
                 obj.luminosities=obj.luminosities(randomPermutation);
             end
             obj.pos=[obj.pos obj.pos(1)]; %add an additional stimulus that will never be shown
-            obj.luminosities=[obj.luminosities obj.luminosities(1)]; %add an additional stimulus that will never be shown
+            
             
             %run test Flip (sometimes this first flip is slow and so it is not included in the anlysis
             obj.visualFieldBackgroundLuminance=obj.visualFieldBackgroundLuminance;
@@ -131,7 +131,7 @@ classdef VS_rectGrid < VStim
             save tmpVSFile obj; %temporarily save object in case of a system crash
             disp('Session starting');
             
-            Screen('DrawTexture',obj.PTB_win,imgTex(obj.pos(1),obj.luminosities(1)),[],obj.visualFieldRect,obj.rotation);
+            Screen('DrawTexture',obj.PTB_win,imgTex(obj.pos(1),obj.rectLuminosity(obj.luminosities(1))),[],obj.visualFieldRect,obj.rotation);
             obj.applyBackgound;
             
             %main loop - start the session
@@ -159,7 +159,6 @@ classdef VS_rectGrid < VStim
                 [keyIsDown, ~, keyCode] = KbCheck;
                 if keyCode(obj.escapeKeyCode)
                     obj.lastExcecutedTrial=i;
-                    obj.sendTTL(1,false);
                     return;
                 end
                 
@@ -173,7 +172,7 @@ classdef VS_rectGrid < VStim
             Screen('Close',imgTex);
         end
         
-        function obj=CMShowGrid(obj,srcHandle,eventData,hPanel)
+        function obj=CMShowGrid(obj,srcHandle,eventData,hPanel) %%%FIX FOR MULTIPLE LUMINOCITIES
             
             obj.tilingRatio=obj.tilingRatio*0.95;
             obj.calculatePositions;
@@ -186,13 +185,14 @@ classdef VS_rectGrid < VStim
             % Update image buffer for the first time
             I=ones(obj.visualFieldRect(3)-obj.visualFieldRect(1),obj.visualFieldRect(4)-obj.visualFieldRect(2)).*obj.visualFieldBackgroundLuminance;
             for i=1:nPositions
-                I(obj.rectData.X1(obj.pValidRect(i)):obj.rectData.X3(obj.pValidRect(i)),obj.rectData.Y1(obj.pValidRect(i)):obj.rectData.Y3(obj.pValidRect(i)))=obj.rectLuminosity;
+                I(obj.rectData.X1(obj.pValidRect(i)):obj.rectData.X3(obj.pValidRect(i)),obj.rectData.Y1(obj.pValidRect(i)):obj.rectData.Y3(obj.pValidRect(i)))=obj.rectLuminosity(1);
             end
             imgTex=Screen('MakeTexture', obj.PTB_win,I,obj.rotation);
             Screen('DrawTexture',obj.PTB_win,imgTex,[],obj.visualFieldRect,obj.rotation);
             
             for i=1:nPositions
-                Screen('DrawText', obj.PTB_win, num2str(i),obj.visualFieldRect(1)+obj.rectData.Y1(obj.pValidRect(i)),obj.visualFieldRect(2)+obj.rectData.X1(obj.pValidRect(i)),[min(obj.rectLuminosity+50,255) 0 0],[]);
+                
+                Screen('DrawText', obj.PTB_win, num2str(i),obj.visualFieldRect(1)+obj.rectData.Y1(obj.pValidRect(i)),obj.visualFieldRect(2)+obj.rectData.X1(obj.pValidRect(i)),[min(obj.rectLuminosity(nLuminosities)+50,255) 0 0],[]);
                 
                 %DrawFormattedText(obj.PTB_win, num2str(i), obj.rectData.X1(obj.pValidRect(i)),obj.rectData.Y1(obj.pValidRect(i)),[255 0 0]);
             end
@@ -208,7 +208,6 @@ classdef VS_rectGrid < VStim
                     obj.applyBackgound;
                     Screen('Flip',obj.PTB_win);
                     Screen('Close',imgTex);
-                    obj.sendTTL(1,false);
                     return;
                 end
             end

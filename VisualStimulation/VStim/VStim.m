@@ -15,6 +15,7 @@ classdef (Abstract) VStim < handle
         DMDcorrectionIntensity = 0;
         stimDuration = 2;
         backgroundMaskSteepness = 0.2;
+        horizontalShift=0;
     end
     properties (Constant)
         backgroudLuminance = 0;
@@ -52,7 +53,7 @@ classdef (Abstract) VStim < handle
         currentBinState = [false false false false false false false false false false false false false false false false]; %false false false false false false false
         io %parallel port communication object for PC
         
-        parallelPortNum = 956; %Parallel port default number
+        parallelPortNum = 888; %Parallel port default number
         
         PTB_win %Pointer to PTB window
         whiteIdx %black index for screen
@@ -65,8 +66,8 @@ classdef (Abstract) VStim < handle
         simulationMode = false; %a switch that is used to prepare visual stimulation without applying the stimulation itself
         lastExcecutedTrial = 0; %parameter that keeps the number of the last excecuted trial
         syncSquareSizePix = 60; % the size of the the corder square for syncing stims
-        syncSquareLuminosity=0; % The luminocity of the square used for syncing 
-            syncMarkerOn = false;   
+        syncSquareLuminosity=255; % The luminocity of the square used for syncing 
+        syncMarkerOn = false;   
      end
     
     properties (Hidden)
@@ -77,6 +78,7 @@ classdef (Abstract) VStim < handle
         %class constractor
         function obj=VStim(PTB_WindowPointer,interactiveGUIhandle)
             addlistener(obj,'visualFieldBackgroundLuminance','PostSet',@obj.initializeBackground); %add a listener to visualFieldBackgroundLuminance, after its changed its size is updated in the changedDataEvent method
+            addlistener(obj,'horizontalShift','PostSet',@obj.initializeBackground); %add a listener to visualFieldBackgroundLuminance, after its changed its size is updated in the changedDataEvent method
             addlistener(obj,'visualFieldDiameter','PostSet',@obj.initializeBackground); %add a listener to visualFieldDiameter, after its changed its size is updated in the changedDataEvent method
             addlistener(obj,'DMDcorrectionIntensity','PostSet',@obj.initializeBackground); %add a listener to visualFieldDiameter, after its changed its size is updated in the changedDataEvent method
             addlistener(obj,'inVivoSettings','PostSet',@obj.initializeBackground); %add a listener to visualFieldDiameter, after its changed its size is updated in the changedDataEvent method
@@ -177,7 +179,7 @@ classdef (Abstract) VStim < handle
             else
                 obj.actualVFieldDiameter=obj.visualFieldDiameter;
             end
-            obj.centerX=(obj.rect(1,3)+obj.rect(1,1))/2;
+            obj.centerX=(obj.rect(1,3)+obj.rect(1,1))/2+obj.horizontalShift;
             obj.centerY=(obj.rect(1,4)+obj.rect(1,2))/2;
             
             obj.visualFieldRect=[obj.centerX-obj.actualVFieldDiameter/2,obj.centerY-obj.actualVFieldDiameter/2,obj.centerX+obj.actualVFieldDiameter/2,obj.centerY+obj.actualVFieldDiameter/2];

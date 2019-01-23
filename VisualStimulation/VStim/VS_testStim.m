@@ -28,6 +28,7 @@ classdef VS_testStim < VStim
     methods
         function obj=run(obj)
             %draw cross hair
+            obj.sendTTL(1,true);
             T=ones(obj.rect([4 3]))*obj.visualFieldBackgroundLuminance;
             T(round(obj.centerY-obj.lineWidth/2):round(obj.centerY+obj.lineWidth/2),:)=obj.luminosity;
             T(:,round(obj.centerX-obj.lineWidth/2):round(obj.centerX+obj.lineWidth/2))=obj.luminosity;
@@ -61,10 +62,11 @@ classdef VS_testStim < VStim
                     for i=1:obj.nPTBScreens
                         Screen('Flip',obj.PTB_win(i));
                     end
-                    return;
+                    obj.sendTTL(1,false);
+                        return;
                 end
             end
-            
+           
         end
         
         function outStats=getLastStimStatistics(obj,hFigure)

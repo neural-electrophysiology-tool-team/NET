@@ -90,7 +90,7 @@ classdef VS_rectGrid < VStim
             for i=1:nPositions
                 for j=1:nLuminosities
                     obj.pos( ((c-1)*obj.trialsPerCategory+1):(c*obj.trialsPerCategory) )=i;
-                    obj.luminosities( ((c-1)*obj.trialsPerCategory+1):(c*obj.trialsPerCategory) )=j;
+                    obj.luminosities( ((c-1)*obj.trialsPerCategory+1):(c*obj.trialsPerCategory) )=obj.rectLuminosity(j);
                     c=c+1;
                 end
             end
@@ -100,18 +100,16 @@ classdef VS_rectGrid < VStim
                 obj.luminosities=obj.luminosities(randomPermutation);
             end
             obj.pos=[obj.pos obj.pos(1)]; %add an additional stimulus that will never be shown
-            obj.luminosities=[obj.luminosities obj.luminosities(1)]; %add an additional stimulus that will never be shown
+            
             
             %run test Flip (sometimes this first flip is slow and so it is not included in the anlysis
             obj.visualFieldBackgroundLuminance=obj.visualFieldBackgroundLuminance;
             
             % Update image buffer for the first time
             for i=1:nPositions
-                for j=1:nLuminosities
-                    I=ones(obj.visualFieldRect(3)-obj.visualFieldRect(1),obj.visualFieldRect(4)-obj.visualFieldRect(2)).*obj.visualFieldBackgroundLuminance;
-                    I(obj.rectData.X1(obj.pValidRect(i)):obj.rectData.X3(obj.pValidRect(i)),obj.rectData.Y1(obj.pValidRect(i)):obj.rectData.Y3(obj.pValidRect(i)))=obj.rectLuminosity(j);
-                    imgTex(i,j)=Screen('MakeTexture', obj.PTB_win,I,obj.rotation);
-                end
+                I=ones(obj.visualFieldRect(3)-obj.visualFieldRect(1),obj.visualFieldRect(4)-obj.visualFieldRect(2)).*obj.visualFieldBackgroundLuminance;
+                I(obj.rectData.X1(obj.pValidRect(i)):obj.rectData.X3(obj.pValidRect(i)),obj.rectData.Y1(obj.pValidRect(i)):obj.rectData.Y3(obj.pValidRect(i)))=obj.rectLuminosity;
+                imgTex(i)=Screen('MakeTexture', obj.PTB_win,I,obj.rotation);
             end
             
             %Pre allocate memory for variables
@@ -131,7 +129,7 @@ classdef VS_rectGrid < VStim
             save tmpVSFile obj; %temporarily save object in case of a system crash
             disp('Session starting');
             
-            Screen('DrawTexture',obj.PTB_win,imgTex(obj.pos(1),obj.luminosities(1)),[],obj.visualFieldRect,obj.rotation);
+            Screen('DrawTexture',obj.PTB_win,imgTex(obj.pos(1)),[],obj.visualFieldRect,obj.rotation);
             obj.applyBackgound;
             
             %main loop - start the session
@@ -150,7 +148,7 @@ classdef VS_rectGrid < VStim
                % pp(uint8(obj.trigChNames(2)),[false false],false,uint8(0),uint64(32784)); %stim offset trigger
                    obj.sendTTL(2,false); 
                 % Update image buffer for the first time
-                Screen('DrawTexture',obj.PTB_win,imgTex(obj.pos(i+1),obj.luminosities(i+1)),[],obj.visualFieldRect,obj.rotation);
+                Screen('DrawTexture',obj.PTB_win,imgTex(obj.pos(i+1)),[],obj.visualFieldRect,obj.rotation);
                 obj.applyBackgound;
 
                 disp(['Trial ' num2str(i) '/' num2str(obj.nTotTrials)]);
@@ -159,7 +157,6 @@ classdef VS_rectGrid < VStim
                 [keyIsDown, ~, keyCode] = KbCheck;
                 if keyCode(obj.escapeKeyCode)
                     obj.lastExcecutedTrial=i;
-                    obj.sendTTL(1,false);
                     return;
                 end
                 
@@ -208,7 +205,6 @@ classdef VS_rectGrid < VStim
                     obj.applyBackgound;
                     Screen('Flip',obj.PTB_win);
                     Screen('Close',imgTex);
-                    obj.sendTTL(1,false);
                     return;
                 end
             end
