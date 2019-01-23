@@ -1,0 +1,45 @@
+This is the software accompanying the paper "Kernel Current Source Density Method" by Potworowski et al., Neural Computation (2012) 24, 541-575. Matlab scripts implementing the methods described in the paper have been divided into two folders depending on the dimensionality of the task.
+
+==
+2D
+==
+Contains scripts for analyzing two-dimensional data (recordings from planar multielectrodes). Full HTML documentation of these scripts is available in the 'doc' folder, including a tutorial.
+
+==
+1D
+==
+Contains scripts for analyzing one-dimensional data (recordings from laminar multielectrodes). This set of scripts is less mature. See the file 'howToCall.m' for an example. Ridge regression and cross validation have not been implemented here yet. We plan to release a more complete version soon. Write us if you need it more urgently.
+
+==============
+OTHER VARIANTS
+==============
+The 3D version is experimental. If you would like to get the 3D code, contact Jan Potworowski (j.potworowski@nencki.gov.pl). We plan to release it in future.
+
+============
+TERMS OF USE
+============
+kCSDv1 Copyright (C) 2012 Jan Potworowski
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License (http://www.gnu.org/licenses/) for details.
+
+
+USE IN PUBLISHED RESEARCH
+-------------------------
+
+If you publish the results obtained with this software we request that you cite the paper
+
+	Potworowski J, Jakuczun W, Leski S, Wojcik DK (2012) Kernel Current Source Density Method. Neural Computation 24, 541-575. 
+
+where the statistical methods of source reconstruction implemented here were published, and one of the following papers, where the physical models relating sources to potentials were published in the context of iCSD method which preceded kCSD. Depending on dimensionality:
+
+for 1D: 
+	Pettersen, K. H., Devor, A., Ulbert, I., Dale, A. M., & Einevoll, G. T. (2006). Current-source density estimation based on inversion of electrostatic forward solution: Effects of finite extent of neuronal activity and conductivity discontinuities. J.Neurosci. Methods, 154(1–2), 116–133.
+
+for 2D: 
+	Leski, S., Pettersen, K. H., Tunstall, B., Einevoll, G., Gigg, J. & Wojcik, D. K. (2011). Inverse current source density method in two dimensions: Inferring neural activation from multielectrode recordings. Neuroinformatics 9 (2011) 401-425
+
+for 3D:. 
+	Leski, S, Wojcik, DK, Tereszczuk, J, Swiejkowski, DA, Kublik, E, Wrobel, A (2007). Inverse current-source density method in 3D: Reconstruction fidelity, boundary effects, and influence of distant sources. Neuroinformatics, 5(4), 207–222.
+

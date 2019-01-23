@@ -1,0 +1,207 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Quick Start &mdash; kcsd2d v1 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="kcsd2d v1 documentation" href="index.html" />
+    <link rel="next" title="kcsd2d Class Constructor" href="constructor.html" />
+    <link rel="prev" title="Download" href="download.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="constructor.html" title="kcsd2d Class Constructor"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="download.html" title="Download"
+             accesskey="P">previous</a> |</li>
+        <li><a href="kcsd2d_index.html">kcsd2d v1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="quick-start">
+<h1>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="setting-the-path">
+<h2>Setting the path<a class="headerlink" href="#setting-the-path" title="Permalink to this headline">¶</a></h2>
+<p>Once you downloaded the packaged and unzipped the folder <cite>kcsd2d</cite> you should add it to your
+Matlab path along with all the subfolders. You can move the folder to your Matlab toolbox folder and run:</p>
+<div class="highlight-python"><pre>&gt;&gt;addpath(genpath('kcsd2d'));</pre>
+</div>
+<p>or move it elsewhere, change the directory there and run:</p>
+<div class="highlight-python"><pre>&gt;&gt;addpath(genpath(pwd))</pre>
+</div>
+</div>
+<div class="section" id="loading-data">
+<h2>Loading data<a class="headerlink" href="#loading-data" title="Permalink to this headline">¶</a></h2>
+<p>Let&#8217;s examine an exemplary data set with measured potentials.Import the mat-file <cite>data_01.mat</cite>:</p>
+<div class="highlight-python"><pre>&gt;&gt;load('data_01.mat');</pre>
+</div>
+<p>Now variables <tt class="docutils literal"><span class="pre">el_pos</span></tt> and <tt class="docutils literal"><span class="pre">pots</span></tt> defining the electrode positions and measured
+potentials have been loaded to the workspace. Check out the elements of the
+<tt class="docutils literal"><span class="pre">el_pos</span></tt> variable:</p>
+<div class="highlight-python"><pre>&gt;&gt;el_pos
+
+el_pos =
+
+        0.8395    0.8155
+        1.0491    0.0324
+        0.0121    0.9350
+        0.2013    0.9087
+        0.4646    0.9131
+        ...</pre>
+</div>
+<p>and it&#8217;s size:</p>
+<div class="highlight-python"><pre>&gt;&gt;size(el_pos)
+
+ans =
+
+     32     2</pre>
+</div>
+<p>It&#8217;s a two-column matrix whose rows denote the <cite>(y, x)</cite> coordinates
+(<cite>y</cite>-vertical, <cite>x</cite>-horizontal) of the electrode positions. Here the variable
+describes 32 electrodes.</p>
+<p>The <tt class="docutils literal"><span class="pre">pots</span></tt> variable here is a column vector containing the potentials measured
+at the corresponding positions in <tt class="docutils literal"><span class="pre">el_pos</span></tt>:</p>
+<div class="highlight-python"><pre>&gt;&gt; pots
+
+pots =
+
+   -0.0291
+   -0.0360
+   -0.0153
+   -0.0189
+   -0.0243
+...
+
+&gt;&gt; size(pots)
+
+ans =
+
+        32     1</pre>
+</div>
+<p><tt class="docutils literal"><span class="pre">pots</span></tt> does not have to be a single column vector. Potentials come often in time-series.
+In general <tt class="docutils literal"><span class="pre">pots</span></tt> can be an <cite>n x m</cite> matrix, where <cite>n</cite> still  denotes the number of
+electrodes and the consecutive <cite>m</cite> columns contain the evolution the potentials in
+time.</p>
+</div>
+<div class="section" id="the-kcsd-class">
+<span id="class-intro"></span><h2>The kCSD-class<a class="headerlink" href="#the-kcsd-class" title="Permalink to this headline">¶</a></h2>
+<p>Methods for carrying out the kCSD method have been embedded in a Matlab class.
+If you are not familiar with object oriented programming imagine
+classes as definitions of machines that provided some input can perform different actions.
+Like a washing machine, given clothes and some washing powder, allows us to
+choose a program for washing the clothes, an instance of the kCSD class, given
+information about the electrode positions and the signals recorded, can apply several
+variants of the kCSD method to the data.
+With the <tt class="docutils literal"><span class="pre">el_pos</span></tt> and <tt class="docutils literal"><span class="pre">pots</span></tt> variables we can create an instance of the kCSD
+class:</p>
+<div class="highlight-python"><pre>&gt;&gt; k = kcsd2d(el_pos, pots);</pre>
+</div>
+<p>With this instruction we created an object <tt class="docutils literal"><span class="pre">k</span></tt> (an instance of the <tt class="docutils literal"><span class="pre">kcsd2d</span></tt> class)
+and provided it with information about the electrode positions and measured
+potentials. We did that by calling the <tt class="docutils literal"><span class="pre">kcsd2d()</span></tt> function, called a <cite>class
+constructor</cite>. The <cite>class constructor</cite> can be provided with several other
+variables representing our prior knowledge about the conditions of the
+experiment. <a class="reference internal" href="constructor.html"><em>Click here</em></a> for a full description of the class constructor.</p>
+<p>The <tt class="docutils literal"><span class="pre">k</span></tt> object we created contains an estimate of the CSD profile:</p>
+<div class="highlight-python"><pre>&gt;&gt;k.plot_CSD;</pre>
+</div>
+<p>Now the class object <cite>k</cite> runs it&#8217;s built in viewer, a GUI that presents the most
+up to date estimation. Negative values of the CSD, meaning sinks (places where positively charged ions enter the cell) are depicted with red. This is a common convention which is a consequence of the fact that ions entering the cell mean excitation and therefore should be depicted as <cite>hot-spots</cite>.</p>
+<p><tt class="docutils literal"><span class="pre">k.plot_CSD</span></tt> is a method of the <tt class="docutils literal"><span class="pre">kcsd2d</span></tt> class.
+<a class="reference internal" href="methods.html"><em>Click here</em></a> for a complete overview of the <tt class="docutils literal"><span class="pre">kcsd2d</span></tt> class methods.</p>
+<p>The estimated CSD values can be extracted from <cite>k</cite> to the Matlab workspace:</p>
+<div class="highlight-python"><pre>&gt;&gt;X = k.X; Y = k.Y; CSD_est = k.CSD_est;</pre>
+</div>
+<p><tt class="docutils literal"><span class="pre">X,</span> <span class="pre">Y</span></tt> and <tt class="docutils literal"><span class="pre">CSD_est</span></tt> are properties of the <tt class="docutils literal"><span class="pre">kcsd2d</span></tt> class. <a class="reference internal" href="properties.html"><em>Click here</em></a>
+for an overview of all the <tt class="docutils literal"><span class="pre">kcsd2d</span></tt> class properties</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="kcsd2d_index.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="download.html">Download</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#setting-the-path">Setting the path</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loading-data">Loading data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-kcsd-class">The kCSD-class</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="constructor.html">kcsd2d Class Constructor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="methods.html">Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="properties.html">Properties</a></li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/tutorial.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="constructor.html" title="kcsd2d Class Constructor"
+             >next</a></li>
+        <li class="right" >
+          <a href="download.html" title="Download"
+             >previous</a> |</li>
+        <li><a href="kcsd2d_index.html">kcsd2d v1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Jan Potworowski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>
