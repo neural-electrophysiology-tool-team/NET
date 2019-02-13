@@ -81,13 +81,13 @@ classdef VS_fullFieldFlash < VStim
             for i=1:obj.nTotTrials
                 
                 [obj.on_Flip(i),obj.on_Stim(i),obj.on_FlipEnd(i),obj.on_Miss(i)]=Screen('Flip',obj.PTB_win);
-                obj.sendTTL(2,true); %session start trigger (also triggers the recording start)
+                obj.sendTTL(2,true);
                 if obj.Back2Background %Display background between luminosities
                     % Update display
                     Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
                     obj.applyBackgound; %set background mask and finalize drawing (drawing finished)
                     [obj.off_Flip(i),obj.off_Stim(i),obj.off_FlipEnd(i),obj.off_Miss(i)]=Screen('Flip',obj.PTB_win,obj.on_Flip(i)+obj.actualStimDuration-0.5*obj.ifi);
-                    obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                    obj.sendTTL(2,false);
                 else %just move on to the next luminosity but first turn of trigger
                     WaitSecs(obj.screenTriggerDuration);
                     obj.sendTTL(2,false);
@@ -96,7 +96,6 @@ classdef VS_fullFieldFlash < VStim
                 % Update image buffer
                 Screen('FillOval',obj.PTB_win,obj.luminosities(i+1),obj.visualFieldRect);
                 obj.applyBackgound; %set background mask and finalize drawing (drawing finished)
-                check=1
                 disp(['Trial ' num2str(i) '/' num2str(obj.nTotTrials)]);
                 
                 %check if stimulation session was stopped by the user

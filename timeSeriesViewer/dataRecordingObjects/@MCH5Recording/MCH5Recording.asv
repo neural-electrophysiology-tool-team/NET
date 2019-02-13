@@ -258,7 +258,7 @@ classdef MCH5Recording < dataRecording
       
         
         if nargout==2
-            T_ms=(1:windowSamples)*(1e3/obj.samplingFrequency(1));
+            T_ms=(1:windowSamples*n)*(1e3/obj.samplingFrequency(1));
         end
     end
     
