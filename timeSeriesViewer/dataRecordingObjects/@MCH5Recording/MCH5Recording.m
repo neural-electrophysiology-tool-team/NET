@@ -437,7 +437,7 @@ classdef MCH5Recording < dataRecording
 %       end
 %       obj.triggerFilename = fullfile(obj.recordingDir, triggerFile.name);
       
-      if exist([obj.recordingDir filesep 'metaData.mat'],'file') && ~obj.overwriteMetaData
+      if exist([obj.recordingDir filesep obj.recordingName 'metaData.mat'],'file') && ~obj.overwriteMetaData
           obj = loadMetaData(obj); %needs recNameHD5
       else
           obj = extractMetaData(obj);

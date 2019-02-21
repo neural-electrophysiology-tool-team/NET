@@ -76,6 +76,11 @@ if isempty(T{trialStartEndDigiTriggerNumbers(1)}) || isempty(T{trialStartEndDigi
     return;
 end
 
+% %subtract global median
+% [Adata]=dataRecordingObj.getAnalogData(analogChNum);
+% Adata=permute(Adata,[3 1 2]);Adata=Adata(:);
+% medAdata = fastmedfilt1d(Adata,round(20*Fs*10)); %20 secs per image, 10 images (each image is a flip up or down)
+
 %estimate transition points
 if isempty(transition)
     hWB=waitbar(0,hWB,'Classifying transition on sample data...');
@@ -97,10 +102,21 @@ hWB=waitbar(0,hWB,'Extracting analog diode data from recording...');
 upCross=cell(1,nChunks);
 downCross=cell(1,nChunks);
 for i=1:nChunks
+    
+    %sort per chunk
+    [Atmp,Ttmp]=dataRecordingObj.getAnalogData(analogChNum,chunkStart(i)+T{trialStartEndDigiTriggerNumbers(1)}(1:min(10,numel(T{trialStartEndDigiTriggerNumbers(1)})))-100,avgTrialDuration);
+    Atmp=permute(Atmp,[3 1 2]);Atmp=Atmp(:);
+    medAtmp = fastmedfilt1d(Atmp,round(frameSamples*0.8));
+    meanHeight=fastmedfilt1d(Atmp,round((chunkEnd(i)-chunkStart(i))*Fs/4000)); 
+    eva = evalclusters(medAtmp,'kmeans','DaviesBouldin','KList',[2:4]);
+    [idx,cent] = kmeans(medAtmp,eva.OptimalK,'Replicates',5);
+    cent=sort(cent);
+    transitions=(cent(1:end-1)+cent(2:end))/2;
+    
+    
     [A,t_ms]=dataRecordingObj.getAnalogData(1,chunkStart(i),chunkEnd(i)-chunkStart(i));
     A=squeeze(A);
     medA = fastmedfilt1d(A,round(frameSamples*0.8));
-    medA2= fastmedfilt1d(A,round((numel(medA)/4)));
     upCross{i}=chunkStart(i)+find(medA(1:end-1)<transitions(1) & medA(2:end)>=transitions(1))/Fs*1000;
     downCross{i}=chunkStart(i)+find(medA(1:end-1)>transitions(1) & medA(2:end)<=transitions(1))/Fs*1000;
     %plot(medA(1:5000000));hold on;plot(upCross{i}(1:20)*Fs/1000,medA(round(upCross{i}(1:20)*Fs/1000)),'or');plot(downCross{i}(1:20)*Fs/1000,medA(round(downCross{i}(1:20)*Fs/1000)),'sg')
