@@ -474,13 +474,12 @@ classdef MCH5Recording < dataRecording
         obj.info=h5info(obj.fullFilename, obj.pathToAllRecordings);
         obj.analogInfo = h5info(obj.fullFilename, obj.pathToAnalogStream);
         obj.nStreams = size(obj.analogInfo.Groups,1);
-        
-        %get streams' numbers and paths (for raw electrode, digital and aux
-        %streams. Usually it's 0,1,2 but just to make sure
         for i=1:obj.nStreams
             obj.streamPaths{i}=obj.analogInfo.Groups(i).Name;
             obj.streamsSubTypes{i}=h5readatt(obj.fullFilename,obj.streamPaths{i},'DataSubType');
         end    
+        
+        
         obj.electrodeStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultRawDataStreamName))-1; %'Electrode';'Auxiliary';'Digital';
         obj.auxStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultAnalogDataStreamName))-1;
         obj.digitalStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultDigitalDataStreamName))-1;

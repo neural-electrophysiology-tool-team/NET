@@ -150,9 +150,9 @@ classdef KwikRecording < dataRecording
     end
     
     function [V_uV,T_ms]=getAnalogData(obj,channels,startTime_ms,window_ms,name)
-            %Extract Kwik recording analog data. For now extracts
-            %the data according to E-Phys' Kwik, taking first ADC channel, 
-            %so inputs channels and name has no effect.
+            %Extract Kwik recording analog data. If no channels specified,
+            %extracts the data according to E-Phys' Kwik, taking first ADC
+            %channel. Otherwise it take the channels specified.
             %Since the analog stream is just a data channel, this function
             %just uses getData for the relevant channel.
             %Usage: [V_uV,T_ms]=obj.getAnalogData(channels,startTime_ms,window_ms,name);
@@ -170,15 +170,18 @@ classdef KwikRecording < dataRecording
         elseif nargin~=4 && nargin~=5
             error('method getAnalogData was not used correctly: wrong number of inputs');
         end
-        settings=xmlread([obj.recordingDir 'settings.xml']); %This is a file created by openEphys GUI
-        channels=settings.getElementsByTagName("CHANNEL");
-        for i=0:channels.getLength-1
-           if strcmp(channels.item(i).getAttribute("name"),"ADC2") %Change this to ADC1!!!!
-               analogChNum=str2num(channels.item(i).getAttribute("number"));
-               break
-           end
+        if isempty(channels)
+            settings=xmlread([obj.recordingDir 'settings.xml']); %This is a file created by openEphys GUI
+            channels=settings.getElementsByTagName("CHANNEL");
+            for i=0:channels.getLength-1
+               if strcmp(channels.item(i).getAttribute("name"),"ADC1") 
+                   analogChNum=str2num(channels.item(i).getAttribute("number"))+1;
+                   break
+               end
+            end    
+        else
+            analogChNum=channels;
         end    
-        
         
         [V_uV ,t_ms]=obj.getData(analogChNum, startTime_ms, window_ms);
 
