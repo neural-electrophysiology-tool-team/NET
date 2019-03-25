@@ -25,6 +25,7 @@ set(obj.hPlotControls.plotPropGrid, 'Widths',-1,'Heights', [30 30 30 30] );
         else
             M=squeeze(obj.M)';
         end
+        M = double(M);
         minM=nanmin(M,[],2);
         maxM=nanmax(M,[],2);
         obj.plotParams.shifts=flipud(cumsum([0;maxM(end:-1:2)-minM(end-1:-1:1)]));
@@ -41,7 +42,7 @@ set(obj.hPlotControls.plotPropGrid, 'Widths',-1,'Heights', [30 30 30 30] );
     end
     function CallbackAutoScaleStdYPush(hObj,event)
         M=squeeze(obj.M);
-        verticalShift=nanstd(M(:))*1;
+        verticalShift=nanstd(double(M(:)))*1;
         obj.plotParams.shifts=((size(M,1)-1):-1:0)'*verticalShift;
         set(obj.hPlotControls.verticalShiftEdit,'string',num2str(verticalShift));
         ylim(obj.hPlotAxis,[obj.plotParams.shifts(end)-2*verticalShift obj.plotParams.shifts(1)+2*verticalShift]);
