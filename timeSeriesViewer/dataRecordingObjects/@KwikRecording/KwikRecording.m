@@ -32,7 +32,7 @@ classdef KwikRecording < dataRecording
     pathToTriggerData = '/event_types/TTL/events/time_samples'; % where the triggers are stored in the .kwe file
     pathToTriggerOnOff = '/event_types/TTL/events/user_data/eventID';
     pathToTriggerChannel = '/event_types/TTL/events/user_data/event_channels';
-    
+        
     %must define them, bc abstract in base class
     defaultLocalDir='C:\Users\Tulip\Documents\Academic\Post-Doc\Experiments'; %Default directory from which search starts
     signalBits = 16; %the quantization of the sampling card
@@ -148,44 +148,6 @@ classdef KwikRecording < dataRecording
           T_ms{i*2}=double(allTriggers(onOff == 0 & pCh)-obj.globalStartTime)/(obj.samplingFrequency(1)/1000);
       end
     end
-    
-    function [V_uV,T_ms]=getAnalogData(obj,channels,startTime_ms,window_ms,name)
-            %Extract Kwik recording analog data. For now extracts
-            %the data according to E-Phys' Kwik, taking first ADC channel, 
-            %so inputs channels and name has no effect.
-            %Since the analog stream is just a data channel, this function
-            %just uses getData for the relevant channel.
-            %Usage: [V_uV,T_ms]=obj.getAnalogData(channels,startTime_ms,window_ms,name);
-            %Input : channels - [1xN] a vector with channel numbers as appearing in the data folder files
-            %        startTime_ms - a vector [1xN] of start times [ms]. If Inf, returns all time stamps in recording (startTime_ms is not considered)
-            %        window_ms - a scalar [1x1] with the window duration [ms].
-            %        name - the name of the stream (if not entered, default name is used)
-            %Output: V_us - A 3D matrix [nChannels x nTrials x nSamples] with voltage waveforms across specified channels and trials
-            %        T_ms - A time vector relative to recording start (t=0 at start)
-
-
-        if nargin==2
-            startTime_ms=0;
-            window_ms=obj.recordingDuration_ms;
-        elseif nargin~=4 && nargin~=5
-            error('method getAnalogData was not used correctly: wrong number of inputs');
-        end
-        settings=xmlread([obj.recordingDir 'settings.xml']); %This is a file created by openEphys GUI
-        channels=settings.getElementsByTagName("CHANNEL");
-        for i=0:channels.getLength-1
-           if strcmp(channels.item(i).getAttribute("name"),"ADC2") %Change this to ADC1!!!!
-               analogChNum=str2num(channels.item(i).getAttribute("number"));
-               break
-           end
-        end    
-        
-        
-        [V_uV ,t_ms]=obj.getData(analogChNum, startTime_ms, window_ms);
-
-        if nargout==2
-            T_ms=t_ms;
-        end
-    end
   end
   
   methods (Hidden = true)
@@ -220,8 +182,7 @@ classdef KwikRecording < dataRecording
       end
       obj.triggerFilename = fullfile(obj.recordingDir, triggerFile.name);
       
-      if exist([obj.recordingDir filesep obj.recordingName '_metaData.mat'],'file') && ~obj.overwriteMetaData
-%     if exist([obj.recordingDir filesep 'metaData.mat'],'file') && ~obj.overwriteMetaData
+      if exist([obj.recordingDir filesep 'metaData.mat'],'file') && ~obj.overwriteMetaData
           obj = loadMetaData(obj); %needs recNameHD5
       else
           obj = extractMetaData(obj);
@@ -270,7 +231,6 @@ classdef KwikRecording < dataRecording
       catch
         obj.samplingFrequency = double(h5read(obj.fullFilename, [obj.recNameHD5{1} '/application_data/channel_sample_rates']));
       end
-      obj.samplingFrequency=obj.samplingFrequency(1);
       
       try
         disp('Extracting time stamp information...');
