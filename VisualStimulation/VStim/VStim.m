@@ -56,11 +56,11 @@ classdef (Abstract) VStim < handle
         parallelPortNum =  hex2dec('EFF8')%888; %Parallel port default number
         
         PTB_win %Pointer to PTB window
-        whiteIdx %black index for screen
+        whiteIdx %white index for screen
         blackIdx %black index for screen
         visualFieldRect % the coordinates of the rectanle of visual field [pixel]
         masktexOn %the mask texture for visual field with on rectangle on bottom left corner
-        masktexOff %the mask texture for visual field with on rectangle on bottom left corner
+        masktexOff %the mask texture for visual field with off rectangle on bottom left corner
         visualFieldBackgroundTex %the background texture (circle) for visual field
         errorMsg=[]; %The message the object returns in case of an error
         simulationMode = false; %a switch that is used to prepare visual stimulation without applying the stimulation itself

@@ -82,7 +82,8 @@ classdef VS_fullFieldNoise < VStim
             for i=1:obj.nTotTrials
                 % Update image buffer for the first time
                 Screen('FillOval',obj.PTB_win,obj.OUtimeSeries(obj.relaxationOrder(i),1),obj.visualFieldRect);
-                Screen('DrawTexture',obj.PTB_win,obj.masktex);
+                obj.applyBackgound; 
+%                 Screen('DrawTexture',obj.PTB_win,obj.masktexOn);
                 Screen('DrawingFinished', obj.PTB_win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
 
                 obj.flip=nan(1,ceil(nT/obj.timeStepPerFrame));
@@ -99,12 +100,13 @@ classdef VS_fullFieldNoise < VStim
                     nextFrame=round(nextPlace/obj.timeStepPerFrame);
                     
                     Screen('FillOval',obj.PTB_win,obj.OUtimeSeries(obj.relaxationOrder(i),nextPlace),obj.visualFieldRect);
-                    Screen('DrawTexture',obj.PTB_win,obj.masktex);
+                    obj.applyBackgound; 
+%                     Screen('DrawTexture',obj.PTB_win,obj.masktex);
                     Screen('DrawingFinished', obj.PTB_win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
                     
                     %%%% Flip output should be corrected below!!! currently does not look into different trials so output can be removed
                     pp(uint8(obj.trigChNames(3)),true,false,uint8(0),uint64(32784)); %session start trigger (also triggers the recording start)
-                    [obj.flip(nextFrame),obj.stim(nextFrame),obj.flipEnd(nextFrame),obj.miss(nextFrame)]=Screen('Flip',obj.PTB_win,nextTime);
+                    [obj.flip(nextFrame),obj.stim(nextFrame),obj.flipEnd(nextFrame),obj.miss(nextFrame)]=Screen('Flip',obj.PTB_win,round(nextTime));
                     pp(uint8(obj.trigChNames(3)),false,false,uint8(0),uint64(32784)); %session start trigger (also triggers the recording start)
                     
                     % Update image buffer for the first time
@@ -112,7 +114,8 @@ classdef VS_fullFieldNoise < VStim
                 end
                 
                 Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
-                Screen('DrawTexture',obj.PTB_win,obj.masktex);
+                obj.applyBackgound; 
+                %                 Screen('DrawTexture',obj.PTB_win,obj.masktex);
                 Screen('Flip',obj.PTB_win,nextTime);
                 pp(uint8(obj.trigChNames(2)),false,false,uint8(0),uint64(32784)); %session start trigger (also triggers the recording start)
                 
