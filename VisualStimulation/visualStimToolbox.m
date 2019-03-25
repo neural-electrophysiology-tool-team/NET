@@ -2,7 +2,8 @@ function []=visualStimToolbox(varargin)
 %% Default params
 simulationModel=false;
 initialVStim='VS_testStim';
-
+% PsychImaging('PrepareConfiguration');
+% PsychImaging('AddTask', 'General', 'UsePanelFitter', [600 450], 'Aspect');
 %% Output list of default variables
 %print out default arguments and values if no inputs are given
 %{
@@ -34,11 +35,35 @@ VS.par.dirSep=filesep; %choose file/dir separator according to platform
 VS.par.VSDirectory=[VS.par.NSKToolBoxMainDir VS.par.dirSep 'VisualStimulation'];
 VS.par.VSObjDir=[VS.par.VSDirectory VS.par.dirSep 'VStim'];
 VS.par.PCspecificFilesDir=[VS.par.NSKToolBoxMainDir VS.par.dirSep 'PCspecificFiles'];
-VS.par.VSMethods=dir([VS.par.VSObjDir VS.par.dirSep 'VS_*.m']);
+
+% Script to get stim files from within subdirectories
+dirinfo = dir([VS.par.VSObjDir VS.par.dirSep]);
+dirinfo(~[dirinfo.isdir]) = [];  %remove non-directories
+subdirinfo = cell(1,1);
+subdirname = cell(1,1);
+c = 1;
+for K = 1 : length(dirinfo)
+  thisdir = dirinfo(K).name;
+  if ~isempty(dir(fullfile(strcat(dirinfo(3).folder,'\',thisdir), 'VS_*.m')))
+    subdirinfo{c,1} = dir(fullfile(strcat(dirinfo(3).folder,'\',thisdir), 'VS_*.m'));
+    if ismember('.',thisdir)
+        thisdir = 'main';
+    end 
+    subdirname{c,1} = thisdir;
+    c=c+1;
+  end
+end
+
+groupnumbers = [];
+for i=1:length(subdirname)
+    groupnumbers = [groupnumbers;repmat({i},length(subdirinfo{i}),1)];
+end
+VS.par.VSMethods= cat(1, subdirinfo{:});
+VS.par.VSMethodGroups = subdirname;
+VS.par.VSMethodGroupNumber = groupnumbers;
 VS.par.VSMethods={VS.par.VSMethods.name};
 VS.par.VSMethods=cellfun(@(x) x(1:end-2),VS.par.VSMethods,'UniformOutput',0);
 VS.par.VSObjNames=cellfun(@(x) x(4:end),VS.par.VSMethods,'UniformOutput',0);
-
 %check Matlab version for using uiextras of uix gui layout support
 matlabVer=strsplit(version,'.');
 if str2num(matlabVer{1})>=8
@@ -80,7 +105,8 @@ initializeVisualStim;
         VS.par.screens=Screen('Screens');
         set(0,'Units','Pixels')
         VS.par.screenPositionsMatlab=get(0,'MonitorPositions');
-        
+        PsychTweak('UseGPUIndex', 1);
+        Screen('Preference', 'ConserveVRAM',4096);
         if isunix %for visual stimulation setup
             %for working with two graphic cards on linux
             Screen('Preference', 'ScreenToHead', 0,0,0);
@@ -106,7 +132,7 @@ initializeVisualStim;
             VS.par.ScreenPixelSize(i)=screenProps.pixelSize;
         end
         scrnPos=VS.par.screenPositionsMatlab(VS.par.currentGUIScreen,:);
-        VS.par.GUIPosition=[scrnPos(1)+(scrnPos(3)-scrnPos(1))*0.01 scrnPos(2)+(scrnPos(4)-scrnPos(2))*0.07 (scrnPos(3)-scrnPos(1))*0.4 (scrnPos(4)-scrnPos(2))*0.8];
+        VS.par.GUIPosition=abs([scrnPos(1)+(scrnPos(3)-scrnPos(1))*0.01 scrnPos(2)+(scrnPos(4)-scrnPos(2))*0.07 (scrnPos(3)-scrnPos(1))*0.4 (scrnPos(4)-scrnPos(2))*0.8]);
         set(VS.hand.hMainFigure,'position',VS.par.GUIPosition);
         
         if ~simulationModel
@@ -130,7 +156,7 @@ initializeVisualStim;
         else
             Screen('Preference','SkipSyncTests', 1);
             PTBScreenPosition=round([scrnPos(3)-150 scrnPos(4)-410 scrnPos(3)-50 scrnPos(4)-310]);
-            [VS.par.PTB_win] = Screen('OpenWindow',VS.par.screens(VS.par.currentPTBScreen),[],PTBScreenPosition);
+            [VS.par.PTB_win,VS.par.screenRect] = Screen('OpenWindow',VS.par.screens(VS.par.currentPTBScreen),[],PTBScreenPosition);
         end
     end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%% Initialize VS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -321,13 +347,18 @@ initializeVisualStim;
         VS.hand.hFileMenuSaveStimParams=uimenu(VS.hand.hFileMenu,'Label','Save stimulation parameter','Callback', @CallbackFileMenuSaveParams);
         
         % set visual stimulation menu
-        VS.hand.hVisualStimMenu = uimenu(VS.hand.hMainFigure, 'Label', 'Visual stimulation' );
-        for i=1:length(VS.par.VSMethods)
-            VS.hand.visualStimMenu.([VS.par.VSMethods{i}])=uimenu(VS.hand.hVisualStimMenu,...
-                'Label', VS.par.VSObjNames{i}, 'Checked','off', 'Callback', {@CallbackChangeVisualStim,i});
+        VS.hand.hVisualStimMenuMain = uimenu(VS.hand.hMainFigure, 'Label', 'Visual stimulation' );
+       
+        for j=1:length(VS.par.VSMethodGroups)
+            VS.hand.hVisualStimMenu{j} = uimenu('Parent',VS.hand.hVisualStimMenuMain, 'Label', VS.par.VSMethodGroups{j});
         end
+ 
+        for i=1:length(VS.par.VSMethods)
+            VS.hand.visualStimMenu.([VS.par.VSMethods{i}])=uimenu('Parent',VS.hand.hVisualStimMenu{VS.par.VSMethodGroupNumber{i}},...
+                    'Label', VS.par.VSObjNames{i}, 'Checked','off', 'Callback', {@CallbackChangeVisualStim,i});
+        end
+
         set(VS.hand.visualStimMenu.([VS.par.VSMethods{VS.par.currentVSO}]),'Checked','on'); %select one of the stims
-        
         if VS.par.useNewUIX %use uix for GUI layouts
 
             % Arrange the main interface windows
