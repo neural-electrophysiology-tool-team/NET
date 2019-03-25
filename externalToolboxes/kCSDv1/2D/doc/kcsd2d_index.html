@@ -1,0 +1,163 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>kCSD method in 2D - Matlab package &mdash; kcsd2d v1 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="kcsd2d v1 documentation" href="index.html" />
+    <link rel="next" title="Introduction" href="intro.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="intro.html" title="Introduction"
+             accesskey="N">next</a></li>
+        <li><a href="#">kcsd2d v1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="kcsd-method-in-2d-matlab-package">
+<h1>kCSD method in 2D - Matlab package<a class="headerlink" href="#kcsd-method-in-2d-matlab-package" title="Permalink to this headline">¶</a></h1>
+<p>We here present a matlab toolbox for caarying out the kCSD method
+2D.</p>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="download.html">Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#setting-the-path">Setting the path</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#loading-data">Loading data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html#the-kcsd-class">The kCSD-class</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="constructor.html">kcsd2d Class Constructor</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="constructor.html#providing-experimental-data">Providing experimental data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="constructor.html#defining-the-estimation-area">Defining the estimation area</a></li>
+<li class="toctree-l2"><a class="reference internal" href="constructor.html#model-parameter-options">Model parameter options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="constructor.html#layout-of-the-sources">Layout of the sources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="constructor.html#data-management">Data management</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="methods.html">Methods</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="methods.html#estimation">Estimation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="methods.html#estimate-potentials"><tt class="docutils literal"><span class="pre">estimate_potentials</span></tt></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="methods.html#parameter-selection">Parameter selection</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="methods.html#choose-r-lambda"><tt class="docutils literal"><span class="pre">choose_R_lambda</span></tt></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="methods.html#diagnostics">Diagnostics</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="methods.html#calc-cv-error"><tt class="docutils literal"><span class="pre">calc_cv_error</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="methods.html#plot-params-vs-cv"><tt class="docutils literal"><span class="pre">plot_params_vs_cv</span></tt></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="methods.html#plotting">Plotting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="methods.html#plot-csd"><tt class="docutils literal"><span class="pre">plot_CSD</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="methods.html#plot-pots"><tt class="docutils literal"><span class="pre">plot_pots</span></tt></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="properties.html">Properties</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="properties.html#properties-you-can-modify">Properties you can modify</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="properties.html#x-y"><tt class="docutils literal"><span class="pre">X,Y</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="properties.html#h-sigma"><tt class="docutils literal"><span class="pre">h,</span> <span class="pre">sigma</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="properties.html#r"><tt class="docutils literal"><span class="pre">R</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="properties.html#lambda"><tt class="docutils literal"><span class="pre">lambda</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="properties.html#rs"><tt class="docutils literal"><span class="pre">Rs</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="properties.html#lambdas"><tt class="docutils literal"><span class="pre">lambdas</span></tt></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="properties.html#properties-you-can-t-modify">Properties you can&#8217;t modify</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="properties.html#el-pos"><tt class="docutils literal"><span class="pre">el_pos</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="properties.html#pots"><tt class="docutils literal"><span class="pre">pots</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="properties.html#csd-est"><tt class="docutils literal"><span class="pre">CSD_est</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="properties.html#pots-est"><tt class="docutils literal"><span class="pre">pots_est</span></tt></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="#">Table Of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="download.html">Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="constructor.html">kcsd2d Class Constructor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="methods.html">Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="properties.html">Properties</a></li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/kcsd2d_index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="intro.html" title="Introduction"
+             >next</a></li>
+        <li><a href="#">kcsd2d v1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Jan Potworowski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

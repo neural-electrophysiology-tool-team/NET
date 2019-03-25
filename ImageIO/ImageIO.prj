@@ -1,0 +1,105 @@
+<deployment-project plugin="plugin.toolbox" plugin-version="1.0">
+  <configuration build-checksum="89667986" file="D:\Code\GitHub\ImageIO\ImageIO.prj" location="D:\Code\GitHub\ImageIO" name="ImageIO" target="target.toolbox" target-name="Package Toolbox">
+    <param.appname>ImageIO</param.appname>
+    <param.authnamewatermark>Stefano Masneri</param.authnamewatermark>
+    <param.email>stefano.masneri@brain.mpg.de</param.email>
+    <param.company>Max Planck Institute for Brain Research</param.company>
+    <param.summary>Read and write image data from a variety of different formats (Tiff, Tiff directories, CZI, LSM, ND2, EXR, MSR, OBF, SIF	)</param.summary>
+    <param.description>This toolbox provides classes and functions to read image stacks and timeseries from a variety of different formats. The toolbox contains one class representing the reader for each supported data format, and a single function (imageIORead) that performs reading, slicing and subsetting while automatically recognizing the file format.
+The toolbox also provides functionalities for writing data as a Tiff stack, write the metadata in an xml file or save everything as a .mat file.
+More information are available on the github page: https://github.molgen.mpg.de/MPIBR/ImageIO/blob/master/README.md</param.description>
+    <param.screenshot>C:\Users\masneris\Downloads\zebrafish-heart.jpg</param.screenshot>
+    <param.version>1.0.1</param.version>
+    <param.output>${PROJECT_ROOT}\ImageIO.mltbx</param.output>
+    <param.products.name />
+    <param.products.id />
+    <param.products.version />
+    <param.platforms />
+    <param.guid>07290cb2-6d5e-4337-b038-4a806edd2653</param.guid>
+    <param.exclude.filters>% List files contained in your toolbox folder that you would like to exclude
+% from packaging.  Excludes should be listed relative to the toolbox folder.
+% Some examples of how to specify excludes are provided below:
+%
+% A single file in the toolbox folder:
+% .svn
+%
+% A single file in a subfolder of the toolbox folder:
+% example/.svn
+%
+% All files in a subfolder of the toolbox folder:
+% example/*
+%
+% All files of a certain name in all subfolders of the toolbox folder:
+% **/.svn
+%
+% All files matching a pattern in all subfolders of the toolbox folder:
+% **/*.bak
+%
+
+.git
+tests
+.gitignore</param.exclude.filters>
+    <param.examples />
+    <param.demosxml />
+    <param.apps />
+    <param.docs />
+    <param.matlabpath.excludes />
+    <param.javaclasspath.excludes />
+    <unset>
+      <param.output />
+      <param.products.name />
+      <param.products.id />
+      <param.products.version />
+      <param.platforms />
+      <param.examples />
+      <param.demosxml />
+      <param.apps />
+      <param.docs />
+      <param.matlabpath.excludes />
+      <param.javaclasspath.excludes />
+    </unset>
+    <fileset.rootdir>
+      <file>D:\Code\GitHub\ImageIO</file>
+    </fileset.rootdir>
+    <fileset.rootfiles>
+      <file>${PROJECT_ROOT}\+imageIO</file>
+      <file>${PROJECT_ROOT}\andor</file>
+      <file>${PROJECT_ROOT}\bfmatlab</file>
+      <file>${PROJECT_ROOT}\docs</file>
+      <file>${PROJECT_ROOT}\imageIOPtr.m</file>
+      <file>${PROJECT_ROOT}\imageIORead.m</file>
+      <file>${PROJECT_ROOT}\imageIOWrite.m</file>
+      <file>${PROJECT_ROOT}\mex</file>
+      <file>${PROJECT_ROOT}\README.md</file>
+      <file>${PROJECT_ROOT}\utils</file>
+    </fileset.rootfiles>
+    <fileset.depfun.included>
+      <file>D:\Code\GitHub\MatlabUtils\+util\imwritetiff.m</file>
+    </fileset.depfun.included>
+    <fileset.depfun.excluded />
+    <fileset.package />
+    <build-deliverables>
+      <file location="D:\Code\GitHub\ImageIO" name="ImageIO.mltbx" optional="false">D:\Code\GitHub\ImageIO\ImageIO.mltbx</file>
+    </build-deliverables>
+    <workflow />
+    <matlab>
+      <root>C:\Program Files\MATLAB\R2016b</root>
+      <toolboxes />
+    </matlab>
+    <platform>
+      <unix>false</unix>
+      <mac>false</mac>
+      <windows>true</windows>
+      <win2k>false</win2k>
+      <winxp>false</winxp>
+      <vista>false</vista>
+      <linux>false</linux>
+      <solaris>false</solaris>
+      <osver>6.1</osver>
+      <os32>false</os32>
+      <os64>true</os64>
+      <arch>win64</arch>
+      <matlab>true</matlab>
+    </platform>
+  </configuration>
+</deployment-project>

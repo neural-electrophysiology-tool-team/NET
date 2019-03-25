@@ -1,0 +1,246 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>kcsd2d Class Constructor &mdash; kcsd2d v1 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="kcsd2d v1 documentation" href="index.html" />
+    <link rel="next" title="Methods" href="methods.html" />
+    <link rel="prev" title="Quick Start" href="tutorial.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="methods.html" title="Methods"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="Quick Start"
+             accesskey="P">previous</a> |</li>
+        <li><a href="kcsd2d_index.html">kcsd2d v1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="kcsd2d-class-constructor">
+<h1>kcsd2d Class Constructor<a class="headerlink" href="#kcsd2d-class-constructor" title="Permalink to this headline">¶</a></h1>
+<p>The kcsd2d class constructor is a function that returns an instance of the
+kcsd2d class. Through the constructors arguments list we can input the data and
+our prior knowledge about the experiment. The syntax of the constructor looks as
+follows:</p>
+<div class="highlight-python"><pre>&gt;&gt;k = kcsd2d(el_pos, pots, ArgName, ArgVal, ...);</pre>
+</div>
+<p>Variables <tt class="docutils literal"><span class="pre">el_pos</span></tt> and <tt class="docutils literal"><span class="pre">pots</span></tt> containing the electrode positions and
+recorded potentials are mandatory arguments and have to be provided in the presented order
+for the constructor to run. All other arguments are optional and can be given
+in arbitrary order in <cite>ArgName</cite>, <cite>ArgVal</cite> pairs. Values of most of those arguments are later available as class <a class="reference internal" href="properties.html"><em>Properties</em></a>.</p>
+<div class="section" id="providing-experimental-data">
+<h2>Providing experimental data<a class="headerlink" href="#providing-experimental-data" title="Permalink to this headline">¶</a></h2>
+<p>The first argument (called by us <tt class="docutils literal"><span class="pre">el_pos</span></tt>) must contain the electrode
+positions. It must be a <cite>n x 2</cite> matrix, where <cite>n</cite> denotes the number of
+electrodes and whose rows denote the <cite>(y, x)</cite> coordinates (<cite>y</cite>-vertical, <cite>x</cite>-horizontal)
+of the electrode positions.</p>
+<p>The <tt class="docutils literal"><span class="pre">pots</span></tt> argument has to be a <cite>n x m</cite> matrix containing signals recorded at the
+corresponding <cite>n</cite> electrode positions of <tt class="docutils literal"><span class="pre">el_pos</span></tt>. <cite>m</cite> denotes the number of
+time frames analyzed.</p>
+<p>Providing the experimental data is enough for the constructor to run. However, keep
+in mind that you may provide extra information by calling the
+constructor with optional arguments described below.</p>
+</div>
+<div class="section" id="defining-the-estimation-area">
+<h2>Defining the estimation area<a class="headerlink" href="#defining-the-estimation-area" title="Permalink to this headline">¶</a></h2>
+<p>By the estimation area we understand the positions at which the CSD is
+reconstructed. This area is set by default as:</p>
+<div class="highlight-python"><pre>&gt;&gt;[X, Y] = meshgrid(X_min: gdX: X_max, Y_min: gdY: Y_max);</pre>
+</div>
+<p>where <tt class="docutils literal"><span class="pre">X_min,</span> <span class="pre">Y_min,</span> <span class="pre">X_max,</span> <span class="pre">Y_max</span></tt> are the extreme values of the electrode
+positions. <tt class="docutils literal"><span class="pre">gdX</span></tt> and <tt class="docutils literal"><span class="pre">gdY</span></tt> have default values:</p>
+<div class="highlight-python"><pre>&gt;&gt;gdX = 0.001*(X_max-X_min); gdY = 0.001*(Y_max-Y_min);</pre>
+</div>
+<p>You may resign from the default and provide your own values by running
+the constructor with optional arguments:</p>
+<div class="highlight-python"><pre>&gt;&gt;k = kcsd2d(el_pos, pots, 'X_min', my_X_min, 'X_max', my_X_max, ...
+  'Y_min', my_Y_min, 'Y_max', my_Y_max, 'gdX', my_gdX, 'gdY', my_gdY);</pre>
+</div>
+<p>You can also define the estimation area explicitly, e.g.:</p>
+<div class="highlight-python"><pre>&gt;&gt;[my_X, my_Y] = meshgrid(0:0.01:1.4);
+&gt;&gt;k = kcsd2d(el_pos, pots, 'X', my_X, 'Y', my_Y);</pre>
+</div>
+</div>
+<div class="section" id="model-parameter-options">
+<h2>Model parameter options<a class="headerlink" href="#model-parameter-options" title="Permalink to this headline">¶</a></h2>
+<p>Below are listed the model parameters whose values may also be provided
+in the constructor argument list:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="13%" />
+<col width="61%" />
+<col width="25%" />
+</colgroup>
+<thead valign="bottom">
+<tr><th class="head">Parameter</th>
+<th class="head">Description</th>
+<th class="head">Default value</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr><td><tt class="docutils literal"><span class="pre">R</span></tt></td>
+<td>Initial value for basis function radii. If not
+provided, the default value is set to the minimal
+inter-electrode distance. Can be chosen
+by cross-validation at a later stage.</td>
+<td>depending on <cite>el_pos</cite></td>
+</tr>
+<tr><td><tt class="docutils literal"><span class="pre">h</span></tt></td>
+<td>h parameter of the kCSD2d method.</td>
+<td>1</td>
+</tr>
+<tr><td><tt class="docutils literal"><span class="pre">sigma</span></tt></td>
+<td>Conductivity.of extracellular space</td>
+<td>1</td>
+</tr>
+<tr><td><tt class="docutils literal"><span class="pre">lambda</span></tt></td>
+<td>Lambda parameter for ridge regression.</td>
+<td><em>cross-validation</em></td>
+</tr>
+</tbody>
+</table>
+<p><em>cross-validation</em> - means that there is no default value. It is chosen by cross
+validation as described in Section 4.2 in our <a class="reference external" href="Potworowski2012.pdf">paper</a>.</p>
+</div>
+<div class="section" id="layout-of-the-sources">
+<h2>Layout of the sources<a class="headerlink" href="#layout-of-the-sources" title="Permalink to this headline">¶</a></h2>
+<p>By default the base sources are distributed in the estimation area. This can be
+changed by choosing the options <tt class="docutils literal"><span class="pre">ext_X</span></tt> and <tt class="docutils literal"><span class="pre">ext_Y</span></tt> while calling the
+constructor. The overall number of sources can also be chosen  arbitrarily.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="15%" />
+<col width="68%" />
+<col width="17%" />
+</colgroup>
+<thead valign="bottom">
+<tr><th class="head">Parameter</th>
+<th class="head">Description</th>
+<th class="head">Default value</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr><td><tt class="docutils literal"><span class="pre">ext_X</span></tt></td>
+<td>margin by which the sources extend beyond the
+estimation area in the X direction.</td>
+<td>0</td>
+</tr>
+<tr><td><tt class="docutils literal"><span class="pre">ext_Y</span></tt></td>
+<td>margin by which the sources extend beyond the
+estimation area in the Y direction.</td>
+<td>0</td>
+</tr>
+<tr><td><tt class="docutils literal"><span class="pre">n_src</span></tt></td>
+<td>initial number of basis elements used.</td>
+<td>300</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="data-management">
+<h2>Data management<a class="headerlink" href="#data-management" title="Permalink to this headline">¶</a></h2>
+<p>Carrying out the kCSD method involves a lot of calculations. In order to avoid
+repeating the same calculations, the <tt class="docutils literal"><span class="pre">kcsd2d</span></tt> class stores certain results in
+mat-files in the <cite>kcsd2d_class/data</cite> directory and uses them later on.
+However, some users may prefer not to use this feature (e.g. e.g. due to the storage
+constraints). The feature can be turned off while calling the constructor by setting
+the value of the <tt class="docutils literal"><span class="pre">manage_data</span></tt> option to 0:</p>
+<div class="highlight-python"><pre>&gt;&gt;k = kcsd2d(el_pos, pots, 'manage_data', 0);</pre>
+</div>
+<p>If you decide to use the default caching option, keep in mind that after some time the
+<cite>kcsd2d_class/data</cite> directory might get quite large. You might then consider removing some files.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="kcsd2d_index.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="download.html">Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Quick Start</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">kcsd2d Class Constructor</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#providing-experimental-data">Providing experimental data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#defining-the-estimation-area">Defining the estimation area</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-parameter-options">Model parameter options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#layout-of-the-sources">Layout of the sources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#data-management">Data management</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="methods.html">Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="properties.html">Properties</a></li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/constructor.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="methods.html" title="Methods"
+             >next</a></li>
+        <li class="right" >
+          <a href="tutorial.html" title="Quick Start"
+             >previous</a> |</li>
+        <li><a href="kcsd2d_index.html">kcsd2d v1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Jan Potworowski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>

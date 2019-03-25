@@ -1,0 +1,212 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Properties &mdash; kcsd2d v1 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="kcsd2d v1 documentation" href="index.html" />
+    <link rel="prev" title="Methods" href="methods.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="methods.html" title="Methods"
+             accesskey="P">previous</a></li>
+        <li><a href="kcsd2d_index.html">kcsd2d v1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="properties">
+<h1>Properties<a class="headerlink" href="#properties" title="Permalink to this headline">¶</a></h1>
+<p>The kcsd2d class properties hold the data carried by an instance of the class. We discuss here the <cite>public</cite> properties (those that can be accessed and modified by the user).</p>
+<p>The values of the properties may have different origins. Some, like the <cite>lambda</cite> (the ridge regression penalty term, see Section 4.1 in the <cite>kCSD paper &lt;Potworowski2012.pdf&gt;</cite>). may be set via the class constructor:</p>
+<div class="highlight-python"><pre>&gt;&gt;k = kcsd2d(el_pos, pots, 'lambda', 0.001);
+&gt;&gt; k.lambda
+
+ans =
+        0.001</pre>
+</div>
+<p>The same property can be given a new value without running the constructor again:</p>
+<div class="highlight-python"><pre>&gt;&gt;k.lambda = k.lambda*0.1;
+&gt;&gt;k.lambda
+
+ans =
+        0.0001</pre>
+</div>
+<p>On the other hand, values of properties like <cite>CSD_est, pots_est</cite> or <cite>cv_error</cite> cannot be explicitly given by the user and can only be calculated by class methods. You might, however, be interested in exporting and making use of them elsewhere. You can, for example, export the CSD reconstruction along with the electrode positions and information about the estimation area and save it in a mat file:</p>
+<div class="highlight-python"><pre>&gt;&gt;X = k.X;
+&gt;&gt;Y = k.Y;
+&gt;&gt;el_pos = k.el_pos;
+&gt;&gt;CSD_est = k.CSD_est;
+&gt;&gt;save('exported_data', 'X', 'Y', 'el_pos', 'CSD_est');</pre>
+</div>
+<div class="section" id="properties-you-can-modify">
+<h2>Properties you can modify<a class="headerlink" href="#properties-you-can-modify" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="x-y">
+<h3><tt class="docutils literal"><span class="pre">X,Y</span></tt><a class="headerlink" href="#x-y" title="Permalink to this headline">¶</a></h3>
+<p>Properties containing the information about the area where you do the reconstruction. If not specified, they are calculated as a minimal rectangular region containing all the electrodes. They can also be given as an argument to the constructor:</p>
+<div class="highlight-python"><pre>&gt;&gt;k = kcsd2d(el_pos, pots, 'X', X, 'Y', Y);</pre>
+</div>
+<p>You can also change them afterwards:</p>
+<div class="highlight-python"><pre>&gt;&gt;k.X = X_new;</pre>
+</div>
+<p>New reconstructions will be calculated automatically.</p>
+</div>
+<div class="section" id="h-sigma">
+<h3><tt class="docutils literal"><span class="pre">h,</span> <span class="pre">sigma</span></tt><a class="headerlink" href="#h-sigma" title="Permalink to this headline">¶</a></h3>
+<p>Parameters defined in eq. 2.19 in the <a class="reference external" href="Potworowski2012.pdf">kCSD paper</a>. Their values are by default set to 1. They can also be given as a parameter of the constructor:</p>
+<div class="highlight-python"><pre>&gt;&gt;k = kcsd2d(el_pos, pots, 'sigma', sigma, 'h', h);</pre>
+</div>
+<p>and changed later on:</p>
+<div class="highlight-python"><pre>&gt;&gt;k.h = h_new;
+&gt;&gt;k.sigma = sigma_new;</pre>
+</div>
+<p>New reconstructions will be calculated automatically.</p>
+</div>
+<div class="section" id="r">
+<h3><tt class="docutils literal"><span class="pre">R</span></tt><a class="headerlink" href="#r" title="Permalink to this headline">¶</a></h3>
+<p>Radius of the basis element defined in eq. 2.21 in the <a class="reference external" href="Potworowski2012.pdf">kCSD paper</a>. Its value is by default given as the minimal inter-electrode distance. Can be given as a parameter of the constructor:</p>
+<div class="highlight-python"><pre>&gt;&gt;k = kcsd2d(el_pos, pots, 'R', R);</pre>
+</div>
+<p>They can also be calculated via <cite>cross validation</cite> along with the <tt class="docutils literal"><span class="pre">lambda</span></tt> property:</p>
+<div class="highlight-python"><pre>&gt;&gt;k.choose_R_lambda;</pre>
+</div>
+</div>
+<div class="section" id="lambda">
+<h3><tt class="docutils literal"><span class="pre">lambda</span></tt><a class="headerlink" href="#lambda" title="Permalink to this headline">¶</a></h3>
+<p>The ridge regression parameter. It is calculated by default by <cite>cross validation</cite>.</p>
+</div>
+<div class="section" id="rs">
+<h3><tt class="docutils literal"><span class="pre">Rs</span></tt><a class="headerlink" href="#rs" title="Permalink to this headline">¶</a></h3>
+<p>The range of values considered for the <tt class="docutils literal"><span class="pre">R</span></tt> parameter search. If <tt class="docutils literal"><span class="pre">R</span></tt> is chosen using <tt class="docutils literal"><span class="pre">choose_R_lambda</span></tt> then it will take one of those values.</p>
+</div>
+<div class="section" id="lambdas">
+<span id="id2"></span><h3><tt class="docutils literal"><span class="pre">lambdas</span></tt><a class="headerlink" href="#lambdas" title="Permalink to this headline">¶</a></h3>
+<p>The range of values considered for the <tt class="docutils literal"><span class="pre">lambda</span></tt> parameter search. If <tt class="docutils literal"><span class="pre">lambda</span></tt> is chosen using <tt class="docutils literal"><span class="pre">choose_R_lambda</span></tt> then it will take one of those values. For example, if you are sure that the data are noise free, you can set:</p>
+<div class="highlight-python"><pre>&gt;&gt;k.lambdas = 0;</pre>
+</div>
+</div>
+</div>
+<div class="section" id="properties-you-can-t-modify">
+<h2>Properties you can&#8217;t modify<a class="headerlink" href="#properties-you-can-t-modify" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="el-pos">
+<h3><tt class="docutils literal"><span class="pre">el_pos</span></tt><a class="headerlink" href="#el-pos" title="Permalink to this headline">¶</a></h3>
+<p>Matrix containing the electrode positions. Its value has to be given as an argument of the class constructor and cannot be modified. It must be a <cite>n x 2</cite> matrix, where n denotes the number of electrodes and whose rows contain the (y, x) coordinates (y-vertical, x-horizontal) of the electrode positions.</p>
+</div>
+<div class="section" id="pots">
+<h3><tt class="docutils literal"><span class="pre">pots</span></tt><a class="headerlink" href="#pots" title="Permalink to this headline">¶</a></h3>
+<p>Matrix containing values of the potentials. Its value has to be given as an argument of the class constructor and cannot be modified. Has to be a <cite>n x m</cite> matrix containing signals recorded at the
+corresponding <cite>n</cite> electrode positions of <tt class="docutils literal"><span class="pre">el_pos</span></tt>. <cite>m</cite> denotes the number of time frames analyzed.</p>
+</div>
+<div class="section" id="csd-est">
+<h3><tt class="docutils literal"><span class="pre">CSD_est</span></tt><a class="headerlink" href="#csd-est" title="Permalink to this headline">¶</a></h3>
+<p>3d matrix containing the CSD reconstruction. The size of <tt class="docutils literal"><span class="pre">CSD_est</span></tt> is <tt class="docutils literal"><span class="pre">[size(X),</span> <span class="pre">size(pots,</span> <span class="pre">2)]</span></tt> so that the first two dimensions represent space and the third represents time.</p>
+<p><tt class="docutils literal"><span class="pre">CSD_est</span></tt> is updated every time we change any of the other properties whenever its value is accessed. For example if we run:</p>
+<div class="highlight-python"><pre>&gt;&gt;k.R = 0.3;
+&gt;&gt;a = k.CSD_est;</pre>
+</div>
+<p>then the class will verify that first a reconstruction for <tt class="docutils literal"><span class="pre">k.R</span> <span class="pre">=</span> <span class="pre">0.3</span></tt> will be performed and only then it will be copied to <tt class="docutils literal"><span class="pre">a</span></tt>.</p>
+</div>
+<div class="section" id="pots-est">
+<h3><tt class="docutils literal"><span class="pre">pots_est</span></tt><a class="headerlink" href="#pots-est" title="Permalink to this headline">¶</a></h3>
+<p>Same as <tt class="docutils literal"><span class="pre">CSD_est</span></tt> for potential values.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="kcsd2d_index.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="download.html">Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="constructor.html">kcsd2d Class Constructor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="methods.html">Methods</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Properties</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#properties-you-can-modify">Properties you can modify</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#x-y"><tt class="docutils literal"><span class="pre">X,Y</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#h-sigma"><tt class="docutils literal"><span class="pre">h,</span> <span class="pre">sigma</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#r"><tt class="docutils literal"><span class="pre">R</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lambda"><tt class="docutils literal"><span class="pre">lambda</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#rs"><tt class="docutils literal"><span class="pre">Rs</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lambdas"><tt class="docutils literal"><span class="pre">lambdas</span></tt></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#properties-you-can-t-modify">Properties you can&#8217;t modify</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#el-pos"><tt class="docutils literal"><span class="pre">el_pos</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pots"><tt class="docutils literal"><span class="pre">pots</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#csd-est"><tt class="docutils literal"><span class="pre">CSD_est</span></tt></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pots-est"><tt class="docutils literal"><span class="pre">pots_est</span></tt></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/properties.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="methods.html" title="Methods"
+             >previous</a></li>
+        <li><a href="kcsd2d_index.html">kcsd2d v1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011, Jan Potworowski.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>
