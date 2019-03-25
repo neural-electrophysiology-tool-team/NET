@@ -392,8 +392,6 @@ classdef (Abstract) recAnalysis < handle
                             obj.currentDataObj=Recording(obj.currentDataFiles);
                         elseif strcmp(allFullFiles{1}(end-3:end),'.kwd')
                             obj.currentDataObj=KwikRecording(obj.currentDataFiles);
-                        elseif strcmp(allFullFiles{1}(end-2:end),'.h5')
-                            obj.currentDataObj=MCH5Recording(obj.currentDataFiles);
                         elseif isdir(allFullFiles{1}) %OE or NeuraLynx recording
                             if ~isempty(regexp(allFullFiles{1}(end-8:end),'cheetah')) %identifies neuralynx recording by the ending of the folder name with "cheetah"
                                 obj.currentDataObj=NLRecording(obj.currentDataFiles{1});
