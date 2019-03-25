@@ -63,6 +63,7 @@ classdef MCH5Recording < dataRecording
         pathToRecording='/Data/Recording_0/';
         pathToAnalogStream = '/Data/Recording_0/AnalogStream/'; %This is in case there is only one recording in HDF5 file. If there are more - code should be revised
         maxNumberOfDigitalChannels=16; %up to 16 digIn channels
+        fileExtension='h5';
    end
     
   properties (Constant = true)
@@ -321,7 +322,7 @@ classdef MCH5Recording < dataRecording
             for i=1:nWindows
 %                 obj.getDataConfig.startend=[startTime_ms(i);startTime_ms(i)+window_ms];
 %                 startSample=min(0,round(startTime_ms(i)*conversionFactor))+1;
-                if startTime_ms(i)>=0 && (startTime_ms(i)+window_ms)<=obj.recordingDuration_ms
+                if startTime_ms(i)>=0 && (startTime_ms(i)+window_ms)<=obj.recordingDuration_ms && ~isempty(obj.pathToDigitalDataStreamGroup)
                     data=h5read(obj.fullFilename,[obj.pathToDigitalDataStreamGroup '/ChannelData'],...
                        [startElement(i) 1], [windowSamples 1] );
                     D(:,i,:)=rem(floor(double(data)*pow2(0:-1:(1-obj.maxNumberOfDigitalChannels))),2)';
@@ -329,10 +330,12 @@ classdef MCH5Recording < dataRecording
                     windowSamples=min(windowSamples,obj.dataLength-startElement(i));
 %                     obj.getDataConfig.startend=[max(0,startTime_ms(i));min(startTime_ms(i)+window_ms,recordingDuration_ms)];
 %                     data=mcstreammex(obj.getDataConfig);
-                    data=h5read(obj.fullFilename,[obj.pathToDigitalDataStreamGroup '/ChannelData'],...
-                       [startElement(i) 1], [windowSamples 1] );
-                    D(:,i,1-startSample:endSample)=rem(floor(data.data*pow2(0:-1:(1-obj.maxNumberOfDigitalChannels))),2)';
-                    disp('Recording at edge');
+                    if ~isempty(obj.pathToDigitalDataStreamGroup)
+                        data=h5read(obj.fullFilename,[obj.pathToDigitalDataStreamGroup '/ChannelData'],...
+                            [startElement(i) 1], [windowSamples 1] );
+                        D(:,i,1-startSample:endSample)=rem(floor(data.data*pow2(0:-1:(1-obj.maxNumberOfDigitalChannels))),2)';
+                        disp('Recording at edge');
+                    end
                 end
             end
 %         end
@@ -437,7 +440,7 @@ classdef MCH5Recording < dataRecording
 %       end
 %       obj.triggerFilename = fullfile(obj.recordingDir, triggerFile.name);
       
-      if exist([obj.recordingDir filesep obj.recordingName 'metaData.mat'],'file') && ~obj.overwriteMetaData
+      if exist([obj.recordingDir filesep 'metaData.mat'],'file') && ~obj.overwriteMetaData
           obj = loadMetaData(obj); %needs recNameHD5
       else
           obj = extractMetaData(obj);
@@ -496,26 +499,34 @@ classdef MCH5Recording < dataRecording
         
         %get start date. This currently only works windows. Otherwise, try
         %using the attribute 'Date' in the h5 file.
-        dateInTicks=h5readatt(obj.fullFilename,'/Data','DateInTicks'); %This is in .NET date
-        dt=System.DateTime(dateInTicks); %create .NET DateTime Struct
-        dateInString=char(dt.ToString);
-        obj.startDate=datenum(dateInString,'dd/mm/yyyy');
-        
+%         dateInTicks=h5readatt(obj.fullFilename,'/Data','DateInTicks'); %This is in .NET date
+%         dt=System.DateTime(dateInTicks); %create .NET DateTime Struct
+%         dateInString=char(dt.ToString);
+%         obj.startDate=datenum(dateInString,'dd/mm/yyyy');
+        obj.startDate = datenum(datetime(h5readatt(obj.fullFilename,'/Data','Date'), 'InputFormat','eeee, MMMMM d, yyyy'));
         obj.info=h5info(obj.fullFilename, obj.pathToAllRecordings);
         obj.analogInfo = h5info(obj.fullFilename, obj.pathToAnalogStream);
-        obj.streamPaths{1}=obj.analogInfo.Groups(1).Name; %should be stream 0 path
-        obj.streamPaths{2}=obj.analogInfo.Groups(2).Name; %should be stream 1 path
-        obj.streamPaths{3}=obj.analogInfo.Groups(3).Name; %should be stream 2 path
+        for i=1:size(obj.analogInfo.Groups,1)
+            obj.streamPaths{i}=obj.analogInfo.Groups(i).Name;
+            temp = h5readatt(obj.fullFilename,obj.streamPaths{i},'DataSubType');
+            obj.streamsSubTypes=[obj.streamsSubTypes,{temp}];
+        end
+%         obj.streamPaths{1}=obj.analogInfo.Groups(1).Name; %should be stream 0 path
+%         obj.streamPaths{2}=obj.analogInfo.Groups(2).Name; %should be stream 1 path
+%         obj.streamPaths{3}=obj.analogInfo.Groups(3).Name; %should be stream 2 path
         
         %get streams' numbers and paths (for raw electrode, digital and aux
         %streams. Usually it's 0,1,2 but just to make sure
-        obj.streamsSubTypes={h5readatt(obj.fullFilename,obj.streamPaths{1},'DataSubType'),h5readatt(obj.fullFilename,obj.streamPaths{2},'DataSubType'),h5readatt(obj.fullFilename,obj.streamPaths{3},'DataSubType')};
+%         obj.streamsSubTypes={h5readatt(obj.fullFilename,obj.streamPaths{1},'DataSubType'),h5readatt(obj.fullFilename,obj.streamPaths{2},'DataSubType'),h5readatt(obj.fullFilename,obj.streamPaths{3},'DataSubType')};
+%         obj.streamsSubTypes={h5readatt(obj.fullFilename,obj.streamPaths{1},'DataSubType'),h5readatt(obj.fullFilename,obj.streamPaths{2},'DataSubType')};
         obj.electrodeStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultRawDataStreamName))-1; %'Electrode';'Auxiliary';'Digital';
         obj.auxStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultAnalogDataStreamName))-1;
         obj.digitalStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultDigitalDataStreamName))-1;
        
         obj.pathToRawDataStreamGroup=obj.streamPaths{obj.electrodeStreamNum+1}; %these are without '/' ending 
-        obj.pathToDigitalDataStreamGroup=obj.streamPaths{obj.digitalStreamNum+1};
+        if ~isempty(obj.digitalStreamNum)
+            obj.pathToDigitalDataStreamGroup=obj.streamPaths{obj.digitalStreamNum+1};
+        end
         obj.pathToAuxDataStreamGroup=obj.streamPaths{obj.auxStreamNum+1};
         
         obj.lengthInfo = h5info(obj.fullFilename, [obj.pathToRawDataStreamGroup '/ChannelData']);

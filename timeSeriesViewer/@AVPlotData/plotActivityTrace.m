@@ -15,14 +15,14 @@ elseif obj.nCh>1 && obj.nTrials>1
 end
 
 if obj.refreshPlot %for first appearance when shifts were not chosen
-    verticalShift=max(nanstd(obj.M(:))*5,eps);
+    verticalShift=max(nanstd(double(obj.M(:)))*5,eps);
     obj.plotParams.shifts=((size(M,1)-1):-1:0)'*verticalShift;
     set(obj.hPlotControls.verticalShiftEdit,'string',num2str(verticalShift));
     ylim(obj.hPlotAxis,[obj.plotParams.shifts(end)-1*verticalShift obj.plotParams.shifts(1)+1*verticalShift+eps]);
     obj.refreshPlot=0;
 end
 
-M=bsxfun(@plus,M,obj.plotParams.shifts);
+M=bsxfun(@plus,double(M),obj.plotParams.shifts);
 obj.hPlot=plot(obj.hPlotAxis,obj.T,M);obj.hPlotAxis.ColorOrderIndex=1;
 
 if obj.nTrials==1 & obj.plotParams.plotChannelNumbers

@@ -180,7 +180,7 @@ classdef binaryRecording < dataRecording
         
         function obj=closeOpenFiles(obj)
             fclose(obj.fid);
-            fclose(obj.fidAnalog);
+%             fclose(obj.fidAnalog);
         end
         
         function [obj]=extractMetaData(obj)

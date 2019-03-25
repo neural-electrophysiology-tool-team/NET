@@ -45,8 +45,11 @@ classdef (Abstract) dataRecording < handle
         function delete(obj) %closing all open files when object is deleted
             obj=closeOpenFiles(obj);
         end
+        
         function obj=closeOpenFiles(obj)
+%             fclose(obj.fid);
         end
+        
         function [V_uV,t_ms]=getData(obj,channels,startTime_ms,window_ms,name)
             %Extract recording data from file to memory
             %Usage: [V_uV,t_ms]=obj.getData(channels,startTime_ms,window_ms);
@@ -286,7 +289,7 @@ classdef (Abstract) dataRecording < handle
             
         end
 
-        function []=convertLayouteJRClust(obj,padSize,outputName)
+        function []=convertLayoutJRClust(obj,padSize,outputName)
             %convertLayouteJRClust(obj,padSize,outputName)
             %Make probe (.prb) file for using with jrclust
             %pad size - [height (y),widht (x)]
