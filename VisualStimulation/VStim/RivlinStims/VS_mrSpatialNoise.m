@@ -1,4 +1,4 @@
-classdef VS_2componentSpatialNoise < VStim
+classdef VS_mrSpatialNoise < VStim
     properties
         %all these properties are modifiable by user and will appear in visual stim GUI
         %Place all other variables in hidden properties
@@ -38,7 +38,7 @@ classdef VS_2componentSpatialNoise < VStim
     methods
         function obj=run(obj)
             
-            rect.sizeL=obj.largeRectNum^2;
+           rect.sizeL=obj.largeRectNum^2;
             
            edgesL=round(linspace(1,obj.actualVFieldDiameter,obj.largeRectNum+1));
             
@@ -57,16 +57,6 @@ classdef VS_2componentSpatialNoise < VStim
                 end
             end
             
-%             %see whether the different rectangle positions overlap with the
-%             %non-good pixels
-%             toInclude=[];
-%             for x=1:(length(edgesL)-1)
-%                 for y=1:(length(edgesL)-1)
-%                     toInclude(x,y)=min(min(goodPix(edgesL(y):(edgesL(y+1)-1), (edgesL(x)+whDiff):(edgesL(x+1)+whDiff-1))));
-%                 end
-%             end
-%             toInclude=reshape(toInclude,size(toInclude,1)*size(toInclude,2),1);
-%             
             
             %generate stimulus
             numberOfstimuli= obj.smallRectFrameRate*obj.stimDuration;
@@ -210,7 +200,7 @@ classdef VS_2componentSpatialNoise < VStim
         
         
         %class constractor
-        function obj=VS_2componentSpatialNoise(w,h)
+        function obj=VS_mrSpatialNoise(w,h)
             obj = obj@VStim(w); %ca
             %get the visual stimulation methods
             obj.trialsPerCategory=obj.defaultTrialsPerCategory;
