@@ -95,6 +95,11 @@ venv.bak/
 .spyproject
 
 # Rope project settings
+
+
+# Matlab Files
+*.asv
+*.mat
 .ropeproject
 
 # mkdocs documentation
