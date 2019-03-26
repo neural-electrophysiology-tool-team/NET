@@ -81,10 +81,6 @@ classdef VS_mrSpatialNoise < VStim
             screenProps=Screen('Resolution',obj.PTB_win);
            
             %generate stimulus
-            numberOfstimuli= obj.smallRectFrameRate*obj.stimDuration;
-            whiteVal=round(obj.meanLuminosity-obj.contrast*obj.meanLuminosity)+1;
-            blackVal=round(obj.meanLuminosity+obj.contrast*obj.meanLuminosity)-1;
-            greyVal=obj. meanLuminosity;
             brtColor = obj.txtDNbrtIntensity*obj.popDNnoiseColor;
             drkColor = obj.txtDNdrkIntensity*obj.popDNnoiseColor;
             scrColor  = obj.txtDNscrIntensity*obj.popDNscrColor;
@@ -104,12 +100,7 @@ classdef VS_mrSpatialNoise < VStim
             xNoisePxls = obj.txtDNnPxls;% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
             yNoisePxls = obj.txtDNnPxls; %num cells y
             nNoisePxls = xNoisePxls * yNoisePxls;
-            %initialize for post hoc monitering of stimuuls timing
-            obj.flipOnsetTimeStamp=nan(obj.trialsPerCategory,numberOfstimuli); %when the flip happened
-            obj.stimOnset=nan(obj.trialsPerCategory,numberOfstimuli);          %estimate of stim onset
-            obj.flipOffsetTimeStamp=nan(obj.trialsPerCategory,numberOfstimuli);  %flip done
-            obj.flipMiss=nan(obj.trialsPerCategory,numberOfstimuli);              %positive for missed stim
-            
+            %initialize for post hoc monitering of stimuuls timing           
             reps= round(obj.txtDNduration/nNoisePxls);
             obj.txtDNduration=reps*nNoisePxls;
             colorsArraySize = obj.txtDNduration*obj.txtDNtmpFrq; % number of times screen changes input
@@ -131,7 +122,7 @@ classdef VS_mrSpatialNoise < VStim
            %main loop - start the session
             WaitSecs(obj.preSessionDelay); %pre session wait time
        
-            if obj.chkDNsinglePxl && ~spars
+            if obj.chkDNsinglePxl
 
                 noisePxlBrt=[];
                 noisePxlDrk=[];
