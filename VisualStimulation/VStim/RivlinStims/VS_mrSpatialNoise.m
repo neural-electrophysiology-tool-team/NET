@@ -111,7 +111,7 @@ classdef VS_mrSpatialNoise < VStim
             
             %run test Flip (sometimes this first flip is slow and so it is not included in the anlysis
             obj.visualFieldBackgroundLuminance=obj.visualFieldBackgroundLuminance;
-            winRect=[round(screenProps.width/2)-round(screenProps.height/2) 0 screenProps.height+round(screenProps.width/2)-round(screenProps.height/2) screenProps.height];  %change this!
+%             winRect=[round(screenProps.width/2)-round(screenProps.height/2) 0 screenProps.height+round(screenProps.width/2)-round(screenProps.height/2) screenProps.height];  %change this!
             
             %sync the computer time with the ttl trace
             obj.sendTTL(1,true); %session start trigger (also triggers the recording start)
@@ -120,7 +120,7 @@ classdef VS_mrSpatialNoise < VStim
             obj.sendTTL(1,true);
             
            %main loop - start the session
-            WaitSecs(obj.preSessionDelay); %pre session wait time
+%             WaitSecs(obj.preSessionDelay); %pre session wait time
        
             if obj.chkDNsinglePxl
 
@@ -233,6 +233,9 @@ classdef VS_mrSpatialNoise < VStim
                 allRectsRight(:, i) = CenterRectOnPointd(baseRect, xPosRight(i), yPosRight(i));
             end
             
+            Screen('FillRect', obj.PTB_win, scrColor, []);
+            Screen('Flip',obj.PTB_win);
+            WaitSecs(obj.txtDNpreStimWait);
             for i = 1:colorsArraySize
                 
                 % Draw the rect to the screen
@@ -293,11 +296,11 @@ classdef VS_mrSpatialNoise < VStim
 %                 
 %             end
 %             
-            Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
-          obj.applyBackgound;
+%             Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+%           obj.applyBackgound;
             Screen('DrawingFinished', obj.PTB_win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
             obj.sendTTL(1,false);
-            WaitSecs(obj.postSessionDelay);
+%             WaitSecs(obj.postSessionDelay);
             
             disp('Session ended');
             
