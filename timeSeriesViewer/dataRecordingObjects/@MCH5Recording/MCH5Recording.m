@@ -29,7 +29,7 @@ classdef MCH5Recording < dataRecording
     info;            % information on recording file
     analogInfo       % information on the analog stream of first recording
     lengthInfo;      % information on recording file length
-%     globalStartTime  % start time within the session
+    nStreams         %number of stream recorded
     streamPaths      % paths to streams
     streamsSubTypes  % type pf streams (electrode, aux, digital)
     electrodeStreamNum %the stream number in h5 file containing raw electrode data (usually 0)
@@ -39,10 +39,13 @@ classdef MCH5Recording < dataRecording
     pathToDigitalDataStreamGroup
     pathToAuxDataStreamGroup
     electrodeInfoChannel
-%     digitalInfoChannel
-%     auxInfoChannel
+    ZeroADValueAnalog % the digital zero value
+    MicrovoltsPerADAnalog % the digital to analog conversion value
+    digitalInfoChannel
+    auxInfoChannel
     unit %Physical unit of the measured sensor value
     exponent %1xn
+    exponentAnalog %1xn
     numOfChannels=252 %number of elecroeds in the MEA
     analogThreshold=-330; %analog photodiode flip indicator
     analogUpLowRange=-315;
@@ -63,7 +66,6 @@ classdef MCH5Recording < dataRecording
         pathToRecording='/Data/Recording_0/';
         pathToAnalogStream = '/Data/Recording_0/AnalogStream/'; %This is in case there is only one recording in HDF5 file. If there are more - code should be revised
         maxNumberOfDigitalChannels=16; %up to 16 digIn channels
-        fileExtension='h5';
    end
     
   properties (Constant = true)
@@ -174,16 +176,6 @@ classdef MCH5Recording < dataRecording
         end
       end
       
-%       if allChannels
-%          tempChannels=zeros(size(V_uV));
-%          for i=1:nCh
-%             tempChannels(i,:,:)=V_uV(obj.n2s(i),:,:); 
-%          end
-%          V_uV=tempChannels;
-%         clear tempChannles
-%       end
-      
-      
       if obj.convertData2Double
           V_uV=double(V_uV);
           for k = 1:size(V_uV, 1)
@@ -252,7 +244,7 @@ classdef MCH5Recording < dataRecording
         if obj.convertData2Double
             V_uV=double(V_uV);
             for k = 1:size(V_uV, 1)
-                V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValue(k)) * obj.MicrovoltsPerAD(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
+                V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValueAnalog(k)) * obj.MicrovoltsPerADAnalog(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
             end
         end
         
@@ -330,9 +322,9 @@ classdef MCH5Recording < dataRecording
                     windowSamples=min(windowSamples,obj.dataLength-startElement(i));
 %                     obj.getDataConfig.startend=[max(0,startTime_ms(i));min(startTime_ms(i)+window_ms,recordingDuration_ms)];
 %                     data=mcstreammex(obj.getDataConfig);
-                    if ~isempty(obj.pathToDigitalDataStreamGroup)
+                    if ~isempty(obj.pathToDigitalDataStreamGroup)   
                         data=h5read(obj.fullFilename,[obj.pathToDigitalDataStreamGroup '/ChannelData'],...
-                            [startElement(i) 1], [windowSamples 1] );
+                           [startElement(i) 1], [windowSamples 1] );
                         D(:,i,1-startSample:endSample)=rem(floor(data.data*pow2(0:-1:(1-obj.maxNumberOfDigitalChannels))),2)';
                         disp('Recording at edge');
                     end
@@ -423,37 +415,13 @@ classdef MCH5Recording < dataRecording
       obj = obj.getRecordingFiles(recordingFile, 'h5');
       
       % Find the .h5 file
-      %[~, name, ~] = fileparts(obj.recordingName);
       obj.fullFilename = fullfile(obj.recordingDir, obj.recordingName);
-      filePrefix=strsplit(obj.recordingName,'_');
-      
-%       %%%YUVAL: CHANGE TO GET RELEVANT TRIGGER PROPERTIES FROM HDF5 %%%%%
-%       triggerFile = dir([obj.recordingDir filesep filePrefix{1} '*.kwe']);
-%       if isempty(triggerFile)
-%           triggerFile = dir([obj.recordingDir filesep '*.kwe']);
-%           disp(['Trigger file with prefix ' filePrefix{1} ' not found!!!!, looking for other .kwe files in the same folder']);
-%       end
-%       if isempty(triggerFile)
-%         error('KwikRecording: Cannot file .kwe file')
-%       elseif length(triggerFile) > 1
-%         warning('KwikRecording: Multiple .kwe file found! using the first one')
-%       end
-%       obj.triggerFilename = fullfile(obj.recordingDir, triggerFile.name);
+
       
       if exist([obj.recordingDir filesep 'metaData.mat'],'file') && ~obj.overwriteMetaData
           obj = loadMetaData(obj); %needs recNameHD5
       else
           obj = extractMetaData(obj);
-      end
-      
-      obj.numRecordings = length(obj.info.Groups);
-      if obj.numRecordings > 1
-          warning('KwikRecording: file contains multiple recordings.')
-      end
-      
-      obj.recNameHD5 = cell(1, obj.numRecordings);
-      for k = 1:obj.numRecordings
-          obj.recNameHD5{k} = obj.info.Groups(k).Name;
       end
      
       %layout
@@ -469,7 +437,8 @@ classdef MCH5Recording < dataRecording
               obj.layoutName='layout_100_12x12.mat';
               obj.electrodePitch=100;
           elseif obj.totalChannels<=252
-              obj.layoutName='layout_100_16x16.mat';
+%               obj.layoutName='layout_100_16x16.mat';
+              obj.layoutName='layout_100_16x16_newSetup.mat';
               obj.electrodePitch=100;
           end
           load(obj.layoutName);
@@ -477,7 +446,7 @@ classdef MCH5Recording < dataRecording
           obj.chLayoutNames=Ena;
           obj.chLayoutPositions=Enp;
       end  
-       obj=obj.configureN2S;
+%        obj=obj.configureN2S; %This was before newSetup layout
     end
     
     function delete(obj) %do nothing
@@ -499,77 +468,80 @@ classdef MCH5Recording < dataRecording
         
         %get start date. This currently only works windows. Otherwise, try
         %using the attribute 'Date' in the h5 file.
-%         dateInTicks=h5readatt(obj.fullFilename,'/Data','DateInTicks'); %This is in .NET date
-%         dt=System.DateTime(dateInTicks); %create .NET DateTime Struct
-%         dateInString=char(dt.ToString);
-%         obj.startDate=datenum(dateInString,'dd/mm/yyyy');
-        obj.startDate = datenum(datetime(h5readatt(obj.fullFilename,'/Data','Date'), 'InputFormat','eeee, MMMMM d, yyyy'));
+        dateInTicks=h5readatt(obj.fullFilename,'/Data','DateInTicks'); %This is in .NET date
+        dt=System.DateTime(dateInTicks); %create .NET DateTime Struct
+        dateInString=char(dt.ToString);
+        obj.startDate=datenum(dateInString,'dd/mm/yyyy');
+        
         obj.info=h5info(obj.fullFilename, obj.pathToAllRecordings);
         obj.analogInfo = h5info(obj.fullFilename, obj.pathToAnalogStream);
-        for i=1:size(obj.analogInfo.Groups,1)
-            obj.streamPaths{i}=obj.analogInfo.Groups(i).Name;
-            temp = h5readatt(obj.fullFilename,obj.streamPaths{i},'DataSubType');
-            obj.streamsSubTypes=[obj.streamsSubTypes,{temp}];
-        end
-%         obj.streamPaths{1}=obj.analogInfo.Groups(1).Name; %should be stream 0 path
-%         obj.streamPaths{2}=obj.analogInfo.Groups(2).Name; %should be stream 1 path
-%         obj.streamPaths{3}=obj.analogInfo.Groups(3).Name; %should be stream 2 path
+        obj.nStreams = size(obj.analogInfo.Groups,1);
         
         %get streams' numbers and paths (for raw electrode, digital and aux
         %streams. Usually it's 0,1,2 but just to make sure
-%         obj.streamsSubTypes={h5readatt(obj.fullFilename,obj.streamPaths{1},'DataSubType'),h5readatt(obj.fullFilename,obj.streamPaths{2},'DataSubType'),h5readatt(obj.fullFilename,obj.streamPaths{3},'DataSubType')};
-%         obj.streamsSubTypes={h5readatt(obj.fullFilename,obj.streamPaths{1},'DataSubType'),h5readatt(obj.fullFilename,obj.streamPaths{2},'DataSubType')};
+        for i=1:obj.nStreams
+            obj.streamPaths{i}=obj.analogInfo.Groups(i).Name;
+            obj.streamsSubTypes{i}=h5readatt(obj.fullFilename,obj.streamPaths{i},'DataSubType');
+        end    
         obj.electrodeStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultRawDataStreamName))-1; %'Electrode';'Auxiliary';'Digital';
         obj.auxStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultAnalogDataStreamName))-1;
         obj.digitalStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultDigitalDataStreamName))-1;
        
-        obj.pathToRawDataStreamGroup=obj.streamPaths{obj.electrodeStreamNum+1}; %these are without '/' ending 
-        if ~isempty(obj.digitalStreamNum)
-            obj.pathToDigitalDataStreamGroup=obj.streamPaths{obj.digitalStreamNum+1};
+        if isempty(obj.electrodeStreamNum)
+            disp('No Electrode Data Recorded!');
+        else
+            obj.pathToRawDataStreamGroup=obj.streamPaths{obj.electrodeStreamNum+1}; %these are without '/' ending 
+            obj.lengthInfo = h5info(obj.fullFilename, [obj.pathToRawDataStreamGroup '/ChannelData']);
+            obj.electrodeInfoChannel=h5read(obj.fullFilename, [obj.pathToRawDataStreamGroup '/InfoChannel']);
+            obj.MicrovoltsPerAD = double(obj.electrodeInfoChannel.ConversionFactor); %this is a nx1 array (n channels)
+            obj.ZeroADValue=double(obj.electrodeInfoChannel.ADZero);
+            obj.sample_ms = double(obj.electrodeInfoChannel.Tick(1))/1000;
+            obj.unit=obj.electrodeInfoChannel.Unit(1);
+            obj.exponent=obj.electrodeInfoChannel.Exponent; 
+            rawDataType=char(obj.electrodeInfoChannel.RawDataType(1));
+            databit=char(obj.electrodeInfoChannel.ADCBits(1));
+            obj.channelNumbers = 1:length(obj.MicrovoltsPerAD);
+            obj.channelNames =  obj.electrodeInfoChannel.Label;
+            obj.timestamps = double(h5read(obj.fullFilename, [obj.pathToRawDataStreamGroup '/ChannelDataTimeStamps']));
         end
-        obj.pathToAuxDataStreamGroup=obj.streamPaths{obj.auxStreamNum+1};
         
-        obj.lengthInfo = h5info(obj.fullFilename, [obj.pathToRawDataStreamGroup '/ChannelData']);
+        if isempty(obj.auxStreamNum)
+            disp('No Analog Data Recorded!');
+        else
+            obj.pathToAuxDataStreamGroup=obj.streamPaths{obj.auxStreamNum+1}; %these are without '/' ending 
+            obj.auxInfoChannel=h5read(obj.fullFilename, [obj.pathToAuxDataStreamGroup '/InfoChannel']);
+            obj.ZeroADValueAnalog=double(obj.auxInfoChannel.ADZero);
+            obj.MicrovoltsPerADAnalog=double(obj.auxInfoChannel.ConversionFactor);
+            obj.exponentAnalog=double(obj.auxInfoChannel.Exponent);
+            if isempty(obj.electrodeStreamNum) %get this from here only if there is no electrode data
+                obj.lengthInfo = h5info(obj.fullFilename, [obj.pathToAuxDataStreamGroup '/ChannelData']);
+                obj.sample_ms = double(obj.auxInfoChannel.Tick(1))/1000; 
+                obj.unit=obj.auxInfoChannel.Unit(1);
+                obj.exponent=obj.auxInfoChannel.Exponent; 
+                obj.channelNumbers = 1:length(obj.MicrovoltsPerADAnalog);
+                obj.channelNames =  obj.auxInfoChannel.Label;
+                obj.timestamps = double(h5read(obj.fullFilename, [obj.pathToAuxDataStreamGroup '/ChannelDataTimeStamps']));
+                rawDataType=char(obj.auxInfoChannel.RawDataType(1));
+                databit=char(obj.auxInfoChannel.ADCBits(1));
+            end
+            obj.analogChannelNumbers=1:length(obj.MicrovoltsPerADAnalog);
+        end
+        if isempty(obj.digitalStreamNum)
+            disp('No Digital Data Recorded!');
+        else
+            obj.pathToDigitalDataStreamGroup=obj.streamPaths{obj.digitalStreamNum+1};
+            obj.digitalInfoChannel=h5read(obj.fullFilename, [obj.pathToDigitalDataStreamGroup '/InfoChannel']);
+        end
         
-        obj.electrodeInfoChannel=h5read(obj.fullFilename, [obj.pathToRawDataStreamGroup '/InfoChannel']);
-%         digitalInfoChannel
-%         auxInfoChannel
-        obj.MicrovoltsPerAD = double(obj.electrodeInfoChannel.ConversionFactor); %this is a nx1 array (n channels)
-        obj.ZeroADValue=double(obj.electrodeInfoChannel.ADZero);
-      
       obj.dataLength = obj.lengthInfo.Dataspace.Size(1);
       obj.totalChannels=obj.lengthInfo.Dataspace.Size(2); 
-      obj.channelNumbers = 1:length(obj.MicrovoltsPerAD);
-      obj.channelNames =  obj.electrodeInfoChannel.Label;
+
       %n2s configuration at the end of class constructor
 %     obj.channelNames = cellfun(@(x) num2str(x), mat2cell(obj.channelNumbers,1,ones(1,numel(obj.channelNumbers))),'UniformOutput',0); 
-      obj.analogChannelNumbers=1; %only one non-electrode analog channel - the aux stream
       
-      obj.sample_ms = double(obj.electrodeInfoChannel.Tick(1))/1000;
       obj.samplingFrequency = 1e3/obj.sample_ms; %Assuming all chanels are the same
       obj.recordingDuration_ms=obj.sample_ms*obj.dataLength;
-%         disp('Extracting time stamp information...');
-        obj.timestamps = double(h5read(obj.fullFilename, [obj.pathToRawDataStreamGroup '/ChannelDataTimeStamps']));
-%         disp('... done');
-
-%       obj.globalStartTime = double(h5readatt(obj.fullFilename, obj.recNameHD5{1}, 'start_time'));
-
-%       try
-%         obj.recordingDuration_ms = double(h5readatt(obj.fullFilename,[obj.recNameHD5{1} '/data'], 'valid_samples'));
-%         obj.recordingDuration_ms = 1000 * obj.recordingDuration_ms ./ obj.samplingFrequency;
-%         obj.recordingDuration_ms = max(obj.recordingDuration_ms);
-%       catch
-%         try
-%           obj.recordingDuration_ms = double(h5readatt(obj.fullFilename, '/', 'recordingDuration'));
-%         catch
-%           obj.recordingDuration_ms = 0;
-%         end
-%       end     
       
-      obj.unit=obj.electrodeInfoChannel.Unit(1);
-      obj.exponent=obj.electrodeInfoChannel.Exponent; 
-      rawDataType=char(obj.electrodeInfoChannel.RawDataType(1));
-      databit=char(obj.electrodeInfoChannel.ADCBits(1));
       if strcmp(rawDataType,'Int'), rawDataType='int'; end
       if databit==24, databit=32; end %MCs ADC works in 24 bits quantization, but stores in 32 bit format (Try to get aroung this)
       obj.datatype = [rawDataType '32'];                
