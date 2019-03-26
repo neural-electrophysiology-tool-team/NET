@@ -3,13 +3,26 @@ classdef VS_mrSpatialNoise < VStim
         %all these properties are modifiable by user and will appear in visual stim GUI
         %Place all other variables in hidden properties
         %test
-        meanLuminosity = 128;
-        contrast = 1;
-        largeRectNum=10;
-        smallRectNum=100;
-        smallRectFrameRate=30 %Hz
-        largeRectSparsity=5;
-        smallRectSparsity=66;
+    txtDNbrtIntensity    = 255; %white
+    txtDNdrkIntensity    = 0; %black
+    txtDNscrIntensity    = 255/2;
+    popDNnoiseColor      = [1 1 1]; %black/white
+    popDNscrColor        = [1 1 1]; %black/white
+    txtDNduration        = 300; %300sec = 5min
+    txtDNtmpFrq          = 5; %hz
+    txtDNnPxls           = 54; 
+    chkDNmaskRect        = 1;
+    txtDNrectWidth       = 126;
+    txtDNrectHeight      = 252;
+    txtDNpreStimWait     = 10;
+    chkDNbinaryNoise     = 1;
+    chkDNsinglePxl       = 1;
+    txtDNmaskRadius      = 2000;
+    chkDNbrtGradualNoise = 1;
+    txtDNsaveImageTime   = 2;
+    chkDNsaveImage       = 0;
+    padRows = 5;
+    padColumns = 5;
         
         
     end
@@ -24,6 +37,32 @@ classdef VS_mrSpatialNoise < VStim
         smallRectFrameRateTxt='temporal frequency (Hz)';
         largeRectSparsityTxt='%of non grey squares';
         smallRectSparsityTxt='%of non grey squares';
+        
+        %     txtDNbrtIntensity     scalar, between 0 and 255, the color of the
+%                           bright noise
+%     txtDNdrkIntensity     scalar, between 0 and 255, the color of the 
+%                           dark noise 
+%     txtDNscrIntensity;    scalar, between 0 and 255, the color of the screen
+%                           between intervals
+%     popDNnoiseColor       RGB colors (B/W, green, UV) for noise
+%     popDNscrColor         RGB colors (B/W, green, UV) for screen
+%     txtDNduration         Duration of the stimulus
+%     txtDNtmpFrq           Temporal Frq of frames (frames/s)
+%     txtDNnPxls            Number of noise pixels in the x axis
+%     txtDNnPxls            Number of noise pixels in the y axis
+%     chkDNmaskRect 
+%     txtDNrectWidth 
+%     txtDNrectHeight 
+%     txtDNpreStimWait      scalar,time (s) to wait before beginning recording
+%     chkDNbinaryNoise  
+%     chkDNsinglePxl        Black white pixels or gradual colors
+%     txtDNmaskRadius
+%     chkDNbrtGradualNoise  Black white pixels or gradual bright colors
+%     txtDNsaveImageTime
+%     chkDNsaveImage
+%     btnDNdebug            Debug mode when there in no parallel connection
+%     padRows                  add zeros to fix dimentions of pixels in x axis
+%     padColumns                  add zeros to fix dimentions of pixels in y axis
         remarks={''};
     end
     properties (Hidden, SetAccess=protected)
