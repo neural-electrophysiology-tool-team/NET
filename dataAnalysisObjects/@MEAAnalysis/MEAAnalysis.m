@@ -235,7 +235,7 @@ classdef MEAAnalysis < recAnalysis
             par.saveFileName=obj.getFileName(dbstack,par.saveFileName); %extracts file save name
             
             %save/load data
-            if exist(par.saveFileName,'file') & ~par.overwrite & ~par.manual & ~par.exportGS 
+            if exist(par.saveFileName,'file') & ~par.overwrite & ~par.manual & ~par.exportGS
                 if nargout==1
                     data=load(par.saveFileName);
                 else
@@ -256,34 +256,35 @@ classdef MEAAnalysis < recAnalysis
                 obj.currentDataObj.convertLayouteJRClust(par.electrodePadSize); %electrode side is sqrt(pi*15^2)=26.6;
                 disp('Layout converted to JRclust format');
             end
-
+            
             % Build files
             if isempty(par.fullFile)
                 par.fullFile=[recDir filesep obj.currentDataObj.dataFileNames{1}];
             end
             fullProbeFile=[recDir filesep par.layoutName];
             par.fullParamFile=[recDir filesep recName '_' par.layoutName(1:end-4) '.prm'];
-
+            
             if ~exist(par.fullParamFile,'file')
-                jrc3('makeprm',par.fullFile,fullProbeFile);
+                %jrc('makeprm',par.fullFile,fullProbeFile);
+                jrc('bootstrap',par.fullFile,fullProbeFile);
             else
                 disp('Prm file already exist');
             end
             
             if ~exist([par.fullParamFile(1:end-4) '_ksort.mat'],'file')
-                jrc3('import-kilosort',par.fullParamFile);
+                jrc('import-kilosort',par.fullParamFile);
             else
                 disp('Data from ksort already imported');
             end
-                        
+            
             if par.manual
                 disp('Deleting results file since manual mode is run again');
-                jrc3('manual',par.fullParamFile);
+                jrc('manual',par.fullParamFile);
                 return;
             end
             
-            if ~exist([par.fullParamFile(1:end-4) '_gridSorter.mat'],'file') | par.exportGS
-                jrc3('export-gs',par.fullParamFile);
+            if ~exist([par.fullParamFile(1:end-4) '_gridSorter.mat'],'file') || par.exportGS
+                jrc('export-gs',par.fullParamFile);
                 S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
                 save(par.saveFileName,'par','S','-v7.3');
             else
@@ -291,18 +292,18 @@ classdef MEAAnalysis < recAnalysis
             end
             
             if par.exportGS
-                jrc3('export-gs',par.fullParamFile);
+                jrc('export-gs',par.fullParamFile);
                 S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
                 save(par.saveFileName,'par','S','-v7.3');
             end
             
-            %jrc3('detect',par.fullParamFile);
-            %jrc3('spikesort',par.fullParamFile);
-            %jrc3('cluster',par.fullParamFile);
-            %jrc3('manual',par.fullParamFile);
-            %jrc3('export-spkwav',par.fullParamFile);
-            %jrc3('import-gs',par.fullParamFile);
-            %jrc3('export-gs',par.fullParamFile);
+            %jrc('detect',par.fullParamFile);
+            %jrc('spikesort',par.fullParamFile);
+            %jrc('cluster',par.fullParamFile);
+            %jrc('manual',par.fullParamFile);
+            %jrc('export-spkwav',par.fullParamFile);
+            %jrc('import-gs',par.fullParamFile);
+            %jrc('export-gs',par.fullParamFile);
             
         end
         
