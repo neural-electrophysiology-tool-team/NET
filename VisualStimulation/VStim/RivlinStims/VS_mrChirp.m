@@ -6,7 +6,6 @@ classdef VS_mrChirp < VStim
         txtCt1 = 10;
         txtCf1 = 20;
         popCmethods = 1;
-        txtCnumTrials = 1;
         txtCpreStimWait = 1;
         txtCinterStimWait = 0.5;
         txtCSintervalIntensity = 255/2;
@@ -99,6 +98,7 @@ classdef VS_mrChirp < VStim
             obj.sendTTL(1,true)
             for trial = 1:length(obj.txtCradius)
                 obj.sendTTL(2,true);
+                WaitSecs(2);
                 for tStim =1: length(crp)
                     Screen('FillRect', window, interlColor, []);
                     crpColor = round(crp(tStim)*obj.popCchirpColor*255);
@@ -111,11 +111,11 @@ classdef VS_mrChirp < VStim
                 end
                 Screen('FillRect', window, interlColor);
                 Screen('Flip', window);
-                obj.applyBackgound;
                 obj.sendTTL(2,false);
                 WaitSecs(3);
                 WaitSecs(obj.txtCinterStimWait);
             end
+             obj.applyBackgound;
              Screen('DrawingFinished', obj.PTB_win);
             obj.sendTTL(1,false);
         end
