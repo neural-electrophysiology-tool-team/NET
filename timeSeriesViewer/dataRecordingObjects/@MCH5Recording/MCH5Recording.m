@@ -53,6 +53,7 @@ classdef MCH5Recording < dataRecording
     analogDownHighRange=-350;
     analogDownLowRange=-370;
     includeOnlyDigitalDataInTriggers=0; %this is to make frameTimeFromDiode.m to work
+    fileExtension = 'h5'
   end
   
    properties (Constant, Hidden)

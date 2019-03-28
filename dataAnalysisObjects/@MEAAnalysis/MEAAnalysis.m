@@ -165,21 +165,21 @@ classdef MEAAnalysis < recAnalysis
                 fprintf('\nKilo-sort only runs on binaryData class!!!\nYou can use the dataRecording.export2Binary method to convert to this format\n');
                 return;
             end
-            if isempty('make_eMouseData.m')
+            if exist('make_eMouseData_drift', 'file')==0
                 fprintf('\nKilo-sort is not on the Matlab path, please add to path and run again!!!');
                 return;
-            else
-                fprintf('\nKilo-sort not on path, trying to find it...');
-                NSKToolboxDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
-                
-                tmp = strsplit(NSKToolboxDir, filesep);
-                matlabFunctionsDir = strjoin(tmp(1:end-1),filesep);
-                if exist([matlabFunctionsDir filesep 'spikeSorting'],'dir')
-                    addpath(genpath([matlabFunctionsDir filesep 'spikeSorting' filesep 'kiloSort']));
-                    fprintf('\nPath added successfully.\n');
-                else
-                    fprintf('Did not find kilosort path!\nPlease add manually\n');
-                end
+%             else
+%                 fprintf('\nKilo-sort not on path, trying to find it...');
+%                 NSKToolboxDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
+%                 
+%                 tmp = strsplit(NSKToolboxDir, filesep);
+%                 matlabFunctionsDir = strjoin(tmp(1:end-1),filesep);
+%                 if exist([matlabFunctionsDir filesep 'spikeSorting'],'dir')
+%                     addpath(genpath([matlabFunctionsDir filesep 'spikeSorting' filesep 'kiloSort2']));
+%                     fprintf('\nPath added successfully.\n');
+%                 else
+%                     fprintf('Did not find kilosort path!\nPlease add manually\n');
+%                 end
             end
             
             nCh=numel(obj.currentDataObj.channelNumbers);
