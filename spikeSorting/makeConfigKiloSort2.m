@@ -81,20 +81,21 @@ dd                  = load('PCspikes2.mat'); % you might want to recompute this 
 ops.wPCA            = dd.Wi(:,1:7);   % PCs 	
 
 ops.trange = [0 Inf];
-ops.NchanTOT    = 252;
+% ops.NchanTOT    = 252;
+ops.NchanTOT    = nCh;
 %%
-if nargin==0
+if nargin~=0
     defaultArguments=fields(ops);
     for i=1:numel(defaultArguments)
         eval(['defaultArgumentValue=ops.' defaultArguments{i} ';']);
-        if numel(defaultArgumentValue)==1
-            disp([defaultArguments{i} ' = ' num2str(defaultArgumentValue)]);
-        else
-            fprintf([defaultArguments{i} ' = ']);
-            disp(defaultArgumentValue);
-        end
+%         if numel(defaultArgumentValue)==1
+%             disp([defaultArguments{i} ' = ' num2str(defaultArgumentValue)]);
+%         else
+%             fprintf([defaultArguments{i} ' = ']);
+%             disp(defaultArgumentValue);
+%         end
     end
-    return;
+%     return;
 end
 
 %options depending on the input data object
