@@ -183,8 +183,8 @@ classdef MEAAnalysis < recAnalysis
             end
             
             nCh=numel(obj.currentDataObj.channelNumbers);
-            NT=64+2^round(log2(1024*(128/nCh)))*1024;
-            
+%             NT=64+2^round(log2(1024*(128/nCh)))*1024;
+            NT = 32+2^round(log2(1024*(32/nCh)))*64;
             % Run the configuration file, it builds the structure of options (ops)
             ops=makeConfigKiloSort2(obj.currentDataObj.recordingDir,nCh,...
                 'GPU',1,'parfor',1,'NT',NT,'fbinary',[obj.currentDataObj.recordingDir filesep obj.currentDataObj.dataFileNames{1}]);
