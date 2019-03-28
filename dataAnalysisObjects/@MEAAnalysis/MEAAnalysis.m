@@ -187,7 +187,8 @@ classdef MEAAnalysis < recAnalysis
             NT = 32+2^round(log2(1024*(32/nCh)))*64;
             % Run the configuration file, it builds the structure of options (ops)
             ops=makeConfigKiloSort2(obj.currentDataObj.recordingDir,nCh,...
-                'GPU',1,'parfor',1,'NT',NT,'fbinary',[obj.currentDataObj.recordingDir filesep obj.currentDataObj.dataFileNames{1}]);
+                'GPU',1,'parfor',1,'NT',NT,'fbinary',[obj.currentDataObj.recordingDir filesep obj.currentDataObj.dataFileNames{1}],...
+                'fs',obj.currentDataObj.samplingFrequency);
             
             layoutName=[obj.currentDataObj.layoutName '_JRC.prb'];
             resultsFileName=[obj.currentDataObj.recordingDir obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName '_JRC_ksort'];
