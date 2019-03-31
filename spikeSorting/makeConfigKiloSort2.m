@@ -2,7 +2,7 @@ function ops=makeConfigKiloSort2(sortingDir,nCh,varargin)
 
 ops.datatype = 'bin';  % binary ('dat', 'bin') or 'openEphys'		
 ops.GPU                 = 1; % has to be 1, no CPU version yet, sorry
-ops.parfor              = 0;
+ops.parfor              = 1;
 ops.verbose             = 1;
 ops.showfigures         = 1;
 
