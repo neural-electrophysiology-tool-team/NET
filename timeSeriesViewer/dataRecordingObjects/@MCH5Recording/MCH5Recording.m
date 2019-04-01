@@ -322,10 +322,12 @@ classdef MCH5Recording < dataRecording
                     windowSamples=min(windowSamples,obj.dataLength-startElement(i));
 %                     obj.getDataConfig.startend=[max(0,startTime_ms(i));min(startTime_ms(i)+window_ms,recordingDuration_ms)];
 %                     data=mcstreammex(obj.getDataConfig);
-                    data=h5read(obj.fullFilename,[obj.pathToDigitalDataStreamGroup '/ChannelData'],...
-                       [startElement(i) 1], [windowSamples 1] );
-                    D(:,i,1-startSample:endSample)=rem(floor(data.data*pow2(0:-1:(1-obj.maxNumberOfDigitalChannels))),2)';
-                    disp('Recording at edge');
+                    if ~isempty(obj.pathToDigitalDataStreamGroup)   
+                        data=h5read(obj.fullFilename,[obj.pathToDigitalDataStreamGroup '/ChannelData'],...
+                           [startElement(i) 1], [windowSamples 1] );
+                        D(:,i,1-startSample:endSample)=rem(floor(data.data*pow2(0:-1:(1-obj.maxNumberOfDigitalChannels))),2)';
+                        disp('Recording at edge');
+                    end
                 end
             end
 %         end
@@ -416,10 +418,10 @@ classdef MCH5Recording < dataRecording
       obj.fullFilename = fullfile(obj.recordingDir, obj.recordingName);
 
       
-      if exist([obj.recordingDir filesep obj.recordingName 'metaData.mat'],'file') && ~obj.overwriteMetaData
-          obj = loadMetaData(obj); %needs recNameHD5
+      if exist([obj.recordingDir filesep obj.recordingName '_metaData.mat'],'file') && ~obj.overwriteMetaData
+          obj = obj.loadMetaData; %needs recNameHD5
       else
-          obj = extractMetaData(obj);
+          obj = obj.extractMetaData;
       end
      
       %layout

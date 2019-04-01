@@ -501,5 +501,6 @@ classdef (Abstract) dataRecording < handle
             end
             obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
         end
+
     end
 end
