@@ -273,7 +273,7 @@ classdef KwikRecording < dataRecording
       catch
         obj.samplingFrequency = double(h5read(obj.fullFilename, [obj.recNameHD5{1} '/application_data/channel_sample_rates']));
       end
-      obj.samplingFrequency=obj.samplingFrequency(1);
+%       obj.samplingFrequency=obj.samplingFrequency(1);
       
       try
         disp('Extracting time stamp information...');
