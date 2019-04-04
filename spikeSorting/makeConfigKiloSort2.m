@@ -14,14 +14,14 @@ ops.whitening       = 'full'; % type of whitening (default 'full', for 'noSpikes
 ops.spkTh           = -6;      % spike threshold in standard deviations (-6)
 ops.reorder         = 1;       % whether to reorder batches for drift correction. 
 ops.nskip           = 25;  % how many batches to skip for determining spike PCs
-ops.whiteningRange      = 36; % number of channels to use for whitening each channel
-ops.nSkipCov            = 1; %not sure about this. % compute whitening matrix from every N-th batch (1)
+ops.whiteningRange      = 32; % number of channels to use for whitening each channel
+ops.nSkipCov            = 25; %not sure about this. % compute whitening matrix from every N-th batch (1)
 
 ops.fs = 10000;  
 % frequency for high pass filtering (150)
 ops.fshigh = 250;   
 % minimum firing rate on a "good" channel (0 to skip)
-ops.minfr_goodchannels = 0; 
+ops.minfr_goodchannels = 0.1; 
 % threshold on projections (like in Kilosort1, can be different for last pass like [10 4])
 ops.Th = [6 12 12];  
 % how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot) 
@@ -56,8 +56,9 @@ ops.maxFR               = 20000;  % maximum number of spikes to extract per batc
 ops.fshigh              = 250;   % frequency for high pass filtering		
 ops.fslow               = 3000;   % frequency for low pass filtering (optional)
 
-ops.Nfilt               = 4; %1024; % max number of clusters
-ops.nfilt_factor        = 4; % max number of clusters per good channel (even temporary ones)
+ops.Nfilt               = 64; %1024; % max number of clusters
+ops.nfilt_factor        = 3; % max number of clusters per good channel (even temporary ones)
+% ops.Nfilt               = round(nCh*ops.FiltersPerCh/32)*32;  % number of clusters to use (2-4 times more than Nchan, should be a multiple of 32)    
 ops.ntbuff              = 64;    % samples of symmetrical buffer for whitening and spike detection
 ops.NT                  = 128*1024+ops.ntbuff; % must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory). 
 
@@ -108,9 +109,9 @@ ops.root                = sortingDir; % 'openEphys' only: where raw files are
 % define the channel map as a filename (string) or simply an array		
 ops.chanMap             = fullfile(sortingDir, channelMapFile); % make this file using createChannelMapFile.m		
 % ops.chanMap = 1:ops.Nchan; % treated as linear probe if unavailable chanMap file		
-ops.Nfilt               = round(nCh*ops.FiltersPerCh/32)*32;  % number of clusters to use (2-4 times more than Nchan, should be a multiple of 32)    
 
-
+ops.nt0 = 25;
+ops.fig = 0;
 %% Overwrite with input values
 for i=1:2:length(varargin)
     eval(['ops.' varargin{i} '=' 'varargin{i+1};'])
