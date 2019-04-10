@@ -10,13 +10,12 @@ classdef VS_mrAlignMEA < VStim
         %trialsPerCategory = 10;
         %preSessionDelay = 10;
         luminosity = 255; %(L_high-L_low)/L_low
-        pixelsBetweenCircs = 100;
-        radiusCircs = 15;
-        rowOffset = 200;
-        colOffset = 125;
-        rotation = 0;
+        pixelpersq = 10;
+        numrows = 8;
+        numcols = 8;
         lineWidth = 10;
-        squareEdge = 20;
+        rotation=0;
+        
     end
     properties (Hidden,Constant)
         luminosityTxt='The luminocity value for the stim';
@@ -38,24 +37,39 @@ classdef VS_mrAlignMEA < VStim
             T=ones(obj.rect([4 3]))*obj.visualFieldBackgroundLuminance;
             T(round(obj.centerY-obj.lineWidth/2):round(obj.centerY+obj.lineWidth/2),:)=obj.luminosity;
             T(:,round(obj.centerX-obj.lineWidth/2):round(obj.centerX+obj.lineWidth/2))=obj.luminosity;
-            %make square
-            T(round(obj.centerY+50):round(obj.centerY+50+obj.squareEdge),...
-                round(obj.centerX-100):round(obj.centerX-100+obj.squareEdge))=obj.luminosity;
-            centerX = obj.colOffset;
-            for i=1:2
-                centerY = obj.rowOffset;
-                centerX = centerX  + obj.pixelsBetweenCircs;
-                circlePixels = (rowsInImage - centerY).^2 ...
-                        + (columnsInImage - centerX).^2 <= obj.radiusCircs.^2;
-                    T = T+circlePixels*obj.luminosity;
-                    
-                    for j=2:2
-                        centerY = centerY + obj.pixelsBetweenCircs;
-                        circlePixels = (rowsInImage - centerY).^2 ...
-                            + (columnsInImage - centerX).^2 <= obj.radiusCircs.^2;
-                        T = T+circlePixels*obj.luminosity;
-                    end
+%             T(round(obj.centerY+50):round(obj.centerY+50+obj.squareEdge),...
+%                 round(obj.centerX-100):round(obj.centerX-100+obj.squareEdge))=obj.luminosity;
+            
+            board = checkerboard(obj.pixelpersq,obj.numrows,obj.numcols);
+            board = board > 0.5;
+            board = board * obj.luminosity;
+            board(board == 0) = obj.visualFieldBackgroundLuminance;
+            board = padarray(board,[obj.lineWidth, obj.lineWidth],obj.luminosity,'both');
+            
+            if size(board,1)>size(T,1)
+               board = imresize(board,[size(T,1),size(T,2)]); 
+            else
+               [x,y] = RectCenter(obj.rect);
+               newRect = CenterRectOnPoint([0,0,size(board,1),size(board,2)],x,y);
+               T(newRect(2):newRect(4)-1,newRect(1):newRect(3)-1)=board;
             end
+            
+            
+%             centerX = obj.colOffset;
+%             for i=1:2
+%                 centerY = obj.rowOffset;
+%                 centerX = centerX  + obj.pixelsBetweenCircs;
+%                 circlePixels = (rowsInImage - centerY).^2 ...
+%                         + (columnsInImage - centerX).^2 <= obj.radiusCircs.^2;
+%                     T = T+circlePixels*obj.luminosity;
+%                     
+%                     for j=2:2
+%                         centerY = centerY + obj.pixelsBetweenCircs;
+%                         circlePixels = (rowsInImage - centerY).^2 ...
+%                             + (columnsInImage - centerX).^2 <= obj.radiusCircs.^2;
+%                         T = T+circlePixels*obj.luminosity;
+%                     end
+%             end
             T(T>255)=255;
 %             
 %             T(round(obj.centerY-obj.lineWidth/2):round(obj.centerY+obj.lineWidth/2),:)=obj.luminosity;
@@ -84,6 +98,7 @@ classdef VS_mrAlignMEA < VStim
                 [keyIsDown, ~, keyCode] = KbCheck;
                 if keyCode(obj.escapeKeyCode)
                     obj.visualFieldBackgroundLuminance=obj.visualFieldBackgroundLuminance; %rest the stimulation screen
+                    obj.applyBackgound;
                     Screen('Flip',obj.PTB_win);
                     return;
                 end
