@@ -33,8 +33,7 @@ classdef VS_mrAlignMEA < VStim
     methods
         function obj=run(obj)
             %draw cross hair
-            
-             
+
             [columnsInImage, rowsInImage] = meshgrid(1:obj.rect(3), 1:obj.rect(4));
             T=ones(obj.rect([4 3]))*obj.visualFieldBackgroundLuminance;
             T(round(obj.centerY-obj.lineWidth/2):round(obj.centerY+obj.lineWidth/2),:)=obj.luminosity;
