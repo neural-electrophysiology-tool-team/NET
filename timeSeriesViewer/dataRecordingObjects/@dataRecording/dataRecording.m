@@ -143,7 +143,7 @@ classdef (Abstract) dataRecording < handle
                     if nargin==2
                         load(fileName);
                     else
-                        load([obj.recordingDir filesep obj.recordingName '_metaData'],'metaData');
+                        load([obj.recordingDir filesep obj.recordingName '_metaData.mat'],'metaData');
                     end
                     fieldNames=fieldnames(metaData);
                     for i=1:numel(fieldNames)
