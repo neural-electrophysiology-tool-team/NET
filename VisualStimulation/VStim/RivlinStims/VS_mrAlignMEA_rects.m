@@ -1,4 +1,4 @@
-classdef VS_mrAlignMEA < VStim
+classdef VS_mrAlignMEA_rects < VStim
     properties
         %all these properties are modifiable by user and will appear in visual stim GUI
         %Place all other variables in hidden properties
@@ -10,9 +10,10 @@ classdef VS_mrAlignMEA < VStim
         %trialsPerCategory = 10;
         %preSessionDelay = 10;
         luminosity = 255; %(L_high-L_low)/L_low
-        pixelpersq = 10;
-        numrows = 8;
-        numcols = 8;
+        height = 400;
+        width = 300;
+        rectHeight = 10;
+        rectWidth = 10;
         lineWidth = 10;
         rotation=0;
         
@@ -37,27 +38,22 @@ classdef VS_mrAlignMEA < VStim
             T=ones(obj.rect([4 3]))*obj.visualFieldBackgroundLuminance;
             T(round(obj.centerY-obj.lineWidth/2):round(obj.centerY+obj.lineWidth/2),:)=obj.luminosity;
             T(:,round(obj.centerX-obj.lineWidth/2):round(obj.centerX+obj.lineWidth/2))=obj.luminosity;
-%             T(round(obj.centerY+50):round(obj.centerY+50+obj.squareEdge),...
-%                 round(obj.centerX-100):round(obj.centerX-100+obj.squareEdge))=obj.luminosity;
-            
-            board = checkerboard(obj.pixelpersq,obj.numrows,obj.numcols);
-           
+            [n1, n2] = ndgrid(1:obj.height, 1:obj.width);
+            I = (-1).^(floor(n1/obj.rectHeight) + floor(n2/obj.rectWidth));
+            % Make it a binary image of 0s and 1s instead of -1s and 1s.
+            board = I == 1;
             board = padarray(board,[obj.lineWidth, obj.lineWidth],obj.luminosity,'both');
             
             if size(board,1)>size(T,1)
-                board = board > 0.5;
                 board = board * obj.luminosity;
                 board(board == 0) = obj.visualFieldBackgroundLuminance;
                T = imresize(board,[size(T,1),size(T,2)]); 
             else
-               board = board > 0.5;
-               board = imresize(board,[round(size(board,1)*(800/600)),size(board,2)], 'bilinear');
-               board = board > 0.5;
                board = board * obj.luminosity;
                board(board == 0) = obj.visualFieldBackgroundLuminance;
                [x,y] = RectCenter(obj.rect);
-               newRect = CenterRectOnPoint([0,0,size(board,1),size(board,2)],x,y);
-               T(newRect(2):newRect(4)-1,newRect(1):newRect(3)-1)=board';
+               newRect = CenterRectOnPoint([0,0,size(board,2),size(board,1)],x,y);
+               T(newRect(2):newRect(4)-1,newRect(1):newRect(3)-1)=board;
             end
             
             
@@ -116,7 +112,7 @@ classdef VS_mrAlignMEA < VStim
             outStats=[];
         end
         %class constractor
-        function obj=VS_mrAlignMEA(w,h)
+        function obj=VS_mrAlignMEA_rects(w,h)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
             obj.visualFieldBackgroundLuminance=0;
