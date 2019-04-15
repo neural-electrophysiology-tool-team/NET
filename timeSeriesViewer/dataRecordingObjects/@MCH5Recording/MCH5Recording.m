@@ -355,7 +355,11 @@ classdef MCH5Recording < dataRecording
         %        calculated (up to obj.maxNumberOfDigitalChannels). [1 2 4]
         %        listens to bits 1,2,4
         %Output: T_ms - trigger times [ms] - different triggers are arranged in a cell array
-        
+        if isempty(obj.digitalStreamNum)
+            disp('No Digital Data Found!\n')
+            T_ms=[];
+            return
+        end
         if nargin==4
             [D,Ttmp]=getDigitalData(obj,startTime_ms,window_ms);
         elseif nargin==3
