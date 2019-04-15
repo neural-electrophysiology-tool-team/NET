@@ -27,7 +27,7 @@ colormapFiles=dir([AVG.Params.colormapFileDirectory 'colormap*.mat']);
 AVG.Params.colormapList=cellfun(@(x) x(1:end-4),{colormapFiles.name},'UniformOutput',0);
 AVG.Params.currentColormap=find(strcmp(AVG.Params.colormapList,AVG.Params.defaultColorMap));
 AVG.Params.colormap=load(AVG.Params.colormapList{AVG.Params.currentColormap},'cmap');
-AVG.Params.colormap=AVG.Params.colormap.cmap;
+AVG.Params.colormap=AVG.Params.colormap.cm;
 
 AVG.Params.defaultActiveChannels=[];
 %AVG.Params.defaultPlotName='ActivityTracePhysicalSpace'; %out of the plot list
