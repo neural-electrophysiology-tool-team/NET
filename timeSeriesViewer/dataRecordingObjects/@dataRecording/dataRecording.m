@@ -45,11 +45,9 @@ classdef (Abstract) dataRecording < handle
         function delete(obj) %closing all open files when object is deleted
             obj=closeOpenFiles(obj);
         end
-        
         function obj=closeOpenFiles(obj)
-%             fclose(obj.fid);
+             fclose(obj.fid);
         end
-        
         function [V_uV,t_ms]=getData(obj,channels,startTime_ms,window_ms,name)
             %Extract recording data from file to memory
             %Usage: [V_uV,t_ms]=obj.getData(channels,startTime_ms,window_ms);
@@ -146,7 +144,7 @@ classdef (Abstract) dataRecording < handle
                     if nargin==2
                         load(fileName);
                     else
-                        load([obj.recordingDir filesep obj.recordingName '_metaData'],'metaData');
+                        load([obj.recordingDir filesep obj.recordingName '_metaData.mat'],'metaData');
                     end
                     fieldNames=fieldnames(metaData);
                     for i=1:numel(fieldNames)
@@ -289,7 +287,7 @@ classdef (Abstract) dataRecording < handle
             
         end
 
-        function []=convertLayoutJRClust(obj,padSize,outputName)
+        function []=convertLayouteJRClust(obj,padSize,outputName)
             %convertLayouteJRClust(obj,padSize,outputName)
             %Make probe (.prb) file for using with jrclust
             %pad size - [height (y),widht (x)]
@@ -328,14 +326,45 @@ classdef (Abstract) dataRecording < handle
                 end
             end
             
-            if ~strcmp(obj.datatype,targetDataType)
-                fprintf('Recording data type different from target data type!!!!\nConverting from %s to %s!',obj.datatype,targetDataType);
-                zeroValue=2^16/2;
-                convertDataType=true;
-            else
-                zeroValue=0;
-                convertDataType=false;
+            switch obj.datatype
+                case targetDataType
+                   zeroValue=0;
+                   convertDataType=false; %switch from uint to int
+                   convertTo16=false; %switch from 32int to 16int
+                   useDouble=false; %other unknown type, us the data converted first to uV
+                case 'uint16'
+                   fprintf('Recording data type different from target data type!!!!\nConverting from %s to %s!\n',obj.datatype,targetDataType);
+                   bits=16;
+                   zeroValue=2^bits/2;
+                   convertDataType=true;
+                   convertTo16=false;
+                   useDouble=false;
+                case 'int32'
+                    fprintf('Recording data type different from target data type!!!!\nConverting from %s to %s!\n',obj.datatype,targetDataType);
+                    zeroValue=0;
+                    convertTo16=true;
+                    convertDataType=false;
+                    useDouble=false;
+                case 'uint32'
+                    fprintf('Recording data type different from target data type!!!!\nConverting from %s to %s!\n',obj.datatype,targetDataType);
+                    bits=32;
+                    zeroValue=2^bits/2;
+                    convertDataType=true;
+                    convertTo16=true;
+                    useDouble=false;
+                otherwise
+                    useDouble=true;
             end
+            
+%           if ~strcmp(obj.datatype,targetDataType)
+%                 fprintf('Recording data type different from target data type!!!!\nConverting from %s to %s!',obj.datatype,targetDataType);
+%                 zeroValue=2^16/2;
+%                 convertDataType=true;
+%             else
+%                 zeroValue=0;
+%                 convertDataType=false;
+%             end
+            
             
             %converts data recording object to kilo sort binary format for sorting
             if nargin<3
@@ -356,16 +385,43 @@ classdef (Abstract) dataRecording < handle
             if ~exist(targetFile,'file')
                 %open data file
                 fid = fopen(targetFile, 'w+');
-                obj.convertData2Double=0;
+                
+                tempConvertData2Double=obj.convertData2Double;
+                obj.convertData2Double=useDouble;
                 
                 fprintf('\nConverting blocks to binary %s format(/%d) : ',targetDataType,numel(startTimes));
                 nDigits=0;
                 for j=1:numel(startTimes)
                     fprintf([repmat('\b',1,nDigits) '%d'],j);nDigits=length(num2str(j));
-                    if ~convertDataType
+                    if ~useDouble
+                        if ~convertDataType
+                            data=squeeze(obj.getData(dataChannels,startTimes(j),endTimes(j)-startTimes(j)));
+                            if convertTo16 %data is 32bit,convert to 16 with saturation
+                                saturation=32767; %2^15 -1 maximal value of 16bit
+                                data(data>saturation)=saturation;
+                                data(data<(-saturation))=-saturation;
+                                data=int16(data);
+                            end
+                        else %convert from uint to int
+                            if ~convertTo16
+                                data=int16(int32(squeeze(obj.getData(dataChannels,startTimes(j),endTimes(j)-startTimes(j))))-zeroValue);
+                            else
+                                %convert to signed
+                                data=int32(int64(squeeze(obj.getData(dataChannels,startTimes(j),endTimes(j)-startTimes(j))))-zeroValue);
+                                %convert to 16 w saturation
+                                saturation=32767; %2^15 -1 maximal value of 16bit
+                                data(data>saturation)=saturation;
+                                data(data<(-saturation))=-saturation;
+                                data=int16(data);
+                            end    
+                        end
+                    else %unknown data type - get data in uV and convert to 16bit
                         data=squeeze(obj.getData(dataChannels,startTimes(j),endTimes(j)-startTimes(j)));
-                    else
-                        data=int16(int32(squeeze(obj.getData(dataChannels,startTimes(j),endTimes(j)-startTimes(j))))-zeroValue);
+                        data=(data+obj.ZeroADValue)/obj.MicrovoltsPerAD(1);
+                        saturation=32767; %2^15 -1 maximal value of 16bit
+                        data(data>saturation)=saturation;
+                        data(data<(-saturation))=-saturation;
+                        data=int16(data);
                     end
                     if ~isempty(medianFilterGroup)
                         for i=1:numel(medianFilterGroup)
@@ -377,6 +433,8 @@ classdef (Abstract) dataRecording < handle
                 end
                 fclose(fid);
                 fprintf('\nConversion complete (binary %s)\n',targetDataType);
+                
+                obj.convertData2Double=tempConvertData2Double; %return value to what it was
             else
                 disp('file already exists, please delete data first and run again!');
             end
@@ -488,7 +546,7 @@ classdef (Abstract) dataRecording < handle
                     end
                     obj.nRecordings=numel(obj.dataFileNames);
                     if obj.nRecordings>1
-                        obj.multifileMode=true;
+                        obj.multifileMode=true; 
                     end
                 else
                     [obj.recordingDir]= uigetdir(obj.defaultLocalDir,'Choose the data folder');
@@ -504,5 +562,6 @@ classdef (Abstract) dataRecording < handle
             end
             obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
         end
+
     end
 end
