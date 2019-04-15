@@ -179,7 +179,7 @@ classdef MCH5Recording < dataRecording
       
       if obj.convertData2Double
           
-        V_uV = (double(V_uV) - obj.ZeroADValue) * obj.MicrovoltsPerAD;
+        V_uV = (double(V_uV) - obj.ZeroADValue) .* obj.MicrovoltsPerAD;
 %           for k = 1:size(V_uV, 1)
 % %               V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValue(k)) * obj.MicrovoltsPerAD(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
 %           end
