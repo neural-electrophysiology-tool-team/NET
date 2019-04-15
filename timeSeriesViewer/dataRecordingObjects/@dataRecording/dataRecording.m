@@ -440,17 +440,22 @@ classdef (Abstract) dataRecording < handle
             end
             
             fprintf('Writing trigger file...\n');
-            T=obj.getTrigger;
-            nT=cellfun(@(x) numel(x),T);
-            pT=find(nT>0);
-            
-            triggerFile=[targetFile(1:end-4) '_Triggers.bin'];
-            fid = fopen(triggerFile, 'w+');
-            fwrite(fid,uint32(nT+1),'*uint32');
-            for i=1:numel(pT)
-                fwrite(fid, uint32(T{pT(i)}*obj.samplingFrequency(1)/1000)+1,'*uint32');
+            try
+                T=obj.getTrigger;
+                nT=cellfun(@(x) numel(x),T);
+                pT=find(nT>0);
+                
+                triggerFile=[targetFile(1:end-4) '_Triggers.bin'];
+                fid = fopen(triggerFile, 'w+');
+                fwrite(fid,uint32(nT+1),'*uint32');
+                for i=1:numel(pT)
+                    fwrite(fid, uint32(T{pT(i)}*obj.samplingFrequency(1)/1000)+1,'*uint32');
+                end
+                fclose(fid);
+                
+            catch
+                disp('No triggers found! Trigger file not created.\n');
             end
-            fclose(fid);
             
             metaDataFile=[targetFile(1:end-4) '.meta'];
             if ~exist(metaDataFile,'file')
