@@ -268,6 +268,8 @@ classdef MCH5Recording < dataRecording
         %        T_ms - A time vector relative to recording start (t=0 at start)
         if isempty(obj.digitalStreamNum)
             disp('No Digital Data Found!\n')
+            D=[];
+            T_ms=[];
             return
         end
         if nargin==1
