@@ -266,6 +266,10 @@ classdef MCH5Recording < dataRecording
         %        name - the name of the stream (if not entered, default name is used)
         %Output: D - A 3D matrix [nChannels x nTrials x nSamples] with digitalData waveforms across specified channels and trials
         %        T_ms - A time vector relative to recording start (t=0 at start)
+        if isempty(obj.digitalStreamNum)
+            disp('No Digital Data Found!\n')
+            return
+        end
         if nargin==1
             startTime_ms=0;
             window_ms=obj.recordingDuration_ms;
