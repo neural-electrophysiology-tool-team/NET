@@ -13,17 +13,18 @@ ops.nNeigh              = 16; % visualization only (Phy): number of neighboring 
 ops.whitening       = 'full'; % type of whitening (default 'full', for 'noSpikes' set options for spike detection below)		
 ops.spkTh           = -6;      % spike threshold in standard deviations (-6)
 ops.reorder         = 1;       % whether to reorder batches for drift correction. 
-ops.nskip           = 25;  % how many batches to skip for determining spike PCs
-ops.whiteningRange      = 32; % number of channels to use for whitening each channel
-ops.nSkipCov            = 25; %not sure about this. % compute whitening matrix from every N-th batch (1)
+ops.nskip           = 32;  % how many batches to skip for determining spike PCs
+ops.whiteningRange      = 4; % number of channels to use for whitening each channel
+ops.nSkipCov            = 1; %not sure about this. % compute whitening matrix from every N-th batch (1)
 
-ops.fs = 10000;  
+ops.fs = 20000;  
 % frequency for high pass filtering (150)
 ops.fshigh = 250;   
 % minimum firing rate on a "good" channel (0 to skip)
 ops.minfr_goodchannels = 0.1; 
 % threshold on projections (like in Kilosort1, can be different for last pass like [10 4])
-ops.Th = [6 12 12];  
+% ops.Th = [6 12 12];
+ops.Th = [12 6];  
 % how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot) 
 ops.lam = [5 5 5];  
 
@@ -56,7 +57,8 @@ ops.maxFR               = 20000;  % maximum number of spikes to extract per batc
 ops.fshigh              = 250;   % frequency for high pass filtering		
 ops.fslow               = 3000;   % frequency for low pass filtering (optional)
 
-ops.Nfilt               = 64; %1024; % max number of clusters
+ops.Nfilt               = 1024; %64; % max number of clusters
+% ops.Nfilt               = round(nCh*ops.FiltersPerCh/32)*32;
 ops.nfilt_factor        = 3; % max number of clusters per good channel (even temporary ones)
 % ops.Nfilt               = round(nCh*ops.FiltersPerCh/32)*32;  % number of clusters to use (2-4 times more than Nchan, should be a multiple of 32)    
 ops.ntbuff              = 64;    % samples of symmetrical buffer for whitening and spike detection
