@@ -107,11 +107,11 @@ classdef MCH5Recording < dataRecording
       end
       
       nCh = numel(channels);
-      allChannels=nCh==obj.numOfChannels;
+%       allChannels=nCh==obj.numOfChannels;
      
-      if ~allChannels %If all channels were selected, retrieve all and sort n2s afterwards
-        channels=obj.n2s(channels); %check with mark
-      end
+%       if ~allChannels %If all channels were selected, retrieve all and sort n2s afterwards
+%         channels=obj.n2s(channels); %check with mark
+%       end
       
       V_uV = zeros(nCh, nWindows, windowSamples, obj.datatype); %initialize waveform matrix
       %{
@@ -177,10 +177,11 @@ classdef MCH5Recording < dataRecording
       end
       
       if obj.convertData2Double
-          V_uV=double(V_uV);
-          for k = 1:size(V_uV, 1)
-              V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValue(k)) * obj.MicrovoltsPerAD(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
-          end
+          
+        V_uV = (double(V_uV) - obj.ZeroADValue) .* obj.MicrovoltsPerAD;
+%           for k = 1:size(V_uV, 1)
+% %               V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValue(k)) * obj.MicrovoltsPerAD(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
+%           end
       end
       
       if nargout==2
@@ -243,9 +244,10 @@ classdef MCH5Recording < dataRecording
         V_uV=shiftdim(V_uV,-1); %make dimensions to be nCh x nTrials x nSamples
         if obj.convertData2Double
             V_uV=double(V_uV);
-            for k = 1:size(V_uV, 1)
-                V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValueAnalog(k)) * obj.MicrovoltsPerADAnalog(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
-            end
+            V_uV = (double(V_uV) - obj.ZeroADValueAnalog) * obj.MicrovoltsPerADAnalog;
+%             for k = 1:size(V_uV, 1)
+%                 V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValueAnalog(k)) * obj.MicrovoltsPerADAnalog(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
+%             end
         end
         
       
@@ -263,6 +265,12 @@ classdef MCH5Recording < dataRecording
         %        name - the name of the stream (if not entered, default name is used)
         %Output: D - A 3D matrix [nChannels x nTrials x nSamples] with digitalData waveforms across specified channels and trials
         %        T_ms - A time vector relative to recording start (t=0 at start)
+        if isempty(obj.digitalStreamNum)
+            disp('No Digital Data Found!\n')
+            D=[];
+            T_ms=[];
+            return
+        end
         if nargin==1
             startTime_ms=0;
             window_ms=obj.recordingDuration_ms;
@@ -346,7 +354,11 @@ classdef MCH5Recording < dataRecording
         %        calculated (up to obj.maxNumberOfDigitalChannels). [1 2 4]
         %        listens to bits 1,2,4
         %Output: T_ms - trigger times [ms] - different triggers are arranged in a cell array
-        
+        if isempty(obj.digitalStreamNum)
+            disp('No Digital Data Found!\n')
+            T_ms=[];
+            return
+        end
         if nargin==4
             [D,Ttmp]=getDigitalData(obj,startTime_ms,window_ms);
         elseif nargin==3
@@ -493,14 +505,14 @@ classdef MCH5Recording < dataRecording
             obj.pathToRawDataStreamGroup=obj.streamPaths{obj.electrodeStreamNum+1}; %these are without '/' ending 
             obj.lengthInfo = h5info(obj.fullFilename, [obj.pathToRawDataStreamGroup '/ChannelData']);
             obj.electrodeInfoChannel=h5read(obj.fullFilename, [obj.pathToRawDataStreamGroup '/InfoChannel']);
-            obj.MicrovoltsPerAD = double(obj.electrodeInfoChannel.ConversionFactor); %this is a nx1 array (n channels)
-            obj.ZeroADValue=double(obj.electrodeInfoChannel.ADZero);
+            obj.exponent=obj.electrodeInfoChannel.Exponent(1); 
+            obj.MicrovoltsPerAD = double(obj.electrodeInfoChannel.ConversionFactor(1))*(10^(double(obj.exponent(1))+6)); %exponent brings value in V, we want uV; %this is a nx1 array (n channels)
+            obj.ZeroADValue=double(obj.electrodeInfoChannel.ADZero(1));
             obj.sample_ms = double(obj.electrodeInfoChannel.Tick(1))/1000;
             obj.unit=obj.electrodeInfoChannel.Unit(1);
-            obj.exponent=obj.electrodeInfoChannel.Exponent; 
             rawDataType=char(obj.electrodeInfoChannel.RawDataType(1));
-            databit=char(obj.electrodeInfoChannel.ADCBits(1));
-            obj.channelNumbers = 1:length(obj.MicrovoltsPerAD);
+            databit=obj.electrodeInfoChannel.ADCBits(1);
+            obj.channelNumbers = 1:length(obj.electrodeInfoChannel.ChannelID);
             obj.channelNames =  obj.electrodeInfoChannel.Label;
             obj.timestamps = double(h5read(obj.fullFilename, [obj.pathToRawDataStreamGroup '/ChannelDataTimeStamps']));
         end
@@ -510,19 +522,21 @@ classdef MCH5Recording < dataRecording
         else
             obj.pathToAuxDataStreamGroup=obj.streamPaths{obj.auxStreamNum+1}; %these are without '/' ending 
             obj.auxInfoChannel=h5read(obj.fullFilename, [obj.pathToAuxDataStreamGroup '/InfoChannel']);
-            obj.ZeroADValueAnalog=double(obj.auxInfoChannel.ADZero);
-            obj.MicrovoltsPerADAnalog=double(obj.auxInfoChannel.ConversionFactor);
-            obj.exponentAnalog=double(obj.auxInfoChannel.Exponent);
+            obj.ZeroADValueAnalog=double(obj.auxInfoChannel.ADZero(1));
+            obj.exponentAnalog=double(obj.auxInfoChannel.Exponent(1));
+            obj.MicrovoltsPerADAnalog=double(obj.auxInfoChannel.ConversionFactor)*(10^(double(obj.exponentAnalog)+6)); %exponent brings value in V, we want uV;
             if isempty(obj.electrodeStreamNum) %get this from here only if there is no electrode data
                 obj.lengthInfo = h5info(obj.fullFilename, [obj.pathToAuxDataStreamGroup '/ChannelData']);
                 obj.sample_ms = double(obj.auxInfoChannel.Tick(1))/1000; 
                 obj.unit=obj.auxInfoChannel.Unit(1);
-                obj.exponent=obj.auxInfoChannel.Exponent; 
-                obj.channelNumbers = 1:length(obj.MicrovoltsPerADAnalog);
+                obj.exponent=obj.auxInfoChannel.Exponent(1); 
+                obj.MicrovoltsPerAD = double(obj.auxInfoChannel.ConversionFactor(1))*(10^(double(obj.exponent(1))+6)); %exponent brings value in V, we want uV; %this is a nx1 array (n channels)
+                obj.ZeroADValue=double(obj.auxInfoChannel.ADZero(1));
+                obj.channelNumbers = 1:length(obj.auxInfoChannel.ChannelID);
                 obj.channelNames =  obj.auxInfoChannel.Label;
                 obj.timestamps = double(h5read(obj.fullFilename, [obj.pathToAuxDataStreamGroup '/ChannelDataTimeStamps']));
-                rawDataType=char(obj.auxInfoChannel.RawDataType(1));
-                databit=char(obj.auxInfoChannel.ADCBits(1));
+                rawDataType=obj.auxInfoChannel.RawDataType(1);
+                databit=obj.auxInfoChannel.ADCBits(1);
             end
             obj.analogChannelNumbers=1:length(obj.MicrovoltsPerADAnalog);
         end
