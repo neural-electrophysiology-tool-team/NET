@@ -179,7 +179,7 @@ classdef MCH5Recording < dataRecording
       
       if obj.convertData2Double
           
-        V_uV = (double(V_uV) - obj.ZeroADValue) .* obj.MicrovoltsPerAD;
+        V_uV = (double(V_uV) - obj.ZeroADValue(1)) * obj.MicrovoltsPerAD(1);
 %           for k = 1:size(V_uV, 1)
 % %               V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValue(k)) * obj.MicrovoltsPerAD(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
 %           end
@@ -244,8 +244,8 @@ classdef MCH5Recording < dataRecording
 %         [99540459]
         V_uV=shiftdim(V_uV,-1); %make dimensions to be nCh x nTrials x nSamples
         if obj.convertData2Double
-            V_uV=double(V_uV);
-            V_uV = (double(V_uV) - obj.ZeroADValue) * obj.ZeroADValueAnalog;
+%             V_uV=double(V_uV);
+                V_uV = (double(V_uV) - obj.ZeroADValueAnalog) * obj.MicrovoltsPerADAnalog;
 %             for k = 1:size(V_uV, 1)
 %                 V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValueAnalog(k)) * obj.MicrovoltsPerADAnalog(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
 %             end
