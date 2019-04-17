@@ -287,7 +287,7 @@ classdef (Abstract) dataRecording < handle
             
         end
 
-        function []=convertLayouteJRClust(obj,padSize,outputName)
+        function []=convertLayoutJRClust(obj,padSize,outputName)
             %convertLayouteJRClust(obj,padSize,outputName)
             %Make probe (.prb) file for using with jrclust
             %pad size - [height (y),widht (x)]
@@ -454,6 +454,7 @@ classdef (Abstract) dataRecording < handle
                 fclose(fid);
                 
             catch
+                nT = [];
                 disp('No triggers found! Trigger file not created.\n');
             end
             

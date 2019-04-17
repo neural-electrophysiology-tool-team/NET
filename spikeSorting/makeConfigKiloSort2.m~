@@ -118,13 +118,6 @@ ops.fig = 0;
 for i=1:2:length(varargin)
     eval(['ops.' varargin{i} '=' 'varargin{i+1};'])
 end
-ops_temp = load('/home/mestalbet/KiloSort2/configFiles/gui_settings.mat');
-ops_gui = ops_temp.ops;
-ops_gui = rmfield('fbinary', ops_gui);
-ops_gui = rmfield('fproc', ops_gui);
-ops_gui = rmfield('saveDir', ops_gui);
 
-for fn = fieldnames(ops_gui)'
-   ops.(fn{1}) = ops_gui.(fn{1});
-end
+ops
 end
