@@ -209,6 +209,8 @@ initializeVisualStim;
             VSMetaData=VS.par.VSO.getLastStimStatistics(VS.hand.stimulationStatisticsFigure); %if a figure handle is added as input object plots
             print(saveFile(1:end-4),'-djpeg','-r300');
         end
+        
+        
     end
 
     function CallbackEstimateStimDurationPush(hObj,event)
@@ -356,6 +358,7 @@ initializeVisualStim;
             set(VS.hand.GenealBox.hChDirHBox, 'Widths',[-1 -7]);
             
             VS.hand.GenealBox.hEstimateStimDurationPush=uicontrol('Parent', VS.hand.GenealBox.hMainVBox, 'Style','push', 'String','Estimate stim duration','Callback',@CallbackEstimateStimDurationPush);
+            %VS.hand.GenealBox.hSendEMailEdit=uicontrol('Parent', VS.hand.GenealBox.hMainVBox, 'Style','edit', 'String','send email','Callback',@CallbackSendEmailEdit);
             
             VS.hand.GenealBox.hInitializeTriggers=uicontrol('Parent', VS.hand.GenealBox.hMainVBox, 'Style','push', 'String','Init triggers','Callback',@CallbackInitializeTriggersPush);
             

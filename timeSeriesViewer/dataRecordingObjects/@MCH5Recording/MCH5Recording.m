@@ -130,7 +130,7 @@ classdef MCH5Recording < dataRecording
       
       %}
       % Speed up if all channels are consecutives
-      if all(diff(channels)==1) || allChannels 
+      if all(diff(channels)==1) % || allChannels 
         for m = 1:numel(startElement)
           if startElement(m) <= -windowSamples
             %do nothing, return all zeros
@@ -173,14 +173,14 @@ classdef MCH5Recording < dataRecording
         end
       end
       
-      if allChannels
-         tempChannels=zeros(size(V_uV));
-         for i=1:nCh
-            tempChannels(i,:,:)=V_uV(obj.n2s(i),:,:); 
-         end
-         V_uV=tempChannels;
-        clear tempChannles
-      end
+%       if allChannels
+%          tempChannels=zeros(size(V_uV));
+%          for i=1:nCh
+%             tempChannels(i,:,:)=V_uV(obj.n2s(i),:,:); 
+%          end
+%          V_uV=tempChannels;
+%         clear tempChannles
+%       end
       
       
       if obj.convertData2Double
@@ -208,86 +208,11 @@ classdef MCH5Recording < dataRecording
             %Output: V_us - A 3D matrix [nChannels x nTrials x nSamples] with voltage waveforms across specified channels and trials
             %        T_ms - A time vector relative to recording start (t=0 at start)
             
-            %obj.analogDataStreamNumber=find( cellfun(@(x) all(x(1:numel(obj.defaultAnalogDataStreamName))==obj.defaultAnalogDataStreamName),obj.streamNames) );
-                %obj.analogDataInfo
-%{
-            if nargin==4
-                obj.getDataConfig.streamname=obj.streamNames{obj.analogDataStreamNumber};
-            elseif nargin==5
-            %Yuval: see if something should be done here...    
-                
-%                 obj.getDataConfig.streamname=name;
-%                 %this option should be revised because currently all parameters are derived from the raw data stream
-            else
-                error('method getAnalogData was not used correctly: wrong number of inputs');
-            end
-            if isempty(channels)
-                channels=obj.analogChannelNumbers;
-            end
-            conversionFactor=1/obj.sample_ms;
-            startTime_ms=round(startTime_ms*conversionFactor)/conversionFactor;
-            window_ms=round(window_ms*conversionFactor)/conversionFactor;
-            endTime_ms=startTime_ms+window_ms; %no need to conversion factor
-            recordingDuration_ms=round(obj.recordingDuration_ms*conversionFactor)/conversionFactor;
-            windowSamples=round(window_ms*conversionFactor);
-            nTrials=length(startTime_ms);
-            V_uV=ones(numel(channels),nTrials,windowSamples,'uint16')*obj.ZeroADValueAnalog;
             
-            cumStart=[-Inf obj.cumStart obj.cumEnd(end)];
-            cumEnd=[0 obj.cumEnd Inf];
-            obj.getDataConfig.StreamNumber=obj.analogDataStreamNumber-1;
-            if obj.multifileMode %this mode currently does not support extraction from edges of the recording
-                for i=1:nTrials
-                    tmpStartTime=startTime_ms(i);
-                    startSample=1;
-                    
-                    pFileStart=find(startTime_ms(i)>=cumStart,1,'last');
-                    pFileEnd=find((startTime_ms(i)+window_ms)<=cumEnd,1,'first');
-                    
-                    for f=pFileStart:pFileEnd
-                        tmpEndTime=min([cumEnd(f) endTime_ms(i)]);
-                        endSample=round(startSample+(tmpEndTime-tmpStartTime)/1000*obj.samplingFrequency)-1;
-                        
-                        if f>1 && f<=(obj.nRecordings+1) % data in inside recording range
-                            mcstreammex(obj.fileOpenStruct(f-1));
-                            obj.getDataConfig.startend=[tmpStartTime;tmpEndTime]-cumStart(f);
-                            data=mcstreammex(obj.getDataConfig);
-                            data=reshape(data.data,obj.totalAnalogChannels,length(data.data)/obj.totalAnalogChannels);
-                            V_uV(:,i,startSample:endSample)=data(channels,:);
-                        else % some of the data is outside the recording range - add zeros
-                            V_uV(:,i,startSample:endSample)=obj.ZeroADValueAnalog;
-                        end
-                        startSample=endSample+1;
-                        tmpStartTime=tmpEndTime;
-                    end
-                end
-            else
-                for i=1:nTrials
-                    obj.getDataConfig.startend=[startTime_ms(i);startTime_ms(i)+window_ms];
-                    if startTime_ms(i)>=0 && (startTime_ms(i)+window_ms)<=recordingDuration_ms
-                        data=mcstreammex(obj.getDataConfig);
-                        data=reshape(data.data,obj.totalAnalogChannels,length(data.data)/obj.totalAnalogChannels);
-                        V_uV(:,i,:)=data(channels,:);
-                    else
-                        startSample=min(0,round(startTime_ms(i)*conversionFactor));
-                        endSample=min(windowSamples,round((recordingDuration_ms-startTime_ms(i))*conversionFactor)); %end sample in window (not in recroding)
-                        obj.getDataConfig.startend=[max(0,startTime_ms(i));min(startTime_ms(i)+window_ms,recordingDuration_ms)];
-                        data=mcstreammex(obj.getDataConfig);
-                        data=reshape(data.data,obj.totalAnalogChannels,length(data.data)/obj.totalAnalogChannels);
-                        V_uV(:,i,1-startSample:endSample)=data(obj.number2ID(channels),:);
-                        disp('Recording at edge');
-                    end
-                end
-            end
-            if obj.convertData2Double
-                V_uV = (double(V_uV) - obj.ZeroADValueAnalog) * obj.MicrovoltsPerADAnalog;
-            end
-            
-        if nargout==2
-                T_ms=(1:windowSamples)*(1e3/obj.samplingFrequency);
-            end
-    %}
-               
+            %To do: fix V_uv dimensions. right now it is done manually
+            %shiftdim. Should be by number of Channels (although this is
+            %supposed to always be 1 when it comes to get analog data
+
         if nargin==2
             startTime_ms=0;
             window_ms=obj.recordingDuration_ms;
@@ -302,7 +227,7 @@ classdef MCH5Recording < dataRecording
             startElement(1) = 1;
         end
         
-        V_uV = zeros(nWindows, windowSamples, obj.datatype); %initialize waveform matrix
+        V_uV = zeros(nWindows, windowSamples, obj.datatype); %initialize waveform matrix. nCh dimension added later (fix this)
         for m = 1:numel(startElement)
           if startElement(m) <= -windowSamples
             %do nothing, return all zeros
@@ -322,13 +247,16 @@ classdef MCH5Recording < dataRecording
           end
         end
 %         [99540459]
+        V_uV=shiftdim(V_uV,-1); %make dimensions to be nCh x nTrials x nSamples
         if obj.convertData2Double
             V_uV=double(V_uV);
             for k = 1:size(V_uV, 1)
                 V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValue(k)) * obj.MicrovoltsPerAD(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
             end
         end
-
+        
+      
+        
         if nargout==2
             T_ms=(1:windowSamples)*(1e3/obj.samplingFrequency(1));
         end
@@ -509,7 +437,7 @@ classdef MCH5Recording < dataRecording
 %       end
 %       obj.triggerFilename = fullfile(obj.recordingDir, triggerFile.name);
       
-      if exist([obj.recordingDir filesep 'metaData.mat'],'file') && ~obj.overwriteMetaData
+      if exist([obj.recordingDir filesep obj.recordingName 'metaData.mat'],'file') && ~obj.overwriteMetaData
           obj = loadMetaData(obj); %needs recNameHD5
       else
           obj = extractMetaData(obj);

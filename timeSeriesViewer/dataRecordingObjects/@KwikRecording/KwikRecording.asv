@@ -171,16 +171,12 @@ classdef KwikRecording < dataRecording
             error('method getAnalogData was not used correctly: wrong number of inputs');
         end
         settings=xmlread([obj.recordingDir 'settings.xml']); %This is a file created by openEphys GUI
-        channels=settings.getElementsByTagName("CHANNEL");
-        for i=0:channels.getLength-1
-           if strcmp(channels.item(i).getAttribute("name"),"ADC2") %Change this to ADC1!!!!
-               analogChNum=str2num(channels.item(i).getAttribute("number"));
-               break
-           end
+        channels=xml.getElementsByTagName("CHANNEL");
+        for i=1:channels.getLength-1
+           if strcmp(channels.item(0).getAttribute("Name"),"ACD2") %Change this to ADC
         end    
         
-        
-        [V_uV ,t_ms]=obj.getData(analogChNum, startTime_ms, window_ms);
+        [V_uV ,t_ms]=obj.getData(obj.analogChannelNum, startTime_ms, window_ms);
 
         if nargout==2
             T_ms=t_ms;
