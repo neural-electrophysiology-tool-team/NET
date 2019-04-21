@@ -96,7 +96,6 @@ classdef VS_fullFieldFlash < VStim
                 % Update image buffer
                 Screen('FillOval',obj.PTB_win,obj.luminosities(i+1),obj.visualFieldRect);
                 obj.applyBackgound; %set background mask and finalize drawing (drawing finished)
-                check=1
                 disp(['Trial ' num2str(i) '/' num2str(obj.nTotTrials)]);
                 
                 %check if stimulation session was stopped by the user
