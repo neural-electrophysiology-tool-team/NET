@@ -4,13 +4,15 @@ if ~exist(vcFile_prm, 'file')
     fprintf(2, '.prm file does not exist: %s\n', vcFile_prm);
     P=[]; return; 
 end
-P0 = file2struct_('/home/labs/rivlinlab/bndolev/matlab/JRClust/default.prm');  %P = defaultParam();
-P = file2struct_(vcFile_prm);
+P0 = file2struct('/home/mestalbet/NSKToolbox/JRClust/default.prm');  %P = defaultParam();
+P = file2struct(vcFile_prm);
 if ~isfield(P, 'template_file'), P.template_file = ''; end
 if ~isempty(P.template_file)
     P0 = struct_merge_(P0, file2struct_(P.template_file));
 end
 P.vcFile_prm = vcFile_prm;
+P.vcFile = fullfile(P.outputDir,'2019-03-12T13-54-57Retina_Trial4.bin');
+P.probe_file = fullfile(P.outputDir, 'layout_100_16x16_newSetup.mat_JRC.prb');
 % todo: substitute bin file path
 assert(isfield(P, 'vcFile'), sprintf('Check "%s" file syntax', vcFile_prm));
 
@@ -36,6 +38,7 @@ end
 P = struct_merge_(P0, P);    
 
 % check GPU
+P.fGpu = [];
 P.fGpu = ifeq_(license('test', 'Distrib_Computing_Toolbox'), P.fGpu, 0);
 if P.fGpu, P.fGpu = ifeq_(gpuDeviceCount()>0, 1, 0); end
 
