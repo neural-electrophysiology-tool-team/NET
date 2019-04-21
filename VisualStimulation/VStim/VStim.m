@@ -16,6 +16,7 @@ classdef (Abstract) VStim < handle
         stimDuration = 2;
         backgroundMaskSteepness = 0.2;
         horizontalShift=0;
+        sendMail=false;
     end
     properties (Constant)
         backgroudLuminance = 0;
@@ -122,7 +123,18 @@ classdef (Abstract) VStim < handle
                 end
             end
             obj.initializeTTL;
-
+           
+            syncBoxConfigFile=[NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'syncSquareSizePix.txt'];
+            
+            if exist(syncBoxConfigFile,'file')
+                fid=fopen(syncBoxConfigFile);
+                configData = textscan(fid,'%s = %s');
+                fclose(fid);
+                for i=1:numel(configData{1})
+                    obj.(configData{1}{i})=str2num(configData{2}{i});
+                end
+            end
+            
             obj.whiteIdx=WhiteIndex(obj.PTB_win(1));
             obj.blackIdx=BlackIndex(obj.PTB_win(1));
             if obj.visualFieldBackgroundLuminance<obj.blackIdx || obj.visualFieldBackgroundLuminance>obj.whiteIdx
