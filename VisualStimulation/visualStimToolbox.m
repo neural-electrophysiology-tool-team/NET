@@ -193,6 +193,14 @@ initializeVisualStim;
             disp('Stimulation parameters saved!');
         end
         
+        if VSMetaData.allPropVal{find(ismember(VSMetaData.allPropName, 'sendMail'))}
+                NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
+                emailsFile = fileread([NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'VSEmails.txt']);
+                emails = regexp(emailsFile, '\r\n|\r|\n', 'split');
+                for i=1:numel(emails)
+                    sendMailViaGmail(emails{i},[VSMetaData.metaClassData.Name(4:end) ' Stimulation Ended'], 'You can now open the door.');
+                end
+        end
         %prepare figure
         if VS.par.VSO.lastExcecutedTrial~=0
             VS.hand.stimulationStatisticsFigure=figure('Position',[VS.par.GUIPosition([1 2]) 800 600]);
