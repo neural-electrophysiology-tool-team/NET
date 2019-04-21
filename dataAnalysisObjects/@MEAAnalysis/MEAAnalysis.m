@@ -290,7 +290,8 @@ classdef MEAAnalysis < recAnalysis
             end
             
             if ~exist([par.fullParamFile(1:end-4) '_gridSorter.mat'],'file') || par.exportGS
-                jrc('export-gs',par.fullParamFile);
+                export_gridSorter(par.fullParamFile);
+                %                 jrc('export-gs',par.fullParamFile);
                 S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
                 save(par.saveFileName,'par','S','-v7.3');
             else
@@ -298,6 +299,7 @@ classdef MEAAnalysis < recAnalysis
             end
             
             if par.exportGS
+                export_gridS
                 jrc('export-gs',par.fullParamFile);
                 S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
                 save(par.saveFileName,'par','S','-v7.3');
