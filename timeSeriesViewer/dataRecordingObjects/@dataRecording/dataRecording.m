@@ -46,7 +46,7 @@ classdef (Abstract) dataRecording < handle
             obj=closeOpenFiles(obj);
         end
         function obj=closeOpenFiles(obj)
-             fclose(obj.fid);
+%              fclose(obj.fid);
         end
         function [V_uV,t_ms]=getData(obj,channels,startTime_ms,window_ms,name)
             %Extract recording data from file to memory
