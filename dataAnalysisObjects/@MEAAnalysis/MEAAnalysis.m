@@ -192,7 +192,7 @@ classdef MEAAnalysis < recAnalysis
                 'fs',obj.currentDataObj.samplingFrequency);
             
             layoutName=[obj.currentDataObj.layoutName '_JRC.prb'];
-            resultsFileName=[obj.currentDataObj.recordingDir obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName '_JRC_ksort'];
+            resultsFileName=[obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
             tic; %this is important otherwise fitTemplates crashes since it includes a toc without a tic
             [rez, DATA] = preprocessDataSub(ops);
             save(resultsFileName,'rez', 'DATA', '-v7.3');
@@ -253,7 +253,7 @@ classdef MEAAnalysis < recAnalysis
             recName=obj.currentDataObj.recordingName;
             recDir=obj.currentDataObj.recordingDir;
             if ~exist([recDir filesep filesep par.layoutName],'file')
-                obj.currentDataObj.convertLayoutJRClust(par.electrodePadSize); %electrode side is sqrt(pi*15^2)=26.6;
+                obj.currentDataObj.convertLayoutJRClust([sqrt(pi*30^2) sqrt(pi*30^2)]); %electrode side is sqrt(pi*15^2)=26.6;
                 disp('Layout converted to JRclust format');
             end
             
@@ -275,7 +275,7 @@ classdef MEAAnalysis < recAnalysis
             if ~exist([par.fullParamFile(1:end-4) '_ksort.mat'],'file')
                 C = strsplit(par.fullParamFile,'/');
                 paramDir = fullfile(join(C(1:end-1),'/'));
-                resultsFileName  = [obj.currentDataObj.recordingDir obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName '_JRC_ksort'];
+                resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
                 load(resultsFileName);
                 rezToPhy(rez, paramDir{1});
                 jrc('import-ksort',paramDir{1});
@@ -289,29 +289,21 @@ classdef MEAAnalysis < recAnalysis
                 return;
             end
             
-            if ~exist([par.fullParamFile(1:end-4) '_gridSorter.mat'],'file') || par.exportGS
-                export_gridSorter(par.fullParamFile);
-                %                 jrc('export-gs',par.fullParamFile);
-                S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
-                save(par.saveFileName,'par','S','-v7.3');
-            else
-                disp('Data already exported to gridSorter format, to reexport use overwrite=1');
-            end
+%             if ~exist([par.fullParamFile(1:end-4) '_gridSorter.mat'],'file') || par.exportGS
+%                 export_gridSorter(par.fullParamFile);
+%                 %                 jrc('export-gs',par.fullParamFile);
+%                 S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
+%                 save(par.saveFileName,'par','S','-v7.3');
+%             else
+%                 disp('Data already exported to gridSorter format, to reexport use overwrite=1');
+%             end
             
-            if par.exportGS
-                export_gridS
-                jrc('export-gs',par.fullParamFile);
-                S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
-                save(par.saveFileName,'par','S','-v7.3');
-            end
-            
-            %jrc('detect',par.fullParamFile);
-            %jrc('spikesort',par.fullParamFile);
-            %jrc('cluster',par.fullParamFile);
-            %jrc('manual',par.fullParamFile);
-            %jrc('export-spkwav',par.fullParamFile);
-            %jrc('import-gs',par.fullParamFile);
-            %jrc('export-gs',par.fullParamFile);
+%             if par.exportGS
+%                 export_gridS
+%                 jrc('export-gs',par.fullParamFile);
+%                 S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
+%                 save(par.saveFileName,'par','S','-v7.3');
+%             end
             
         end
         
