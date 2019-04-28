@@ -83,7 +83,11 @@ if isempty(transition)
     avgTrialDuration=round(mean(T{trialStartEndDigiTriggerNumbers(2)}-T{trialStartEndDigiTriggerNumbers(1)})*2);
     [Atmp]=dataRecordingObj.getAnalogData(analogChNum,T{trialStartEndDigiTriggerNumbers(1)}(1:min(10,numel(T{trialStartEndDigiTriggerNumbers(1)})))-100,avgTrialDuration);
     Atmp=permute(Atmp,[3 1 2]);Atmp=Atmp(:);
-    medAtmp = fastmedfilt1d(Atmp,round(frameSamples*0.8));
+%     if noisyAnalog
+        medAtmp = fastmedfilt1d(Atmp,round(frameSamples*0.8));
+%     else
+%     medAtmp = fastmedfilt1d(Atmp,round(frameSamples*0.8));
+%     end
     eva = evalclusters(medAtmp,'kmeans','DaviesBouldin','KList',[2:4]);
     [idx,cent] = kmeans(medAtmp,eva.OptimalK,'Replicates',5);
     cent=sort(cent);
@@ -99,7 +103,11 @@ downCross=cell(1,nChunks);
 for i=1:nChunks
     [A,t_ms]=dataRecordingObj.getAnalogData(1,chunkStart(i),chunkEnd(i)-chunkStart(i));
     A=squeeze(A);
+%     if noisyAnalog
+%         
+%     else
     medA = fastmedfilt1d(A,round(frameSamples*0.8));
+%     end
     upCross{i}=chunkStart(i)+find(medA(1:end-1)<transitions(1) & medA(2:end)>=transitions(1))/Fs*1000;
     downCross{i}=chunkStart(i)+find(medA(1:end-1)>transitions(1) & medA(2:end)<=transitions(1))/Fs*1000;
     %plot(medA(1:5000000));hold on;plot(upCross{i}(1:20)*Fs/1000,medA(round(upCross{i}(1:20)*Fs/1000)),'or');plot(downCross{i}(1:20)*Fs/1000,medA(round(downCross{i}(1:20)*Fs/1000)),'sg')
