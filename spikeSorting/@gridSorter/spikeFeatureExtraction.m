@@ -81,13 +81,13 @@ for i=find(obj.sortingFileNames.featureExtractionExist==0 | obj.overwriteFeature
                 spikeFeatures=spikeFeatures(:,[tmp1(1:obj.featuresNWaveletCoeff/2) nCoeffs+tmp2(1:obj.featuresNWaveletCoeff/2)]);
                 
                 if obj.featuresReduceDimensionsWithPCA
-                    [PCAsimMat,spikeFeatures] = princomp(spikeFeatures); %run PCA for visualization purposes
+                    [PCAsimMat,spikeFeatures] = pca(spikeFeatures); %run PCA for visualization purposes
                     spikeFeatures=spikeFeatures(:,1:obj.featuresDimensionReductionPCA);
                 end
                 
             case 'PCA' %this option was tested and gives worse results than wavelets
                 spikeShapes=double(spikeShapes(:,:,obj.chPar.pSurCh{i})) .* detectionInt2uV;
-                [~,spikeFeatures] = princomp(reshape(permute(spikeShapes,[1 3 2]),[nSamples*numel(obj.chPar.pSurCh{i}) nSpikes]));
+                [~,spikeFeatures] = pca(reshape(permute(spikeShapes,[1 3 2]),[nSamples*numel(obj.chPar.pSurCh{i}) nSpikes]));
                 spikeFeatures=spikeFeatures(1:obj.featuresDimensionReductionPCA,:)';
         end
     end
