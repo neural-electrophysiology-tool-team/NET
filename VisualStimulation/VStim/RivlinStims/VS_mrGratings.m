@@ -1,12 +1,12 @@
 classdef VS_mrGratings < VStim
     properties (SetAccess=public)
 
-        txtSspcFrq = 281;       %pixel/cycle, choose sp=225, tp=5 for 30deg/s at 60x
-        txtStmpFrq = 4;         %cycles/sec
-        txtSmaskRadius = 800;	%radius of circular mask
+        txtSspcFrq = 52;       %pixel/cycle, choose sp=225, tp=5 for 30deg/s at 60x
+        txtStmpFrq = 2;         %cycles/sec
+        txtSmaskRadius = 163;	%radius of circular mask
         txtSnumDirs = 12;
-        txtSnumTrials = 1;
-        txtSduration = 3;       %txtSduration in secs
+        txtSnumTrials = 5;
+        txtSduration = 4;       %txtSduration in secs
         txtSpreStimWait=5;
         txtSdelay=0;
         txtSinterTrialWait=0.5;
@@ -16,18 +16,20 @@ classdef VS_mrGratings < VStim
         txtSbrtIntensity = 255;
         popSgrtColor = [1 1 1];
         txtSdrkIntensity = 0;
-        chkScorrectGrating = 0;
+        chkScorrectGrating = 1;
         x_shift = 0;
         y_shift = 0;
         chkSmaskRect = 0;
         txtSrectWidth = 100;
         txtSrectHeight = 400;
-        txtSscrIntensity = (0+255)/2;
+        txtSscrIntensity = 0;
         popSscrColor = [1 1 1];
         chkSsaveImage=0;
         txtSsaveImageTime=2;
     end
     properties (Hidden,Constant)
+        defaultTrialsPerCategory=50; %number of gratings to present
+        defaultBackground=0;
         txtSspcFrqTxt        ="scalar,pixels/cycle";
         txtStmpFrqTxt        ="scalar,cycles/sec";
         txtSmaskRadiusTxt    ="scalar,half size of square texture";
@@ -70,7 +72,6 @@ classdef VS_mrGratings < VStim
     methods
         
         function obj=run(obj)
-          
             screen_full_color = obj.txtSscrIntensity*obj.popSscrColor;
             if isnan(obj.txtSdirList) 
                 dirs = 0:(360/obj.txtSnumDirs):(360-(360/obj.txtSnumDirs));
@@ -122,9 +123,6 @@ classdef VS_mrGratings < VStim
                 direction=directions(trial);
                 
                 masktex=Screen('MakeTexture', obj.PTB_win, mask);
-                
-%                 [obj.direction, ~, obj.spfFactor ] = ...
-%                     correctDirectionAndSpf( obj.direction,obj.txtSspcFrq, 2 )  ;
                 direction=mod((direction+180),360);
                 gray=round((obj.txtSbrtIntensity+obj.txtSdrkIntensity)/2);
                 inc=obj.txtSbrtIntensity-gray;
@@ -185,16 +183,16 @@ classdef VS_mrGratings < VStim
                         end
                        
                 end
-%                 Screen('FillRect', obj.PTB_win, screen_full_color, []);
                 Screen('Flip', obj.PTB_win);
                 obj.sendTTL(2,false);
                 disp(['Direction ' num2str(trial) '/' num2str(obj.txtSnumTrials*obj.txtSnumDirs)]);
                 WaitSecs(obj.txtSinterTrialWait);%pause to allow recording device to prepare for new trial
             end
-%             Screen('FillRect', obj.PTB_win, screen_full_color, []);
             obj.applyBackgound; 
             Screen('Flip', obj.PTB_win);
             obj.sendTTL(1,false);
+            filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrGratings_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
+            save(filename, 'directions', 'obj', '-v7.3');
         end
 
         function outStats=getLastStimStatistics(obj,hFigure)
@@ -205,6 +203,8 @@ classdef VS_mrGratings < VStim
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
             obj.stimDuration=NaN;
+            obj.trialsPerCategory=obj.defaultTrialsPerCategory;
+            obj.visualFieldBackgroundLuminance=obj.defaultBackground;
         end
     end
 end %EOF

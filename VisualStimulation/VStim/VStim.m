@@ -7,6 +7,7 @@ classdef (Abstract) VStim < handle
         preSessionDelay = 1;
         postSessionDelay = 0;
         trialStartTrig = 'MC=2,Intan=6';
+        
     end
     properties (SetObservable, AbortSet = true, SetAccess=public)
         visualFieldBackgroundLuminance = 64;
@@ -16,11 +17,14 @@ classdef (Abstract) VStim < handle
         stimDuration = 2;
         backgroundMaskSteepness = 0.2;
         horizontalShift=0;
+        numPixels=100;
+        numMicrons=100;
+        
     end
     properties (Constant)
         backgroudLuminance = 0;
         maxTriggers=4;
-        
+        pixelConversionFactor = 100/13; %microns per pixel
         visualFieldBackgroundLuminanceTxt = 'The luminance of the circular visual field that is projected to the retina';
         visualFieldDiameterTxt = 'The diameter of the circular visual field that is projected to the retina [pixels], 0 takes maximal value';
         stimDurationTxt='The duration of the visual stimuls [s]';
@@ -29,6 +33,7 @@ classdef (Abstract) VStim < handle
         preSessionDelayTxt='The delay before the begining of a recording session [s]';
         postSessionDelayTxt='The delay after the ending of a recording session [s]';
         backgroundMaskSteepnessTxt='The steepness of the border on the visual field main mask [0 1]';
+        numPixelsTxt = 'The number of pixels to convert to um';
     end
     properties (SetAccess=protected)
         mainDir %main directory of visual stimulation toolbox
@@ -52,7 +57,7 @@ classdef (Abstract) VStim < handle
         binaryMultiplicator = [1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768]; %512 1024 2048 4096 8192 16384 32768
         currentBinState = [false false false false false false false false false false false false false false false false]; %false false false false false false false
         io %parallel port communication object for PC
-        
+        pixelmicronratio = 100 / 13 ; % microns / pixels
         parallelPortNum =  hex2dec('EFF8')%888; %Parallel port default number
         
         PTB_win %Pointer to PTB window
@@ -84,6 +89,8 @@ classdef (Abstract) VStim < handle
             addlistener(obj,'inVivoSettings','PostSet',@obj.initializeBackground); %add a listener to visualFieldDiameter, after its changed its size is updated in the changedDataEvent method
             addlistener(obj,'backgroundMaskSteepness','PostSet',@obj.initializeBackground); %add a listener to backgroundMaskSteepness, after its changed its size is updated in the changedDataEvent method
             addlistener(obj,'stimDuration','PostSet',@obj.updateActualStimDuration); %add a listener to stimDuration, after its changed its size is updated in the changedDataEvent method
+            addlistener(obj, 'numPixels', 'PostSet', @(src,event)disp([num2str(obj.numPixels), ' is ', num2str(obj.numPixels*obj.pixelConversionFactor), ' microns'])); 
+            addlistener(obj, 'numMicrons', 'PostSet', @(src,event)disp([num2str(obj.numMicrons), ' is ', num2str(obj.numMicrons/obj.pixelConversionFactor), ' pixels']));
 
             obj.nPTBScreens=numel(PTB_WindowPointer);
             
@@ -200,29 +207,7 @@ classdef (Abstract) VStim < handle
             
             if obj.DMDcorrectionIntensity
                 [~,maskblobOff(:,:,2)]=meshgrid(1:size(maskblobOff,2),1:size(maskblobOff,1));
-                maskblobOff(:,:,2)=maskblobOff(:,:,2)/max(max(maskblobOff(:,:,2)))*255;
-                %{
-                DMDcorrection.Profile(1,:)=mean(II(1:340,:));
-                DMDcorrection.pixelValue(1)=0;
-                DMDcorrection.Profile(2,:)=mean(II(419:446,:));
-                DMDcorrection.pixelValue(2)=51;
-                DMDcorrection.Profile(3,:)=mean(II(457:492,:));
-                DMDcorrection.pixelValue(3)=102;
-                DMDcorrection.Profile(4,:)=mean(II(563:603,:));
-                DMDcorrection.pixelValue(4)=153;    
-                DMDcorrection.Profile(5,:)=mean(II(668:684,:));
-                DMDcorrection.pixelValue(5)=204;
-                DMDcorrection.Profile(6,:)=mean(II(850:end,:));
-                DMDcorrection.pixelValue(6)=255;
-                DMDcorrection.Profile=convn(double(DMDcorrection.Profile)',ones(31,1),'same')';
-                BG=ones(numel(DMDcorrection.pixelValue),1)*DMDcorrection.Profile(1,:);
-                
-                BS=sqrt(DMDcorrection.Profile.^2-BG.^2);
-                BS=bsxfun(@minus,DMDcorrection.Profile,DMDcorrection.Profile(1,:));
-                nBS=bsxfun(@rdivide,BS',DMDcorrection.pixelValue);
-                DMDcorrection.Profile=uint8(DMDcorrection.Profile);
-                %}
-                
+                maskblobOff(:,:,2)=maskblobOff(:,:,2)/max(max(maskblobOff(:,:,2)))*255;                
             end
             
             if obj.inVivoSettings==1
@@ -231,8 +216,8 @@ classdef (Abstract) VStim < handle
             end
             
             maskblobOn=maskblobOff; %make on mask addition
-            maskblobOn((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,:)=obj.syncSquareLuminosity;
-            maskblobOff((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,2)=obj.syncSquareLuminosity;
+%             maskblobOn((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,:)=obj.syncSquareLuminosity;
+%             maskblobOff((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,2)=obj.syncSquareLuminosity;
             
             % Build a single transparency mask texture:
             for i=1:obj.nPTBScreens
@@ -343,6 +328,18 @@ classdef (Abstract) VStim < handle
             obj.actualStimDuration(i)=round(obj.stimDuration/obj.ifi(i))*obj.ifi(i);
             end
         end
+        
+        function calcMicrons(obj)
+            disp([num2str(obj.numPixels), ' is ', num2str(obj.numPixels*obj.pixelConversionFactor), ' microns']);
+            %uses the micron/pixel ratio to convert entered number of
+            %pixels to microns
+        end
+        
+        function obj = calcPixels(obj,event)
+            %uses the micron/pixel ratio to convert entered number of
+            %pixels to microns
+        end
+        
         
         function outStats=getLastStimStatistics(obj,hFigure)
         end
