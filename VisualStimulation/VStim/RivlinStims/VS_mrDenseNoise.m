@@ -5,12 +5,12 @@ classdef VS_mrDenseNoise < VStim
         %test
     txtDNbrtIntensity    = 255; %white
     txtDNdrkIntensity    = 0; %black
-    txtDNscrIntensity    = 255/2;
+    txtDNscrIntensity    = 0;
     popDNnoiseColor      = [1 1 1]; %black/white
     popDNscrColor        = [1 1 1]; %black/white
-    txtDNduration        = 300; %300sec = 5min
+    txtDNduration        = 600; %300sec = 5min
     txtDNtmpFrq          = 5; %hz
-    txtDNnPxls           = 54; 
+    txtDNnPxls           = 10; 
     chkDNmaskRect        = 1;
     txtDNrectWidth       = 126;
     txtDNrectHeight      = 252;
@@ -21,14 +21,14 @@ classdef VS_mrDenseNoise < VStim
     chkDNbrtGradualNoise = 1;
     txtDNsaveImageTime   = 2;
     chkDNsaveImage       = 0;
-    padRows = 5;
-    padColumns = 5;
-    spars = 0;    
+    padRows = 2;
+    padColumns = 2;
+    spars = 1;    
         
     end
     properties (Hidden,Constant)
         defaultTrialsPerCategory=50; %number of gratings to present
-        defaultBackground=128;
+        defaultBackground=0;
         defaultITI=0;
         meanLuminosityTxt='luminance value for grey pixels';
         contrastTxt='% of dynamic range to use';
@@ -38,7 +38,7 @@ classdef VS_mrDenseNoise < VStim
         largeRectSparsityTxt='%of non grey squares';
         smallRectSparsityTxt='%of non grey squares';
         
-        %     txtDNbrtIntensity     scalar, between 0 and 255, the color of the
+%     txtDNbrtIntensity     scalar, between 0 and 255, the color of the
 %                           bright noise
 %     txtDNdrkIntensity     scalar, between 0 and 255, the color of the 
 %                           dark noise 
@@ -96,13 +96,10 @@ classdef VS_mrDenseNoise < VStim
             [screenXpixels, screenYpixels] = Screen('WindowSize', obj.PTB_win);
             
             % Get the centre coordinate of the obj.PTB_win
-%             [xCenter, yCenter] = RectCenter(windowRect);
             xNoisePxls = obj.txtDNnPxls;% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
             yNoisePxls = obj.txtDNnPxls; %num cells y
             nNoisePxls = xNoisePxls * yNoisePxls;
             reps = 3;
-%             reps= round(obj.txtDNduration/nNoisePxls);
-%             obj.txtDNduration=reps*nNoisePxls;
             colorsArraySize = obj.txtDNduration*obj.txtDNtmpFrq; % number of times screen changes input
             colorsArray = [];
     
@@ -111,17 +108,10 @@ classdef VS_mrDenseNoise < VStim
             
             %run test Flip (sometimes this first flip is slow and so it is not included in the anlysis
             obj.visualFieldBackgroundLuminance=obj.visualFieldBackgroundLuminance;
-%             winRect=[round(screenProps.width/2)-round(screenProps.height/2) 0 screenProps.height+round(screenProps.width/2)-round(screenProps.height/2) screenProps.height];  %change this!
-            
-            %sync the computer time with the ttl trace
-            obj.sendTTL(1,true); %session start trigger (also triggers the recording start)
-            obj.syncTime=GetSecs();
-            obj.sendTTL(1,false);
             obj.sendTTL(1,true);
             
            %main loop - start the session
-%             WaitSecs(obj.preSessionDelay); %pre session wait time
-       
+
             if obj.chkDNsinglePxl
 
                 noisePxlBrt=[];
@@ -236,77 +226,24 @@ classdef VS_mrDenseNoise < VStim
             Screen('FillRect', obj.PTB_win, scrColor, []);
             Screen('Flip',obj.PTB_win);
             WaitSecs(obj.txtDNpreStimWait);
+            obj.sendTTL(2,true);
             for i = 1:colorsArraySize
-                
+                 obj.sendTTL(3,true);
                 % Draw the rect to the screen
                 Screen('FillRect', obj.PTB_win, colorsArray(:,:,i), allRectsRight);
                 vbl = Screen('Flip', obj.PTB_win);
+                obj.sendTTL(3,false);
                 WaitSecs(1/obj.txtDNtmpFrq);
             end
+            obj.sendTTL(2,false);
             obj.applyBackgound;
-            
-            
-            
-%             Screen('Flip',obj.PTB_win);
-%             WaitSecs(obj.txtDNpreStimWait);%pause to allow retina to adapt
-            
-            
-%             
-%             for i=1:obj.trialsPerCategory
-%                 obj.sendTTL(2,true);
-%                 disp(['Trial ' num2str(i) '/' num2str(obj.trialsPerCategory)]);
-%                 
-%                
-%                 while count <= numberOfstimuli
-%                     
-%                    Screen('DrawTexture', obj.PTB_win,smallRectTex(i,count), [], dstRect, [], 0);
-%                      obj.applyBackgound;
-%                     WaitSecs(1/obj.smallRectFrameRate);
-%                     obj.sendTTL(3,true);
-%                     [obj.flipOnsetTimeStamp(i,count),obj.stimOnset(i,count),obj.flipOffsetTimeStamp(i,count),obj.flipMiss(i,count)]=Screen('Flip',obj.PTB_win);
-%                     obj.sendTTL(3,false);
-%                     Screen('DrawingFinished', obj.PTB_win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
-%                     count = count + 1;
-%                     
-%                 end
-%                 
-%                 %check if stimulation session was stopped by the user
-%                 [keyIsDown, ~, keyCode] = KbCheck;
-%                 if keyCode(obj.escapeKeyCode)
-%                     i=obj.trialsPerCategory;
-%                     Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
-%                 obj.applyBackgound;
-%                     Screen('Flip',obj.PTB_win);
-%                          obj.sendTTL(2,false);
-%                     WaitSecs(obj.interTrialDelay);
-%                     disp('Trial ended early');
-%                      obj.sendTTL(1,false);
-%                      WaitSecs(obj.postSessionDelay);
-%                     disp('Session ended');
-%                     
-%                     return
-%                 end
-%                 
-%                 Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
-%                  obj.applyBackgound;
-%                 Screen('Flip',obj.PTB_win);
-%                 obj.sendTTL(2,false);
-%                 WaitSecs(obj.interTrialDelay);
-%                 disp('Trial ended');
-%                 
-%             end
-%             
-%             Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
-%           obj.applyBackgound;
             Screen('DrawingFinished', obj.PTB_win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
             obj.sendTTL(1,false);
-%             WaitSecs(obj.postSessionDelay);
-            
             disp('Session ended');
-            
+            filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDenseNoise_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
+            save(filename, 'directions', 'obj', '-v7.3');
         end
-        
-        
+   
         %class constractor
         function obj=VS_mrDenseNoise(w,h)
             obj = obj@VStim(w); %ca
