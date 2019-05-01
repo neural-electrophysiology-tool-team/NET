@@ -8,12 +8,13 @@ classdef VS_mrDenseNoise < VStim
     txtDNscrIntensity    = 0;
     popDNnoiseColor      = [1 1 1]; %black/white
     popDNscrColor        = [1 1 1]; %black/white
-    txtDNduration        = 600; %300sec = 5min
+    txtDNduration        = 10; %300sec = 5min
     txtDNtmpFrq          = 5; %hz
-    txtDNnPxls           = 10; 
+    txtDNnPxls_x         = 100; 
+    txtDNnPxls_y         = 75; 
     chkDNmaskRect        = 1;
-    txtDNrectWidth       = 126;
-    txtDNrectHeight      = 252;
+    txtDNrectWidth       = 264;
+    txtDNrectHeight      = 264;
     txtDNpreStimWait     = 10;
     chkDNbinaryNoise     = 1;
     chkDNsinglePxl       = 1;
@@ -21,8 +22,8 @@ classdef VS_mrDenseNoise < VStim
     chkDNbrtGradualNoise = 1;
     txtDNsaveImageTime   = 2;
     chkDNsaveImage       = 0;
-    padRows = 2;
-    padColumns = 2;
+    padRows = 0;
+    padColumns = 0;
     spars = 1;    
         
     end
@@ -96,8 +97,8 @@ classdef VS_mrDenseNoise < VStim
             [screenXpixels, screenYpixels] = Screen('WindowSize', obj.PTB_win);
             
             % Get the centre coordinate of the obj.PTB_win
-            xNoisePxls = obj.txtDNnPxls;% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
-            yNoisePxls = obj.txtDNnPxls; %num cells y
+            xNoisePxls = obj.txtDNnPxls_x;% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
+            yNoisePxls = obj.txtDNnPxls_y; %num cells y
             nNoisePxls = xNoisePxls * yNoisePxls;
             reps = 3;
             colorsArraySize = obj.txtDNduration*obj.txtDNtmpFrq; % number of times screen changes input
@@ -179,10 +180,10 @@ classdef VS_mrDenseNoise < VStim
                     end
                 end
                 
-                realNoisePxls=(obj.txtDNnPxls+(obj.padRows*2))*(obj.txtDNnPxls+(obj.padColumns*2));
+                realNoisePxls=(obj.txtDNnPxls_y+(obj.padRows*2))*(obj.txtDNnPxls_x+(obj.padColumns*2));
                 newNoiseColorsMat = nan(3,realNoisePxls);
                 for d=1:3
-                    tmpMat=reshape(noiseColorsMat(d,:),[obj.txtDNnPxls obj.txtDNnPxls]);
+                    tmpMat=reshape(noiseColorsMat(d,:),[obj.txtDNnPxls_y obj.txtDNnPxls_x]);
                     tmpMat = padarray(tmpMat,[obj.padRows obj.padColumns]);
                     tmpMat=reshape(tmpMat, [1 size(tmpMat,1)* size(tmpMat,2)]);
                     newNoiseColorsMat(d,:)=tmpMat;
@@ -193,8 +194,8 @@ classdef VS_mrDenseNoise < VStim
             
             
             
-            xNoisePxls = obj.txtDNnPxls+(obj.padColumns*2);% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
-            yNoisePxls = obj.txtDNnPxls+(obj.padRows*2); %num cells y
+            xNoisePxls = obj.txtDNnPxls_x+(obj.padColumns*2);% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
+            yNoisePxls = obj.txtDNnPxls_y+(obj.padRows*2); %num cells y
             ySizeNoisePxls=(screenYpixels/yNoisePxls);
             xSizeNoisePxls=(screenXpixels/xNoisePxls); %regular screen
             baseRect = [0 0 xSizeNoisePxls ySizeNoisePxls];

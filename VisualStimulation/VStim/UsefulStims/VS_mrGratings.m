@@ -9,7 +9,7 @@ classdef VS_mrGratings < VStim
         txtSduration = 3;       %txtSduration in secs
         txtSpreStimWait=5;
         txtSdelay=0;
-        txtSinterTrialWait=0.5;
+        txtSinterTrialWait=1;
         save_stimulus=1;
         chkSmakeGrating=0;
         txtSdirList = nan;
@@ -101,8 +101,8 @@ classdef VS_mrGratings < VStim
             black=BlackIndex(obj.PTB_win);
             gray=(white+black)/2;
      
-            table=getGammaTable;
-            Screen('LoadNormalizedGammaTable', obj.PTB_win, table);
+%             table=getGammaTable;
+%             Screen('LoadNormalizedGammaTable', obj.PTB_win, table);
             Screen('BlendFunction', obj.PTB_win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             Screen('FillRect', obj.PTB_win, screen_full_color, []);
             Screen('Flip',obj.PTB_win);
