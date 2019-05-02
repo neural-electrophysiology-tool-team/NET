@@ -242,7 +242,7 @@ classdef VS_mrDenseNoise < VStim
             obj.sendTTL(1,false);
             disp('Session ended');
             filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDenseNoise_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
-            save(filename, 'directions', 'obj', '-v7.3');
+            save(filename, 'colorsArray', 'obj', '-v7.3');
         end
    
         %class constractor

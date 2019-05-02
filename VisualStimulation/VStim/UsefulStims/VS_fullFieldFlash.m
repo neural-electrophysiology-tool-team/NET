@@ -2,7 +2,7 @@ classdef VS_fullFieldFlash < VStim
     properties (SetAccess=public)
         flashLuminosity = 255; %(L_high-L_low)/L_low
         randomize = true;
-        Back2Background=false; %display images between luminosities
+        Back2Background=true; %display images between luminosities
         screenTriggerDuration=0.1; %sec
     end
     properties (Constant)
