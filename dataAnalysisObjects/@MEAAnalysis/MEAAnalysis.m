@@ -286,18 +286,16 @@ classdef MEAAnalysis < recAnalysis
             if par.manual
                 disp('Deleting results file since manual mode is run again');
                 jrc('manual',par.fullParamFile);
+                if ~exist([par.fullParamFile(1:end-4) '_gridSorter.mat'],'file') || par.exportGS
+                    resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
+                    export_gridsorter2(resultsFileName);
+                    %                 S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
+                    %                 save(par.saveFileName,'par','S','-v7.3');
+                else
+                    disp('Data already exported to gridSorter format, to reexport use overwrite=1');
+                end
                 return;
             end
-            
-            if ~exist([par.fullParamFile(1:end-4) '_gridSorter.mat'],'file') || par.exportGS
-                resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
-                export_gridSorter2(resultsFileName);
-%                 S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
-%                 save(par.saveFileName,'par','S','-v7.3');
-            else
-                disp('Data already exported to gridSorter format, to reexport use overwrite=1');
-            end
-            
 %             if par.exportGS
 %                 export_gridS
 %                 jrc('export-gs',par.fullParamFile);
