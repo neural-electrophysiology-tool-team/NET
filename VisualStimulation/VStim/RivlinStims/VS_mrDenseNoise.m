@@ -78,7 +78,6 @@ classdef VS_mrDenseNoise < VStim
     end
     methods
         function obj=run(obj)
-            tic
             %find pixels that can be presented through the optics
             screenProps=Screen('Resolution',obj.PTB_win);
            
@@ -127,9 +126,7 @@ classdef VS_mrDenseNoise < VStim
                     end
                 end
             end
-            
-            disp(toc)
-            
+                        
             for frames = 1:colorsArraySize
                 % Set the colors of each of our squares
                 noiseColorsMat = nan(3,nNoisePxls);
@@ -188,9 +185,7 @@ classdef VS_mrDenseNoise < VStim
                 
                 colorsArray = cat(3, colorsArray, newNoiseColorsMat);
             end
-            
-            disp(toc)
-            
+                    
             xNoisePxls = obj.txtDNnPxls_x+(obj.padColumns*2);% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
             yNoisePxls = obj.txtDNnPxls_y+(obj.padRows*2); %num cells y
             ySizeNoisePxls=(screenYpixels/yNoisePxls);
@@ -226,7 +221,6 @@ classdef VS_mrDenseNoise < VStim
             WaitSecs(obj.txtDNpreStimWait);
             obj.sendTTL(2,true);
             
-            disp(toc)
             
             for i = 1:colorsArraySize
                  obj.sendTTL(3,true);
@@ -242,8 +236,7 @@ classdef VS_mrDenseNoise < VStim
             obj.sendTTL(1,false);
             disp('Session ended');
             filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDenseNoise_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
-            %save(filename, 'directions', 'obj', '-v7.3');
-            disp(toc)
+            save(filename, 'colorsArray', 'obj', '-v7.3');
         end
    
         %class constractor
