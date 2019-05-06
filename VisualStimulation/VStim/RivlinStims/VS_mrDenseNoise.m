@@ -12,19 +12,20 @@ classdef VS_mrDenseNoise < VStim
     txtDNtmpFrq          = 5; %hz
     txtDNnPxls_x         = 100; 
     txtDNnPxls_y         = 75; 
-    chkDNmaskRect        = 1;
+    chkDNmaskRect        = true;
     txtDNrectWidth       = 264;
     txtDNrectHeight      = 264;
-    txtDNpreStimWait     = 10;
-    chkDNbinaryNoise     = 1;
-    chkDNsinglePxl       = 1;
+    txtDNpreStimWait     = 0;
+    chkDNbinaryNoise     = true;
+    chkDNsinglePxl       = true;
     txtDNmaskRadius      = 2000;
-    chkDNbrtGradualNoise = 1;
+    chkDNbrtGradualNoise = true;
     txtDNsaveImageTime   = 2;
-    chkDNsaveImage       = 0;
+    chkDNsaveImage       = false;
     padRows = 0;
     padColumns = 0;
-    spars = 1;    
+    spars = true;
+    percent = 20;
         
     end
     properties (Hidden,Constant)
@@ -77,7 +78,7 @@ classdef VS_mrDenseNoise < VStim
     end
     methods
         function obj=run(obj)
-            
+            tic
             %find pixels that can be presented through the optics
             screenProps=Screen('Resolution',obj.PTB_win);
            
@@ -127,6 +128,8 @@ classdef VS_mrDenseNoise < VStim
                 end
             end
             
+            disp(toc)
+            
             for frames = 1:colorsArraySize
                 % Set the colors of each of our squares
                 noiseColorsMat = nan(3,nNoisePxls);
@@ -149,23 +152,17 @@ classdef VS_mrDenseNoise < VStim
                     
                 elseif obj.spars
                     %sparsly noise
-                    precent=20;
+                    precent=obj.percent;
                     nPxls=round(nNoisePxls*precent/100);
-                    %             pxl = round(rand(nPxls,2)*nNoisePxls);
                     pxl = randperm(nNoisePxls,nPxls*2);
-                    noisePxlBrt = sort(pxl(:,1:nPxls));
-                    noisePxlDrk = sort(pxl(:,nPxls+1:end));
                     
-                    for noisePxl = 1:nNoisePxls
-                        if ~isempty(find(noisePxlBrt==noisePxl,1))
-                            noiseColorsMat(1:3,noisePxl) = brtColor;
-                        elseif ~isempty(find(noisePxlDrk==noisePxl,1))
-                            noiseColorsMat(1:3,noisePxl) = drkColor;
-                        else
-                            noiseColorsMat(1:3,noisePxl) = scrColor;
-                        end
-                        
-                    end
+                    noisePxlBrt = pxl(:,1:nPxls);
+                    noisePxlDrk = pxl(:,nPxls+1:end);
+                    
+                    noiseColorsMat(:,:) = repmat(scrColor',1,nNoisePxls);
+                    noiseColorsMat(:,noisePxlBrt) = repmat(brtColor',1,nPxls);
+                    noiseColorsMat(:,noisePxlDrk) = repmat(drkColor',1,nPxls);
+
                 else
                     %singel pxls
                     for noisePxl = 1:nNoisePxls
@@ -192,7 +189,7 @@ classdef VS_mrDenseNoise < VStim
                 colorsArray = cat(3, colorsArray, newNoiseColorsMat);
             end
             
-            
+            disp(toc)
             
             xNoisePxls = obj.txtDNnPxls_x+(obj.padColumns*2);% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
             yNoisePxls = obj.txtDNnPxls_y+(obj.padRows*2); %num cells y
@@ -228,6 +225,9 @@ classdef VS_mrDenseNoise < VStim
             Screen('Flip',obj.PTB_win);
             WaitSecs(obj.txtDNpreStimWait);
             obj.sendTTL(2,true);
+            
+            disp(toc)
+            
             for i = 1:colorsArraySize
                  obj.sendTTL(3,true);
                 % Draw the rect to the screen
@@ -242,7 +242,8 @@ classdef VS_mrDenseNoise < VStim
             obj.sendTTL(1,false);
             disp('Session ended');
             filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDenseNoise_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
-            save(filename, 'colorsArray', 'obj', '-v7.3');
+            %save(filename, 'directions', 'obj', '-v7.3');
+            disp(toc)
         end
    
         %class constractor
