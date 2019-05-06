@@ -5,7 +5,7 @@ try
     interior_val=0;
     exterior_val=255;
     gray=0.5;
-    pvpmod(varargin)
+%     pvpmod(varargin)
     
     x = txtSrectWidth/2;
     y = txtSrectHeight/2;
