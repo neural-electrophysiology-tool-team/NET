@@ -1,12 +1,12 @@
 classdef VS_mrMovingBars < VStim
     properties (SetAccess=public)
 
-        txtBnumTrials=10;
-        txtBnumDirs=1;
-        txtBbarWidth=300*0.63;%36;
-        txtBbarLength=900*0.63;%180;
-        txtBspeed=500*0.63;%324;
-        txtBmaskRadius=1000*0.63;% 225;
+        txtBnumTrials=5;
+        txtBnumDirs=12;
+        txtBbarWidth=325;%36;
+        txtBbarLength=117;%180;
+        txtBspeed=78;%324;
+        txtBmaskRadius=100;% 225;
         txtBbarIntensity=255;
         popBbarColor = [1 1 1]; %white
         txtBpreStimWait=5;
@@ -93,8 +93,7 @@ classdef VS_mrMovingBars < VStim
                 mask = makeCircularMaskForGUI(obj.txtBmaskRadius,width, height,'color',screen_full_color);
                 masktex=Screen('MakeTexture', obj.PTB_win, mask);
                 maskradius = obj.txtBmaskRadius;
-             while maskradius >= endtxtBmaskRadius
-                    
+             while maskradius >= endtxtBmaskRadius  
                     x_txtBmaskRadius = maskradius;
                     y_txtBmaskRadius = maskradius;
                     screen_full_color = obj.txtBscrIntensity*obj.popBscrColor;
@@ -114,7 +113,8 @@ classdef VS_mrMovingBars < VStim
             Screen('FillRect', obj.PTB_win, screen_full_color, []);
             Screen('Flip', obj.PTB_win);
             obj.sendTTL(1,false);
-
+            filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrMovingBars_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
+            save(filename, 'directions', 'obj', '-v7.3');
         end
 
         function outStats=getLastStimStatistics(obj,hFigure)
