@@ -1,0 +1,37 @@
+{
+    "program": "JRCLUST",
+    "version": {
+        "major": 4,
+        "minor": 0,
+        "release": 0,
+        "tag": "beta-p1",
+        "codename": "Edward"
+    },
+    "changeDate": "4 April 2019",
+    "authors": [
+        "James Jun"
+    ],
+    "maintainers": [
+        "Alan Liddell",
+        "Vidrio Technologies"
+    ],
+    "contributors": [
+        "Mike Economo",
+        "Hidehiko Inagaki",
+        "Thomas Luo",
+        "Vincent Prevosto",
+        "Tim Wang"
+    ],
+    "hardwareRequirements": [
+        "32GiB RAM",
+        "NVIDIA GPU, compute capability 3.5 or later"
+    ],
+    "softwareRequirements": [
+        "MATLAB R2017b or later",
+        "Parallel Computing Toolbox",
+        "Image Processing Toolbox",
+        "Signal Processing Toolbox",
+        "Statistics and Machine Learning Toolbox"
+    ],
+    "docsSite": "https://jrclust.readthedocs.io/en/latest/"
+}
