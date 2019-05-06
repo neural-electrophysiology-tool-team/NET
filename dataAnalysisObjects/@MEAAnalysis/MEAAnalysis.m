@@ -253,7 +253,7 @@ classdef MEAAnalysis < recAnalysis
             recName=obj.currentDataObj.recordingName;
             recDir=obj.currentDataObj.recordingDir;
             if ~exist([recDir filesep filesep par.layoutName],'file')
-                obj.currentDataObj.convertLayoutJRClust([sqrt(pi*30^2) sqrt(pi*30^2)]); %electrode side is sqrt(pi*15^2)=26.6;
+                obj.currentDataObj.convertLayoutJRClust([sqrt(pi*15^2) sqrt(pi*15^2)]); %electrode side is sqrt(pi*15^2)=26.6;
                 disp('Layout converted to JRclust format');
             end
             
@@ -289,14 +289,14 @@ classdef MEAAnalysis < recAnalysis
                 return;
             end
             
-%             if ~exist([par.fullParamFile(1:end-4) '_gridSorter.mat'],'file') || par.exportGS
-%                 export_gridSorter(par.fullParamFile);
-%                 %                 jrc('export-gs',par.fullParamFile);
+            if ~exist([par.fullParamFile(1:end-4) '_gridSorter.mat'],'file') || par.exportGS
+                resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
+                export_gridSorter2(resultsFileName);
 %                 S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
 %                 save(par.saveFileName,'par','S','-v7.3');
-%             else
-%                 disp('Data already exported to gridSorter format, to reexport use overwrite=1');
-%             end
+            else
+                disp('Data already exported to gridSorter format, to reexport use overwrite=1');
+            end
             
 %             if par.exportGS
 %                 export_gridS
