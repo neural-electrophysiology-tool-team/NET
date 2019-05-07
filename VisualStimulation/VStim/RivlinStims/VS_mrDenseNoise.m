@@ -8,22 +8,24 @@ classdef VS_mrDenseNoise < VStim
     txtDNscrIntensity    = 0;
     popDNnoiseColor      = [1 1 1]; %black/white
     popDNscrColor        = [1 1 1]; %black/white
-    txtDNduration        = 600; %300sec = 5min
+    txtDNduration        = 10; %300sec = 5min
     txtDNtmpFrq          = 5; %hz
-    txtDNnPxls           = 10; 
-    chkDNmaskRect        = 1;
-    txtDNrectWidth       = 126;
-    txtDNrectHeight      = 252;
-    txtDNpreStimWait     = 10;
-    chkDNbinaryNoise     = 1;
-    chkDNsinglePxl       = 1;
+    txtDNnPxls_x         = 100; 
+    txtDNnPxls_y         = 75; 
+    chkDNmaskRect        = true;
+    txtDNrectWidth       = 264;
+    txtDNrectHeight      = 264;
+    txtDNpreStimWait     = 0;
+    chkDNbinaryNoise     = true;
+    chkDNsinglePxl       = true;
     txtDNmaskRadius      = 2000;
-    chkDNbrtGradualNoise = 1;
+    chkDNbrtGradualNoise = true;
     txtDNsaveImageTime   = 2;
-    chkDNsaveImage       = 0;
-    padRows = 2;
-    padColumns = 2;
-    spars = 1;    
+    chkDNsaveImage       = false;
+    padRows = 0;
+    padColumns = 0;
+    spars = true;
+    percent = 20;
         
     end
     properties (Hidden,Constant)
@@ -76,7 +78,6 @@ classdef VS_mrDenseNoise < VStim
     end
     methods
         function obj=run(obj)
-            
             %find pixels that can be presented through the optics
             screenProps=Screen('Resolution',obj.PTB_win);
            
@@ -96,8 +97,8 @@ classdef VS_mrDenseNoise < VStim
             [screenXpixels, screenYpixels] = Screen('WindowSize', obj.PTB_win);
             
             % Get the centre coordinate of the obj.PTB_win
-            xNoisePxls = obj.txtDNnPxls;% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
-            yNoisePxls = obj.txtDNnPxls; %num cells y
+            xNoisePxls = obj.txtDNnPxls_x;% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
+            yNoisePxls = obj.txtDNnPxls_y; %num cells y
             nNoisePxls = xNoisePxls * yNoisePxls;
             reps = 3;
             colorsArraySize = obj.txtDNduration*obj.txtDNtmpFrq; % number of times screen changes input
@@ -125,7 +126,7 @@ classdef VS_mrDenseNoise < VStim
                     end
                 end
             end
-            
+                        
             for frames = 1:colorsArraySize
                 % Set the colors of each of our squares
                 noiseColorsMat = nan(3,nNoisePxls);
@@ -148,23 +149,17 @@ classdef VS_mrDenseNoise < VStim
                     
                 elseif obj.spars
                     %sparsly noise
-                    precent=20;
+                    precent=obj.percent;
                     nPxls=round(nNoisePxls*precent/100);
-                    %             pxl = round(rand(nPxls,2)*nNoisePxls);
                     pxl = randperm(nNoisePxls,nPxls*2);
-                    noisePxlBrt = sort(pxl(:,1:nPxls));
-                    noisePxlDrk = sort(pxl(:,nPxls+1:end));
                     
-                    for noisePxl = 1:nNoisePxls
-                        if ~isempty(find(noisePxlBrt==noisePxl,1))
-                            noiseColorsMat(1:3,noisePxl) = brtColor;
-                        elseif ~isempty(find(noisePxlDrk==noisePxl,1))
-                            noiseColorsMat(1:3,noisePxl) = drkColor;
-                        else
-                            noiseColorsMat(1:3,noisePxl) = scrColor;
-                        end
-                        
-                    end
+                    noisePxlBrt = pxl(:,1:nPxls);
+                    noisePxlDrk = pxl(:,nPxls+1:end);
+                    
+                    noiseColorsMat(:,:) = repmat(scrColor',1,nNoisePxls);
+                    noiseColorsMat(:,noisePxlBrt) = repmat(brtColor',1,nPxls);
+                    noiseColorsMat(:,noisePxlDrk) = repmat(drkColor',1,nPxls);
+
                 else
                     %singel pxls
                     for noisePxl = 1:nNoisePxls
@@ -179,10 +174,10 @@ classdef VS_mrDenseNoise < VStim
                     end
                 end
                 
-                realNoisePxls=(obj.txtDNnPxls+(obj.padRows*2))*(obj.txtDNnPxls+(obj.padColumns*2));
+                realNoisePxls=(obj.txtDNnPxls_y+(obj.padRows*2))*(obj.txtDNnPxls_x+(obj.padColumns*2));
                 newNoiseColorsMat = nan(3,realNoisePxls);
                 for d=1:3
-                    tmpMat=reshape(noiseColorsMat(d,:),[obj.txtDNnPxls obj.txtDNnPxls]);
+                    tmpMat=reshape(noiseColorsMat(d,:),[obj.txtDNnPxls_y obj.txtDNnPxls_x]);
                     tmpMat = padarray(tmpMat,[obj.padRows obj.padColumns]);
                     tmpMat=reshape(tmpMat, [1 size(tmpMat,1)* size(tmpMat,2)]);
                     newNoiseColorsMat(d,:)=tmpMat;
@@ -190,11 +185,9 @@ classdef VS_mrDenseNoise < VStim
                 
                 colorsArray = cat(3, colorsArray, newNoiseColorsMat);
             end
-            
-            
-            
-            xNoisePxls = obj.txtDNnPxls+(obj.padColumns*2);% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
-            yNoisePxls = obj.txtDNnPxls+(obj.padRows*2); %num cells y
+                    
+            xNoisePxls = obj.txtDNnPxls_x+(obj.padColumns*2);% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
+            yNoisePxls = obj.txtDNnPxls_y+(obj.padRows*2); %num cells y
             ySizeNoisePxls=(screenYpixels/yNoisePxls);
             xSizeNoisePxls=(screenXpixels/xNoisePxls); %regular screen
             baseRect = [0 0 xSizeNoisePxls ySizeNoisePxls];
@@ -227,6 +220,8 @@ classdef VS_mrDenseNoise < VStim
             Screen('Flip',obj.PTB_win);
             WaitSecs(obj.txtDNpreStimWait);
             obj.sendTTL(2,true);
+            
+            
             for i = 1:colorsArraySize
                  obj.sendTTL(3,true);
                 % Draw the rect to the screen
@@ -241,7 +236,7 @@ classdef VS_mrDenseNoise < VStim
             obj.sendTTL(1,false);
             disp('Session ended');
             filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDenseNoise_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
-            save(filename, 'directions', 'obj', '-v7.3');
+            save(filename, 'colorsArray', 'obj', '-v7.3');
         end
    
         %class constractor
