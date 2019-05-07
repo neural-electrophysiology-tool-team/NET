@@ -4,7 +4,7 @@ if ~exist(vcFile_prm, 'file')
     fprintf(2, '.prm file does not exist: %s\n', vcFile_prm);
     P=[]; return; 
 end
-P0 = file2struct('/home/mestalbet/NSKToolbox/JRClust/default.prm');  %P = defaultParam();
+P0 = file2struct('C:\GitHub\NSKToolboxDolev\JRClust_old\default.prm');  %P = defaultParam();
 P = file2struct(vcFile_prm);
 if ~isfield(P, 'template_file'), P.template_file = ''; end
 if ~isempty(P.template_file)

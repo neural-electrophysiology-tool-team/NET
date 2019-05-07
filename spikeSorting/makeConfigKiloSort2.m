@@ -118,8 +118,9 @@ ops.fig = 0;
 for i=1:2:length(varargin)
     eval(['ops.' varargin{i} '=' 'varargin{i+1};'])
 end
-ops_temp = load('/home/mestalbet/KiloSort2/configFiles/gui_settings.mat');
-ops_gui = ops_temp.ops;
+% ops_temp = load('/home/mestalbet/KiloSort2/configFiles/gui_settings.mat');
+ops_temp = load('E:\Yuval\spikeSorting\sample data\A12\partial\for noah\Movie0001_ksSettings.mat');
+ops_gui = ops_temp.saveDat.ops;
 ops_gui = rmfield(ops_gui, 'fbinary');
 ops_gui = rmfield(ops_gui,'fproc');
 ops_gui = rmfield(ops_gui,'saveDir');

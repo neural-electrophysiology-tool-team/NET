@@ -253,7 +253,7 @@ classdef MEAAnalysis < recAnalysis
             recName=obj.currentDataObj.recordingName;
             recDir=obj.currentDataObj.recordingDir;
             if ~exist([recDir filesep filesep par.layoutName],'file')
-                obj.currentDataObj.convertLayoutJRClust([sqrt(pi*30^2) sqrt(pi*30^2)]); %electrode side is sqrt(pi*15^2)=26.6;
+                obj.currentDataObj.convertLayoutJRClust([sqrt(pi*15^2) sqrt(pi*15^2)]); %electrode side is sqrt(pi*15^2)=26.6;
                 disp('Layout converted to JRclust format');
             end
             
@@ -273,7 +273,7 @@ classdef MEAAnalysis < recAnalysis
             end
             
             if ~exist([par.fullParamFile(1:end-4) '_ksort.mat'],'file')
-                C = strsplit(par.fullParamFile,'/');
+                C = strsplit(par.fullParamFile,filesep);
                 paramDir = fullfile(join(C(1:end-1),'/'));
                 resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
                 load(resultsFileName);
