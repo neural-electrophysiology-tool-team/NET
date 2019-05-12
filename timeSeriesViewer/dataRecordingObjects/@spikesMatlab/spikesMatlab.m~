@@ -7,8 +7,8 @@ classdef spikesMatlab < dataRecording
     properties (Constant, Hidden)
         defaultLocalDir='C:\Users\Tulip\Documents\Academic\Post-Doc\Experiments'; %Default directory from which search starts
         simulationSamplingFrequency=1000*10; 
-        signalBits = 24 ;% the quantization of the sampling card
-        numberOfCharFromEndToBaseName  = 3; %the number of characters from the end of the file name to get to the base file name
+        signalBits % the quantization of the sampling card
+        numberOfCharFromEndToBaseName %the number of characters from the end of the file name to get to the base file name
   
     end
     methods
@@ -21,7 +21,7 @@ classdef spikesMatlab < dataRecording
             obj.channelNumbers=1:nNeurons;
         end
         function obj=updateSamplingFrequency(obj)
-            load(fullfile(obj.recordingDir,obj.dataFileNames),'t');
+            load([obj.recordingDir '\' obj.dataFileNames],'-mat', 't');
             obj.t=round(t/(obj.simulationSamplingFrequency/obj.samplingFrequency));
         end
         function [V_uV,t_ms]=getData(obj,channels,startTime_ms,window_ms)
@@ -70,7 +70,7 @@ classdef spikesMatlab < dataRecording
             obj.samplingFrequency=10000; %default frequency [Hz] - this is decided by the user and can be changed to get more/less accurate spike times
             obj=updateSamplingFrequency(obj); %also loads t
             
-            load(fullfile(obj.recordingDir,obj.dataFileNames),'ic');
+            load([obj.recordingDir '\' obj.dataFileNames],'ic');
             obj.ic=ic;
             obj=reloadMetaData(obj);
         end

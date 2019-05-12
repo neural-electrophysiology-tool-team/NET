@@ -19,7 +19,7 @@ ops.nSkipCov            = 25; %not sure about this. % compute whitening matrix f
 
 ops.fs = 20000;  
 % frequency for high pass filtering (150)
-ops.fshigh = 250;   
+ops.fshigh = 200;   
 % minimum firing rate on a "good" channel (0 to skip)
 ops.minfr_goodchannels = 0.1; 
 % threshold on projections (like in Kilosort1, can be different for last pass like [10 4])
@@ -54,7 +54,6 @@ ops.criterionNoiseChannels = 0.2; % fraction of "noise" templates allowed to spa
 ops.Nrank               = 3;    % matrix rank of spike template model (3)		
 ops.nfullpasses         = 6;    % number of complete passes through data during optimization (6)		
 ops.maxFR               = 20000;  % maximum number of spikes to extract per batch (20000)		
-ops.fshigh              = 250;   % frequency for high pass filtering		
 ops.fslow               = 3000;   % frequency for low pass filtering (optional)
 
 ops.Nfilt               = 1024; %64; % max number of clusters
@@ -123,7 +122,8 @@ ops_gui = ops_temp.ops;
 ops_gui = rmfield(ops_gui, 'fbinary');
 ops_gui = rmfield(ops_gui,'fproc');
 ops_gui = rmfield(ops_gui,'saveDir');
-
+ops_gui = rmfield(ops_gui,'chanMap');
+ops_gui = rmfield(ops_gui,'fshigh');
 for fn = fieldnames(ops_gui)'
    ops.(fn{1}) = ops_gui.(fn{1});
 end

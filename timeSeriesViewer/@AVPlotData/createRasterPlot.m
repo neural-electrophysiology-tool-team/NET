@@ -13,7 +13,7 @@ else %use the sampling frequency as the time bin
 end
 obj.plotParams.plotChannelNumbers=1;
 
-obj.plotParams.colormap=load('colormapMyHot');
+obj.plotParams.colormap=parula(252);
 obj.plotParams.colormap=obj.plotParams.colormap.MyHotColorMap;
 
 colormap(obj.hPlotAxis,obj.plotParams.colormap);
