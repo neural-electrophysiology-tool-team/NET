@@ -53,7 +53,7 @@ classdef MCH5Recording < dataRecording
     analogDownHighRange=-350;
     analogDownLowRange=-370;
     includeOnlyDigitalDataInTriggers=0; %this is to make frameTimeFromDiode.m to work
-    ButterFilt = 1; %runs a highpass filter if saving double to binary.
+    ButterFilt = 1; %runs a highpass filter upon converting to binary.
     fileExtension = 'h5'
   end
   
@@ -180,18 +180,20 @@ classdef MCH5Recording < dataRecording
       
       if obj.convertData2Double
           
-          V_uV = (double(V_uV) - obj.ZeroADValue(1)) * obj.MicrovoltsPerAD(1);
-          
-          if obj.ButterFilt
-              Fcp = 200; %Cutoff freq
-              Fsp = obj.samplingFrequency;
-              order = 2; %filter order;
-              for i= 1:size(V_uV,1)
-                  V_uV = butfilt(squeeze(V_uV(i,:,:)),Fcp,Fsp,order);
-              end
-          end
+        V_uV = (double(V_uV) - obj.ZeroADValue(1)) * obj.MicrovoltsPerAD(1);
+%           for k = 1:size(V_uV, 1)
+% %               V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValue(k)) * obj.MicrovoltsPerAD(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
+%           end
       end
       
+      if obj.ButterFilt
+          Fcp = 200; %Cutoff freq
+          Fsp = obj.samplingFrequency;
+          order = 2; %filter order;
+          for i= 1:size(V_uV,1)
+              V_uV = butfilt(squeeze(V_uV(i,:,:)),Fcp,Fsp,order);
+          end
+      end    
       if nargout==2
         t_ms=(1:windowSamples)*(1e3/obj.samplingFrequency(1));
       end
@@ -258,6 +260,8 @@ classdef MCH5Recording < dataRecording
 %                 V_uV(k, :, :) = (V_uV(k, :, :)-obj.ZeroADValueAnalog(k)) * obj.MicrovoltsPerADAnalog(k)*(10^(double(obj.exponent(k))+6)); %exponent brings value in V, we want uV
 %             end
         end
+        
+      
         
         if nargout==2
             T_ms=(1:windowSamples)*(1e3/obj.samplingFrequency(1));
