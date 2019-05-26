@@ -273,7 +273,7 @@ classdef MEAAnalysis < recAnalysis
             end
             
             if ~exist([par.fullParamFile(1:end-4) '_ksort.mat'],'file')
-                C = strsplit(par.fullParamFile,'/');
+                C = strsplit(par.fullParamFile,filesep);
                 paramDir = fullfile(join(C(1:end-1),'/'));
                 resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
                 load(resultsFileName, 'rez');
