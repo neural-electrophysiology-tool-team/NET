@@ -2,8 +2,12 @@ function sendMailViaGmail(recipientMail,subject,message)
 
 % Modify these two lines to reflect
 % your account and password.
-myaddress = 'message.server.mark@gmail.com';
-mypassword = 'marksheinidelson';
+NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
+emailCredentialsFile = fileread([NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'VSEmailsCredentials.txt']);
+emailCredentials = regexp(emailCredentialsFile, '\r\n|\r|\n', 'split');
+
+myaddress = emailCredentials{1};
+mypassword = emailCredentials{2};
 
 setpref('Internet','E_mail',myaddress);
 setpref('Internet','SMTP_Server','smtp.gmail.com');

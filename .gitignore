@@ -99,7 +99,16 @@ venv.bak/
 
 # Matlab Files
 *.asv
+timeSeriesViewer/dataRecordingObjects/dataRecordingObjects.rar
+timeSeriesViewer/dataRecordingObjects/@MCH5Recording/MCH5Recording.asv
+timeSeriesViewer/electrode layouts/electrode layouts - Shortcut.lnk
 *.mat
+/externalToolboxes/Psychtoolbox/*
+/externalToolboxes/Psychtoolbox/
+** Psychtoolbox
+*.jpg
+spikeSorting/KiloSort/PCspikes2.mat
+
 .ropeproject
 
 # mkdocs documentation

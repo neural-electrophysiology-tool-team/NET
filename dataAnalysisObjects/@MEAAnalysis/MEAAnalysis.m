@@ -183,9 +183,8 @@ classdef MEAAnalysis < recAnalysis
             end
             
             nCh=numel(obj.currentDataObj.channelNumbers);
-%             NT=64+2^round(log2(1024*(128/nCh)))*1024;
-            NT = 32+2^round(log2(1024*(32/nCh)))*64;
-            NT = 2*32*128+64;
+            NT=64+2^round(log2(1024*(128/nCh)))*1024;
+            
             % Run the configuration file, it builds the structure of options (ops)
             ops=makeConfigKiloSort2(obj.currentDataObj.recordingDir,nCh,...
                 'GPU',1,'parfor',1,'NT',NT,'fbinary',[obj.currentDataObj.recordingDir filesep obj.currentDataObj.dataFileNames{1}],...
@@ -686,6 +685,7 @@ classdef MEAAnalysis < recAnalysis
             addParameter(parseObj,'overwrite',false,@isnumeric);
             addParameter(parseObj,'inputParams',false,@isnumeric);
             addParameter(parseObj,'trialStartEndDigiTriggerNumbers',[3 4],@isnumeric);
+            addParameter(parseObj,'noisyAnalog',false,@isnumeric);
             parseObj.parse(varargin{:});
             if parseObj.Results.inputParams
                 disp(parseObj.Results);
@@ -713,7 +713,11 @@ classdef MEAAnalysis < recAnalysis
             T=load(obj.files.getDigitalTriggers);
             
             disp('Syncing diode signal...');
-            [frameShifts,upCross,downCross,digiTriggers,transitionNotFound]=frameTimeFromDiode(obj.currentDataObj,'trialStartEndDigiTriggerNumbers',trialStartEndDigiTriggerNumbers,'T',T.tTrig);
+            if noisyAnalog
+                [frameShifts,upCross,downCross,digiTriggers,transitionNotFound]=frameTimeFromDiode(obj.currentDataObj,'trialStartEndDigiTriggerNumbers',trialStartEndDigiTriggerNumbers,'T',T.tTrig,'noisyAnalog',noisyAnalog);
+            else
+                [frameShifts,upCross,downCross,digiTriggers,transitionNotFound]=frameTimeFromDiode(obj.currentDataObj,'trialStartEndDigiTriggerNumbers',trialStartEndDigiTriggerNumbers,'T',T.tTrig);
+            end
             save(saveFileName,'par','frameShifts','upCross','downCross','digiTriggers','transitionNotFound','-v7.3');
             
         end
