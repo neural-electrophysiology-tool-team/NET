@@ -7,6 +7,7 @@ classdef (Abstract) VStim < handle
         preSessionDelay = 1;
         postSessionDelay = 0;
         trialStartTrig = 'MC=2,Intan=6';
+        displaySyncSignal=true;
         
     end
     properties (SetObservable, AbortSet = true, SetAccess=public)
@@ -216,8 +217,10 @@ classdef (Abstract) VStim < handle
             end
             
             maskblobOn=maskblobOff; %make on mask addition
-%             maskblobOn((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,:)=obj.syncSquareLuminosity;
-%             maskblobOff((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,2)=obj.syncSquareLuminosity;
+            if obj.displaySyncSignal
+                maskblobOn((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,:)=obj.syncSquareLuminosity;
+                maskblobOff((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,2)=obj.syncSquareLuminosity;
+            end 
             
             % Build a single transparency mask texture:
             for i=1:obj.nPTBScreens

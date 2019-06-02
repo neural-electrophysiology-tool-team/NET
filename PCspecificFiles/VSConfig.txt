@@ -1,0 +1,2 @@
+parallelPortNum = 888
+syncSignal = true
