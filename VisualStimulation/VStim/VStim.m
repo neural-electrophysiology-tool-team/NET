@@ -19,6 +19,7 @@ classdef (Abstract) VStim < handle
         horizontalShift=0;
         numPixels=100;
         numMicrons=100;
+        sendMail=false;
         
     end
     properties (Constant)
@@ -60,6 +61,7 @@ classdef (Abstract) VStim < handle
         parallelPortNum =  hex2dec('EFF8')%888; %Parallel port default number
         displaySyncSignal=true;
         pixelConversionFactor = 100/13; %microns per pixel
+        sendMailTo %mail adresses to which a notificaion will be sent at the end of the stimulation (if sendMail=true)
         
         PTB_win %Pointer to PTB window
         whiteIdx %white index for screen
@@ -92,7 +94,6 @@ classdef (Abstract) VStim < handle
             addlistener(obj,'stimDuration','PostSet',@obj.updateActualStimDuration); %add a listener to stimDuration, after its changed its size is updated in the changedDataEvent method
             addlistener(obj, 'numPixels', 'PostSet', @(src,event)disp([num2str(obj.numPixels), ' is ', num2str(obj.numPixels*obj.pixelConversionFactor), ' microns'])); 
             addlistener(obj, 'numMicrons', 'PostSet', @(src,event)disp([num2str(obj.numMicrons), ' is ', num2str(obj.numMicrons/obj.pixelConversionFactor), ' pixels']));
-
             obj.nPTBScreens=numel(PTB_WindowPointer);
             
             if nargin==2

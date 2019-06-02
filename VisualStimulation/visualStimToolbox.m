@@ -219,9 +219,15 @@ initializeVisualStim;
         if get(VS.hand.GenealBox.hSaveStats,'value')
             save (saveFile,'VSMetaData');
             set(VS.hand.GenealBox.hChangeDirEdit,'string','Default dir'); %to prevent saving again on the same file name after running
-            disp('Stimulation parameters saved!');
+            disp('Stimulation parameters saved!');          
         end
         
+        %send mail
+        if VSMetaData.allPropVal{find(ismember(VSMetaData.allPropName, 'sendMail'))}
+                for i=1:numel(VSMetaData.allPropVal{find(ismember(VSMetaData.allPropName, 'sendMailTo'))})
+                    sendMailViaGmail(VSMetaData.allPropVal{find(ismember(VSMetaData.allPropName, 'sendMailTo'))}{i},[VSMetaData.metaClassData.Name(4:end) ' Stimulation Ended'], 'You can now open the door.');
+                end
+        end
         %prepare figure
         if VS.par.VSO.lastExcecutedTrial~=0
             VS.hand.stimulationStatisticsFigure=figure('Position',[VS.par.GUIPosition([1 2]) 800 600]);
