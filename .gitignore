@@ -116,3 +116,4 @@ spikeSorting/KiloSort/PCspikes2.mat
 
 # mypy
 .mypy_cache/
+*.asv
