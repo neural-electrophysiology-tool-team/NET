@@ -118,3 +118,4 @@ spikeSorting/KiloSort/PCspikes2.mat
 .mypy_cache/
 *.asv
 PCspecificFiles/VSConfig.txt
+*.mat
