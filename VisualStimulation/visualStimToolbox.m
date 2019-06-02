@@ -169,7 +169,10 @@ initializeVisualStim;
         if isfield(VS.par,'VSO')
             VS.par.VSO.cleanUp; %clean old Vstim object
         end
-        eval(['VS.par.VSO=' VS.par.VSMethods{VS.par.currentVSO} '(VS.par.PTB_win,VS.hand.GenealBox.hInteractiveGUIparent);']);
+        if length(VS.par.currentVSO)>1 
+            disp('More than one stimulation with the same name found') 
+        end
+        eval(['VS.par.VSO=' VS.par.VSMethods{VS.par.currentVSO(1)} '(VS.par.PTB_win,VS.hand.GenealBox.hInteractiveGUIparent);']);
         
         %get properties of visual stimulation object
         VSControlMethods=VS.par.VSO.getVSControlMethods;
@@ -358,7 +361,7 @@ initializeVisualStim;
                     'Label', VS.par.VSObjNames{i}, 'Checked','off', 'Callback', {@CallbackChangeVisualStim,i});
         end
 
-        set(VS.hand.visualStimMenu.([VS.par.VSMethods{VS.par.currentVSO}]),'Checked','on'); %select one of the stims
+        set(VS.hand.visualStimMenu.([VS.par.VSMethods{VS.par.currentVSO(1)}]),'Checked','on'); %select one of the stims
         if VS.par.useNewUIX %use uix for GUI layouts
 
             % Arrange the main interface windows
