@@ -1,23 +1,22 @@
-classdef VS_mrGratings < VStim
+classdef VS_mrStaticGratings < VStim
     properties (SetAccess=public)
         
         grating_width = 52;     %pixel/cycle, choose sp=225, tp=5 for 30deg/s at 60x
-        tmporalFreq = 2;
-        txtStmpFrq = 2;         %cycles/sec
+        temporalFreq = 2;       %cycles/sec
         txtSmaskRadius = 163;	%radius of circular mask
         txtSnumDirs = 12;
         txtSnumTrials = 5;
         txtSduration = 4;       %txtSduration in secs
-        txtSpreStimWait=5;
+        txtSpreStimWait=1;
         txtSdelay=0;
         txtSinterTrialWait=1;
         save_stimulus= true;
-        chkSmakeGrating= true;
+        temporalGradient = true;
+        makeGratings = true;
         txtSdirList = nan;
         txtSbrtIntensity = 255;
         popSgrtColor = [1 1 1];
         txtSdrkIntensity = 0;
-        chkScorrectGrating = true;
         x_shift = 0;
         y_shift = 0;
         chkSmaskRect = false;
@@ -32,7 +31,7 @@ classdef VS_mrGratings < VStim
         defaultTrialsPerCategory=50; %number of gratings to present
         defaultBackground=0;
         grating_widthTxt     ="scalar,width of black+white grating, pixels/cycle";
-        txtStmpFrqTxt        ="scalar,cycles/sec";
+        temporalFreqTxt      ="scalar,cycles/sec";
         txtSmaskRadiusTxt    ="scalar,half size of square texture";
         txtSnumDirsTxt       ="scalar,number of directions";
         txtSnumTrialsTxt     ="scalar,number of repetitions";
@@ -41,11 +40,9 @@ classdef VS_mrGratings < VStim
         txtSdelayTxt         ="scalar,seconds of black screen before each trial start";
         txtSinterTrialWaitTxt    ="scalar,seconds of waiting between trials";
         save_stimulusTxt     ="0 or 1,save stimuli?";
-        chkSmakeGratingTxt   ="0 or 1,1 creates grating instead of sinusoid";
         txtSdirListTxt       ="vector, list of stimulus directions in degrees if nan (default), generates evenly spaced directions based on txtSnumDirs argument.";
         txtSbrtIntensityTxt     ="scalar, 0 to 255. Maximum intensity of grating or sinusoid";
         txtSdrkIntensityTxt     ="scalar, 0 to 255. minimum intensity of grating or sinusoid";
-        chkScorrectGratingTxt   ="0 or 1, if 0, makes half rectified sinusoids instead of squarewaves like old method.";
         shift_xTxt              ="scalar, shifts the center of stimuli in the x axis";
         shift_yTxt              ="scalar, shifts the center of stimuli in the y axis";
         chkSmaskRectTxt         ="0 or 1. if 1, the masking of the grating is rectangular";
@@ -117,35 +114,48 @@ classdef VS_mrGratings < VStim
             masktex=Screen('MakeTexture', obj.PTB_win, mask);
             
             % Calculate parameters of the Sinusoid
+                                  
+            phaseShift = obj.temporalFreq * 2*pi * obj.ifi;
+            ph = 0:phaseShift:2*pi-phaseShift;
+            cycle_length = numel(ph);
+
+            tempSinusoid = cos(ph);
+            if ~obj.temporalGradient
+                temp_mask = tempSinusoid > 0;
+                tempSinusoid(temp_mask) = 1;
+                tempSinusoid(~temp_mask) = -1;
+            end
+            
+            fr=(1/obj.grating_width)*2*pi;
+            visiblesize=2*obj.txtSmaskRadius+1;
+            
+            [x,~]=meshgrid(-obj.txtSmaskRadius:obj.txtSmaskRadius, -obj.txtSmaskRadius:obj.txtSmaskRadius);
+            spSinusoid = cos(fr*x);
+            if obj.makeGratings %currently works only with square-wave gratings
+            grating_mask = spSinusoid > 0;
+            spSinusoid(grating_mask) = 1;
+            spSinusoid(~grating_mask) = -1;
+            end
             
             gray=round((obj.txtSbrtIntensity+obj.txtSdrkIntensity)/2);
             inc=obj.txtSbrtIntensity-gray;
             
-            p=ceil(obj.grating_width);  % pixels/cycle
-            fr=(1/obj.grating_width)*2*pi;
-            visiblesize=2*obj.txtSmaskRadius+1;
-            
-            [x,~]=meshgrid(-obj.txtSmaskRadius:obj.txtSmaskRadius + abs(p), -obj.txtSmaskRadius:obj.txtSmaskRadius);
-            sinusoid = gray + inc*cos(fr*x); %change x to fix mightex polygon
-            
-            if obj.chkSmakeGrating
-                grating_mask = sinusoid>gray; %returns a 0 and 1 mask
-                if obj.chkScorrectGrating
-                    sinusoid(grating_mask) = obj.txtSbrtIntensity; %makes actual squarewave
-                    sinusoid(~grating_mask) = obj.txtSdrkIntensity;
-                else
-                    sinusoid = sinusoid.*grating_mask; %old method generates half rectified sinusoids
-                end
-            end
+            standingWave = gray + inc*permute(tempSinusoid,[3,1,2]).*spSinusoid;
             
             if any(obj.popSgrtColor ~= [1 1 1])
-                color_sinusoid = repmat(sinusoid,1,1,3);
-                color_sinusoid = color_sinusoid.*reshape(obj.popSgrtColor,1,1,3);
+                colorWave = repmat(standingWave,1,1,1,3);
+                colorWave = colorWave.*reshape(obj.popSgrtColor,1,1,1,3);
+                colorWave = permute(colorWave,[1 2 4 3]);
             else
-                color_sinusoid = sinusoid;
-            end
+                colorWave = permute(standingWave,[1 2 4 3]);
+            end    
             
-            sinusoidtex=Screen('MakeTexture', obj.PTB_win, color_sinusoid);
+            % make textures in advance to gurantee smooth presentation
+            
+            stimTex = NaN(1,cycle_length);
+            for c = 1:cycle_length
+                stimTex(c) = Screen('MakeTexture', obj.PTB_win, colorWave(:,:,:,c));
+            end
             
             % configure display window
             
@@ -153,7 +163,6 @@ classdef VS_mrGratings < VStim
             dstRect=CenterRect(dstRect, obj.rect);
             [x_center, y_center] = RectCenterd(dstRect);
             dstRect = CenterRectOnPointd(dstRect,x_center+obj.x_shift,y_center+obj.y_shift);
-            shiftperframe= obj.txtStmpFrq * p * obj.ifi;
             
             obj.sendTTL(1,true);
             WaitSecs(obj.txtSpreStimWait);
@@ -171,11 +180,11 @@ classdef VS_mrGratings < VStim
                 obj.sendTTL(2,true);
                 %%%%%%
                 while (vbl < vblendtime)
-                    xoffset = mod(i*shiftperframe,abs(p));
+                    toffset = mod(i,cycle_length) + 1;
                     i=i+1;
-                    srcRect=[xoffset 0 xoffset + visiblesize visiblesize];
-                    Screen('DrawTexture', obj.PTB_win, sinusoidtex, srcRect, dstRect, direction);
-                    Screen('DrawTexture',  obj.PTB_win, masktex, [0 0 visiblesize visiblesize], dstRect, direction);
+                    srcRect=[0 0 visiblesize visiblesize];
+                    Screen('DrawTexture', obj.PTB_win, stimTex(toffset), srcRect, dstRect, direction);
+                    Screen('DrawTexture',  obj.PTB_win, masktex, srcRect, dstRect, direction);
                     obj.applyBackgound;
                     obj.sendTTL(3,true);
                     vbl=Screen('Flip',  obj.PTB_win);
@@ -205,11 +214,11 @@ classdef VS_mrGratings < VStim
             end
         end
         
-        function outStats=getLastStimStatistics(obj,hFigure)
+        function outStats=getLastStimStatistics(obj,~)
             outStats.props=obj.getProperties;
         end
         %class constractor
-        function obj=VS_mrGratings(w,h)
+        function obj=VS_mrStaticGratings(w,~)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
             obj.stimDuration=NaN;
