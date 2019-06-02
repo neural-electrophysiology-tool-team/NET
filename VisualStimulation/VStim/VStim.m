@@ -7,7 +7,6 @@ classdef (Abstract) VStim < handle
         preSessionDelay = 1;
         postSessionDelay = 0;
         trialStartTrig = 'MC=2,Intan=6';
-        displaySyncSignal=true;
         
     end
     properties (SetObservable, AbortSet = true, SetAccess=public)
@@ -25,7 +24,6 @@ classdef (Abstract) VStim < handle
     properties (Constant)
         backgroudLuminance = 0;
         maxTriggers=4;
-        pixelConversionFactor = 100/13; %microns per pixel
         visualFieldBackgroundLuminanceTxt = 'The luminance of the circular visual field that is projected to the retina';
         visualFieldDiameterTxt = 'The diameter of the circular visual field that is projected to the retina [pixels], 0 takes maximal value';
         stimDurationTxt='The duration of the visual stimuls [s]';
@@ -60,6 +58,8 @@ classdef (Abstract) VStim < handle
         io %parallel port communication object for PC
         pixelmicronratio = 100 / 13 ; % microns / pixels
         parallelPortNum =  hex2dec('EFF8')%888; %Parallel port default number
+        displaySyncSignal=true;
+        pixelConversionFactor = 100/13; %microns per pixel
         
         PTB_win %Pointer to PTB window
         whiteIdx %white index for screen
@@ -119,14 +119,16 @@ classdef (Abstract) VStim < handle
             
             %initialized TTL signalling
             NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
-            configFile=[NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'VSConfig.txt'];
+            configFile=[NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'VSConfig.txt']; %JSON encoded
             
             if exist(configFile,'file')
                 fid=fopen(configFile);
-                configData = textscan(fid,'%s = %s');
+                configText=fscanf(fid,'%s');
+                configData=jsondecode(configText);
                 fclose(fid);
-                for i=1:numel(configData{1})
-                    obj.(configData{1}{i})=str2num(configData{2}{i});
+                fn = fieldnames(configData);
+                for i=1:numel(fn)
+                    obj.(fn{i})=configData.(fn{i});
                 end
             end
             obj.initializeTTL;
