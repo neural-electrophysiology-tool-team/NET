@@ -26,7 +26,9 @@ classdef VS_mrDenseNoise < VStim
     padColumns = 0;
     spars = true;
     percent = 20;
-        
+    correction = 0.0005;
+    
+    
     end
     properties (Hidden,Constant)
         defaultTrialsPerCategory=50; %number of gratings to present
@@ -216,20 +218,23 @@ classdef VS_mrDenseNoise < VStim
                 allRectsRight(:, i) = CenterRectOnPointd(baseRect, xPosRight(i), yPosRight(i));
             end
             
+            Priority(MaxPriority(obj.PTB_win));
+            
             Screen('FillRect', obj.PTB_win, scrColor, []);
             Screen('Flip',obj.PTB_win);
             WaitSecs(obj.txtDNpreStimWait);
             obj.sendTTL(2,true);
             
-            
+            vbl = GetSecs();
             for i = 1:colorsArraySize
-                 obj.sendTTL(3,true);
+                obj.sendTTL(3,true);
                 % Draw the rect to the screen
                 Screen('FillRect', obj.PTB_win, colorsArray(:,:,i), allRectsRight);
-                vbl = Screen('Flip', obj.PTB_win);
+                vbl = Screen('Flip', obj.PTB_win,vbl+1/obj.txtDNtmpFrq - obj.correction);
                 obj.sendTTL(3,false);
-                WaitSecs(1/obj.txtDNtmpFrq);
             end
+            Priority(0);
+            
             obj.sendTTL(2,false);
             obj.applyBackgound;
             Screen('DrawingFinished', obj.PTB_win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
