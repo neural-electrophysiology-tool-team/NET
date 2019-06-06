@@ -713,11 +713,7 @@ classdef MEAAnalysis < recAnalysis
             T=load(obj.files.getDigitalTriggers);
             
             disp('Syncing diode signal...');
-            if noisyAnalog
-                [frameShifts,upCross,downCross,digiTriggers,transitionNotFound]=frameTimeFromDiode(obj.currentDataObj,'trialStartEndDigiTriggerNumbers',trialStartEndDigiTriggerNumbers,'T',T.tTrig,'noisyAnalog',noisyAnalog);
-            else
-                [frameShifts,upCross,downCross,digiTriggers,transitionNotFound]=frameTimeFromDiode(obj.currentDataObj,'trialStartEndDigiTriggerNumbers',trialStartEndDigiTriggerNumbers,'T',T.tTrig);
-            end
+            [frameShifts,upCross,downCross,digiTriggers,transitionNotFound]=frameTimeFromDiode(obj.currentDataObj,'trialStartEndDigiTriggerNumbers',trialStartEndDigiTriggerNumbers,'T',T.tTrig,'noisyAnalog',noisyAnalog);
             save(saveFileName,'par','frameShifts','upCross','downCross','digiTriggers','transitionNotFound','-v7.3');
             
         end
