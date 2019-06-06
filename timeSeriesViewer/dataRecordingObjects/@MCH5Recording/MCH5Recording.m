@@ -485,9 +485,16 @@ classdef MCH5Recording < dataRecording
             obj.fullFilename=[obj.fullFilename '.h5'];
         end
         
-        %get start date. This currently only works windows. Otherwise, try
-        %using the attribute 'Date' in the h5 file.
-        obj.startDate = datenum(datetime(h5readatt(obj.fullFilename,'/Data','Date'), 'InputFormat','eeee, MMMMM d, yyyy'));
+        %get start date. 
+        try
+            obj.startDate = datenum(datetime(h5readatt(obj.fullFilename,'/Data','Date'), 'InputFormat','eeee, d MMMMM yyyy'));
+        catch
+            %Fix that will only works windows. 
+            dateInTicks=h5readatt(obj.fullFilename,'/Data','DateInTicks'); %This is in .NET date
+            dt=System.DateTime(dateInTicks); %create .NET DateTime Struct
+            dateInString=char(dt.ToString);
+            obj.startDate=datenum(dateInString,'dd/mm/yyyy');
+        end
         obj.info=h5info(obj.fullFilename, obj.pathToAllRecordings);
         obj.analogInfo = h5info(obj.fullFilename, obj.pathToAnalogStream);
         obj.nStreams = size(obj.analogInfo.Groups,1);
