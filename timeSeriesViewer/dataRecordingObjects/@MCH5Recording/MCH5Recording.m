@@ -509,47 +509,19 @@ classdef MCH5Recording < dataRecording
         obj.auxStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultAnalogDataStreamName))-1;
         obj.digitalStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultDigitalDataStreamName))-1;
        
-        if isempty(obj.electrodeStreamNum)
-            disp('No Electrode Data Recorded!');
-        else
-            obj.pathToRawDataStreamGroup=obj.streamPaths{obj.electrodeStreamNum+1}; %these are without '/' ending 
-            obj.lengthInfo = h5info(obj.fullFilename, [obj.pathToRawDataStreamGroup '/ChannelData']);
-            obj.electrodeInfoChannel=h5read(obj.fullFilename, [obj.pathToRawDataStreamGroup '/InfoChannel']);
-            obj.exponent=obj.electrodeInfoChannel.Exponent(1); 
-            obj.MicrovoltsPerAD = double(obj.electrodeInfoChannel.ConversionFactor(1))*(10^(double(obj.exponent(1))+6)); %exponent brings value in V, we want uV; %this is a nx1 array (n channels)
-            obj.ZeroADValue=double(obj.electrodeInfoChannel.ADZero(1));
-            obj.sample_ms = double(obj.electrodeInfoChannel.Tick(1))/1000;
-            obj.unit=obj.electrodeInfoChannel.Unit(1);
-            rawDataType=char(obj.electrodeInfoChannel.RawDataType(1));
-            databit=obj.electrodeInfoChannel.ADCBits(1);
-            obj.channelNumbers = 1:length(obj.electrodeInfoChannel.ChannelID);
-            obj.channelNames =  obj.electrodeInfoChannel.Label;
-            obj.timestamps = double(h5read(obj.fullFilename, [obj.pathToRawDataStreamGroup '/ChannelDataTimeStamps']));
-        end
         
+        %get meta data for analog stream
         if isempty(obj.auxStreamNum)
             disp('No Analog Data Recorded!');
         else
-            obj.pathToAuxDataStreamGroup=obj.streamPaths{obj.auxStreamNum+1}; %these are without '/' ending 
+            obj.pathToAuxDataStreamGroup=obj.streamPaths{obj.auxStreamNum+1};
             obj.auxInfoChannel=h5read(obj.fullFilename, [obj.pathToAuxDataStreamGroup '/InfoChannel']);
             obj.ZeroADValueAnalog=double(obj.auxInfoChannel.ADZero(1));
             obj.exponentAnalog=double(obj.auxInfoChannel.Exponent(1));
             obj.MicrovoltsPerADAnalog=double(obj.auxInfoChannel.ConversionFactor)*(10^(double(obj.exponentAnalog)+6)); %exponent brings value in V, we want uV;
-            if isempty(obj.electrodeStreamNum) %get this from here only if there is no electrode data
-                obj.lengthInfo = h5info(obj.fullFilename, [obj.pathToAuxDataStreamGroup '/ChannelData']);
-                obj.sample_ms = double(obj.auxInfoChannel.Tick(1))/1000; 
-                obj.unit=obj.auxInfoChannel.Unit(1);
-                obj.exponent=obj.auxInfoChannel.Exponent(1); 
-                obj.MicrovoltsPerAD = double(obj.auxInfoChannel.ConversionFactor(1))*(10^(double(obj.exponent(1))+6)); %exponent brings value in V, we want uV; %this is a nx1 array (n channels)
-                obj.ZeroADValue=double(obj.auxInfoChannel.ADZero(1));
-                obj.channelNumbers = 1:length(obj.auxInfoChannel.ChannelID);
-                obj.channelNames =  obj.auxInfoChannel.Label;
-                obj.timestamps = double(h5read(obj.fullFilename, [obj.pathToAuxDataStreamGroup '/ChannelDataTimeStamps']));
-                rawDataType=obj.auxInfoChannel.RawDataType(1);
-                databit=obj.auxInfoChannel.ADCBits(1);
-            end
             obj.analogChannelNumbers=1:length(obj.MicrovoltsPerADAnalog);
         end
+        %get meta data for digital stream
         if isempty(obj.digitalStreamNum)
             disp('No Digital Data Recorded!');
         else
@@ -557,8 +529,50 @@ classdef MCH5Recording < dataRecording
             obj.digitalInfoChannel=h5read(obj.fullFilename, [obj.pathToDigitalDataStreamGroup '/InfoChannel']);
         end
         
-      obj.dataLength = obj.lengthInfo.Dataspace.Size(1);
-      obj.totalChannels=obj.lengthInfo.Dataspace.Size(2); 
+        %Decide where to get general metadata depending on which streams
+        %were recorded
+        if isempty(obj.electrodeStreamNum) %no electrode data
+            if isempty(obj.auxStreamNum) %No analog data
+                if ~isempty(obj.digitalStreamNum)
+                    %set source for basic meta data
+                    channelData=[obj.pathToDigitalDataStreamGroup '/ChannelData'];
+                    infoChannel=obj.digitalInfoChannel;
+                    channelDataTimeStamps=[obj.pathToDigitalDataStreamGroup '/ChannelDataTimeStamps'];
+                end
+            else %there is analog
+                %set source for basic meta data
+                channelData=[obj.pathToAuxDataStreamGroup '/ChannelData'];
+                infoChannel=obj.auxInfoChannel;
+                channelDataTimeStamps=[obj.pathToAuxDataStreamGroup '/ChannelDataTimeStamps'];
+            end
+            disp('No Electrode Data Recorded!');
+        else %elecrode data not empty
+            obj.pathToRawDataStreamGroup=obj.streamPaths{obj.electrodeStreamNum+1}; %these are without '/' ending
+            obj.electrodeInfoChannel=h5read(obj.fullFilename, [obj.pathToRawDataStreamGroup '/InfoChannel']);
+             %set source for basic meta data
+             channelData=[obj.pathToRawDataStreamGroup '/ChannelData'];
+             obj.lengthInfo = h5info(obj.fullFilename, channelData);
+             infoChannel=obj.electrodeInfoChannel;
+             channelDataTimeStamps=[obj.pathToRawDataStreamGroup '/ChannelDataTimeStamps'];
+             
+        end
+
+        %GET DATA FROM SELECTED STREAMS
+        obj.lengthInfo = h5info(obj.fullFilename, channelData);
+        obj.sample_ms = double(infoChannel.Tick(1))/1000;
+        obj.unit=infoChannel.Unit(1);
+        obj.exponent=infoChannel.Exponent(1);
+        obj.MicrovoltsPerAD = double(infoChannel.ConversionFactor(1))*(10^(double(obj.exponent(1))+6)); %exponent brings value in V, we want uV; %this is a nx1 array (n channels)
+        obj.ZeroADValue=double(infoChannel.ADZero(1));
+        obj.channelNumbers = 1:length(infoChannel.ChannelID);
+        obj.channelNames =  infoChannel.Label;
+        obj.timestamps = double(h5read(obj.fullFilename, channelDataTimeStamps));
+%         rawDataType=channelData.RawDataType(1);
+%         databit=channelData.ADCBits(1);
+        rawDataType=char(infoChannel.RawDataType(1));
+        databit=infoChannel.ADCBits(1);
+        obj.dataLength = obj.lengthInfo.Dataspace.Size(1);
+        obj.totalChannels=obj.lengthInfo.Dataspace.Size(2);
 
       %n2s configuration at the end of class constructor
 %     obj.channelNames = cellfun(@(x) num2str(x), mat2cell(obj.channelNumbers,1,ones(1,numel(obj.channelNumbers))),'UniformOutput',0); 
