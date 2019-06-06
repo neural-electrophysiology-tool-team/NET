@@ -3,7 +3,7 @@ function sendMailViaGmail(recipientMail,subject,message)
 % Modify these two lines to reflect
 % your account and password.
 NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
-emailCredentialsFile = fileread([NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'VSEmailsCredentials.txt']);
+emailCredentialsFile = fileread([NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'emailsCredentials.txt']);
 emailCredentials = regexp(emailCredentialsFile, '\r\n|\r|\n', 'split');
 
 myaddress = emailCredentials{1};
