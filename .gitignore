@@ -119,3 +119,6 @@ spikeSorting/KiloSort/PCspikes2.mat
 *.asv
 PCspecificFiles/VSConfig.txt
 *.mat
+
+#ignore PCspecific folder
+PCspecificFiles/
