@@ -1,1 +1,1 @@
-{"parallelPortNum":888,"syncSquareSizePix":60,"pixelConversionFactor":7.6923,"displaySyncSignal":[true],"sendMailTo":["u.vorsher@gmail.com","guyhyman7@gmail.com"]}
+{"parallelPortNum":61432,"syncSquareSizePix":60,"pixelConversionFactor":7.6923,"displaySyncSignal":[false],"sendMailTo":["mestalbet@gmail.com"]}

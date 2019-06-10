@@ -190,11 +190,11 @@ classdef VS_mrDenseNoise < VStim
             
             vbl = GetSecs();
             for i = 1:colorsArraySize
-                obj.sendTTL(3,true);
                 % Draw the rect to the screen
                 Screen('FillRect', obj.PTB_win, colorsArray(:,:,i), allRectsRight);
                 %Screen('DrawTexture',obj.PTB_win,masktex);
                 Screen('DrawingFinished', obj.PTB_win);
+                obj.sendTTL(3,true);
                 vbl(i) = Screen('Flip', obj.PTB_win,vbl(end)+1/obj.txtDNtmpFrq - presentation_error);
                 obj.sendTTL(3,false);
             end
