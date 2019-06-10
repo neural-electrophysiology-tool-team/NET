@@ -1,0 +1,200 @@
+class convertuploaddocument:
+
+    def walk(self):
+        for p, d, f in os.walk(self.searchpath):
+            for ff in f:
+                if ff.endswith(self.suffix):
+                    self.files.append(os.path.join(p, ff))
+
+    def scanforexperiments(self):
+        '''
+        Takes a search path and looks recursively for all MSRD files
+        '''
+
+        self.logger.info('Start: Scan for new files')
+        self.walk()
+        self.logger.info('Process: %d _total_ files found' % len(self.files))
+        oldfilelist = []
+
+        # Checks if this was run in the past, if so, only processes the new files
+        oldfileslog = os.path.join(self.logpath, 'filelist.p')
+        if self.startfresh:
+            self.logger.info('Start: Erasing File History')
+            pickle_out = open(oldfileslog, "wb")
+            pickle.dump([], pickle_out)
+            pickle_out.close()
+
+        if os.path.getsize(oldfileslog) > 0:
+            pickle_in = open(oldfileslog, "rb")
+            oldfilelist = pickle.load(pickle_in)
+            pickle_in.close()
+            self.logger.info('Process: %d _old_ files found' % len(oldfilelist))
+
+        pickle_out = open(oldfileslog, "wb")
+        pickle.dump(self.files, pickle_out)
+        pickle_out.close()
+        self.logger.info('Process: Old files list updated')
+
+        if len(oldfilelist) != 0:
+            self.files = list(set(self.files) - set(oldfilelist))
+        self.numfiles = len(self.files)
+        self.logger.info('Process: %d _new_ files found' % self.numfiles)
+        self.logger.info('End: Scan for files')
+
+    def parsefields(self, getvalchar='<', nextfieldchar='_'):
+        self.field['fullpathmsrd'] = self.files * 2
+        self.field.sort_values(by=['fullpathmsrd'], inplace=True)
+        self.field.reset_index(drop=True, inplace=True)
+        self.field['MEAfiles'] = self.field['fullpathmsrd'].apply(
+            lambda x: x.split('\\')[-1].replace(self.suffix, 'h5'))
+        self.field['MEAfiles'].loc[::2] = self.field['MEAfiles'].loc[::2].apply(lambda x: x.replace('h5', 'bin'))
+        self.field['folder'] = ['\\' + os.path.join(*word[:-1]) for word in
+                                [f.split('\\') for f in self.field['fullpathmsrd']]]
+        self.field['recNames'] = self.field['MEAfiles'].apply(lambda x: hashlib.md5(x.encode()).hexdigest())
+
+        def setrecformat(x):
+            if 'h5' in x:
+                return ('MCH5Recording')
+            else:
+                return ('binaryRecording')
+
+        self.field['recFormat'] = [setrecformat(x) for x in self.field['MEAfiles']]
+
+        flatten = lambda l: [item for sublist in l for item in sublist]
+        nvc = '|'.join(flatten([nextfieldchar]))
+        gvc = '|'.join(flatten([getvalchar]))
+        # words = [f.split('\\') for f in field['fullpathmsrd']]
+        # keyvalpair = []
+        for ind in self.field.index:
+            word = self.field['fullpathmsrd'].loc[ind].split('\\')
+            keyvalpair = [re.split(nvc, w) for w in word]
+            for kv in keyvalpair:
+                for k in kv:
+                    if '=' in k:
+                        temp = re.split(gvc, k)[0]
+                        temp = temp[-np.min([6, len(temp)]):]  # maximum field length is 6 characters
+                        key = ''.join(j for j in temp if not j.isdigit())  #
+                        temp = re.split(gvc, k)[1:]
+                        val = ''.join(temp)
+                        if key not in self.field.columns:
+                            self.field[key] = 'unspecified'
+                        self.field[key].loc[ind] = val.split('.' + self.suffix)[0]
+        self.field.fillna('unspecified', inplace=True)
+
+    def makeGSdir(self, directory='database/'):
+        blob = self.bucket.blob(directory.replace('\\', '/'))
+        blob.upload_from_string('', content_type='application/x-www-form-urlencoded;charset=UTF-8')
+
+    def createDirStructure(self):
+        table = self.field
+        table = table[table['MEAfiles'].str.contains('h5')].drop(
+            ['fullpathmsrd', 'exclude', 'recFormat', 'recNames', 'folder', 'comments'], axis=1)
+        table = table.reindex(columns=(['user'] + list([col for col in table.columns if col != 'user'])))
+        dirs = [t for t in table.columns.values if t != 'MEAfiles']
+        for i in range(0, table.shape[0]):
+            dtemp = 'database'
+            for d in dirs:
+                if 'unspecified' not in table[d].iloc[i]:
+                    dtemp = os.path.join(dtemp, d + '=%s' % table[d].iloc[i])
+            self.directory.append(dtemp.replace('\\', '/'))
+
+    def uploadFile(self, file, path, bucket):
+        path = path + '\\'
+        path = path.replace('\\', '/')
+        testexists = bucket.blob(path + file.replace('.msrd', '.h5').split('\\')[-1])
+        if not testexists.exists():
+            self.makeGSdir(directory=path)
+            bashCommand = 'gsutil -o GSUtil:parallel_composite_upload_threshold=150M -m cp "%s" "gs://%s"' % (
+            file.replace('.msrd', '.h5'), path)  # +file.split('\\')[-1].replace('.msrd','.h5')
+            # Multi-threaded composite upload. Still quite slow.
+            subprocess.Popen(bashCommand, stdout=subprocess.PIPE, shell=True)
+
+    def multi_part_upload_with_s3(self, file_path, key_path, bucket="meadata"):
+        # Multipart upload
+        with open("D:\\code\\user=ND\\ND_AccessKey.csv", 'rb') as csvfile:
+            keys = pd.read_csv(csvfile)
+        s3 = boto3.resource('s3', aws_access_key_id=keys["Access key ID"][0],
+                            aws_secret_access_key=keys["Secret access key"][0])
+        config = TransferConfig(multipart_threshold=1024 * 25, max_concurrency=8,
+                                multipart_chunksize=1024 * 25, use_threads=True)
+        b = s3.Bucket(bucket)
+        objs = list(b.objects.filter(Prefix=key_path))
+        if len(objs) > 0 and objs[0].key == key_path:
+            print("%s already Exists - skipping upload!" % file_path.split('\\')[-1])
+        else:
+            s3.meta.client.upload_file(Filename=file_path, Bucket=bucket, Key=key_path,
+                                       Config=config)
+
+    def converttoh5(self):
+        '''
+        Takes files that were discovered and converts them to h5 then uploads them to google cloud
+        '''
+
+        def processfiles(f, d, bucket=self.bucket, mcspath=self.mcspath, google=self.gcs):
+            if not os.path.isfile(f.replace('.msrd', '.h5')):
+                bashCommand = '%s -t hdf5 "%s"' % (mcspath, f.replace('.msrd', '.msrs'))
+                process = subprocess.Popen(bashCommand, stdout=subprocess.PIPE)
+                output, error = process.communicate()
+                if error is not None:
+                    self.logger.error('File failed to convert with error: \n %s' % error)
+                else:
+                    self.logger.info('Process: Successfully converted file to H5')
+            if (google == 1):
+                self.logger.info('Process: Starting upload of HDF5 to target directory of GS')
+                self.uploadFile(file=f, path=d,
+                                bucket=bucket)  # can be improved by composing a composite object containing all the files to upload
+                self.logger.info('Process: Succesfully uploaded H5 to GS')
+            else:
+                with open("D:\\code\\user=ND\\ND_AccessKey.csv", 'rb') as csvfile:
+                    keys = pd.read_csv(csvfile)
+                file_path = f.replace('.msrd', '.h5')
+                key_path = d + '/' + f.replace('.msrd', '.h5').split('\\')[-1]
+                self.logger.info('Process: %s Uploading' % file_path)
+                self.logger.info('Process: File uploading to: %s' % key_path)
+                self.multi_part_upload_with_s3(file_path=file_path, key_path=key_path, bucket="meadata")
+
+        self.logger.info('Start: Conversion from MSDS to H5')
+        self.parsefields(getvalchar=['=', '>'], nextfieldchar=[',', '_'])
+        self.createDirStructure()
+        self.logger.info('Process: Created target directory structure')
+        with cf.ProcessPoolExecutor() as executor:
+            _ = [executor.submit(processfiles(f=self.files[i], d=self.directory[i])) for i in range(0, len(self.files))]
+        self.logger.info('End: Conversion from MSDS to H5')
+
+    def __init__(self, searchpath="D:\\Multi Channel DataManager\\", startfresh=False,
+                 suffix='.msrd', gcs_credentials_path="D:\\code\\user=ND\\divine-builder-142611-9884de65797a.json",
+                 gcs_project_id='divine-builder-142611', bucketname='meadata',
+                 logpath=os.path.join('d:\\', 'code', 'user=ND'),
+                 mcspath=os.path.join('D:\\', 'code', 'user=ND', 'McsDataCommandLineConverter',
+                                      "McsDataCommandLineConverter.exe"),
+                 gcs=0):
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = gcs_credentials_path
+        self.gcs_client = storage.Client(project=gcs_project_id)
+        self.bucket = self.gcs_client.get_bucket(bucketname)
+
+        self.logpath = logpath
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+
+        # create a file handler
+
+        self.handler = logging.FileHandler(os.path.join(self.logpath, 'SpreadSheet_RunLog.log'), mode='a')
+        self.handler.setLevel(logging.INFO)
+
+        # create a logging format
+        self.formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        self.handler.setFormatter(self.formatter)
+
+        # add the handlers to the logger
+        self.logger.addHandler(self.handler)
+        self.files = []
+        colnames = ['fullpathmsrd', 'exclude', 'folder', 'coating', 'cleaning', 'MEAfiles', 'recFormat', 'recNames',
+                    'comments']
+        self.field = pd.DataFrame(columns=colnames)
+        self.searchpath = searchpath
+        self.startfresh = startfresh
+        self.suffix = suffix
+        self.numfiles = 0
+        self.directory = []
+        self.mcspath = mcspath
+        self.gcs = gcs
