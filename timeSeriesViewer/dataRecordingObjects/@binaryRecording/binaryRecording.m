@@ -179,7 +179,7 @@ classdef binaryRecording < dataRecording
         end
         
         function obj=closeOpenFiles(obj)
-            fclose(obj.fid>0);
+            fclose(obj.fid);
             if obj.fidAnalog>0
                 fclose(obj.fidAnalog);
             end
