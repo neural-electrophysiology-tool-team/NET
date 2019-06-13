@@ -2,12 +2,14 @@ classdef VS_fullFieldFlash < VStim
     properties (SetAccess=public)
         flashLuminosity = 255; %(L_high-L_low)/L_low
         randomize = true;
+        equalize = true; %Make distribution of intenisty diffs more uniform by adding large diffs. Currently all added diffs will have inter trial delay of obj.interTrialDelay(1)
         Back2Background=false; %display images between luminosities
         screenTriggerDuration=0.1; %sec
     end
     properties (Constant)
         flashLuminosityTxt='The luminocity value for the flash, if array->show all given contrasts';
         randomizeTxt='Randomize stimuli';
+        equalizeTxt='Make distribution of intensity differences more uniform';
         remarks={'Categories in Flash stimuli are:','luminosity, interTrialDelay'};
     end
     properties (SetAccess=protected)
@@ -46,6 +48,23 @@ classdef VS_fullFieldFlash < VStim
                 randomPermutation=randperm(obj.nTotTrials);
                 obj.luminosities=obj.luminosities(randomPermutation);
                 obj.delays=obj.delays(randomPermutation);
+                if obj.equalize
+                    %Add 10% more changes which will have larger intensity gap
+                    addN=round(length(obj.luminosities)/10);
+                    nFromEnds=max(round(nLuminosities/10),1); %jump from the lowest 10% to the highest 10%. minimum is 1;
+                    lowLums=obj.flashLuminosity(1:nFromEnds);
+                    highLums=obj.flashLuminosity((end-nFromEnds):end);
+                    originalLum=obj.luminosities;
+                    originalDelay=obj.delays;
+                    for i=1:2:(addN-1)
+                        obj.luminosities=[obj.luminosities(((i-1)*addN+1):(i*addN)+(i-1)*2) lowLums(randi([1 nFromEnds])) highLums(randi([1 nFromEnds])) ...
+                                           obj.luminosities((i*addN+1):((i+1)*addN)+(i-1)*2) highLums(randi([1 nFromEnds])) lowLums(randi([1 nFromEnds])) ...
+                                           obj.luminosities(((i+1)*addN+1+(i-1)*2):end)];
+                        obj.delays=[obj.delays(((i-1)*addN+1):(i*addN)+(i-1)*2) obj.interTrialDelay(1) obj.interTrialDelay(1) ...
+                                           obj.delays((i*addN+1):((i+1)*addN)+(i-1)*2) obj.interTrialDelay(1) obj.interTrialDelay(1) ...
+                                           obj.delays(((i+1)*addN+1+(i-1)*2):end)];
+                    end
+                end
             end
             obj.luminosities=[obj.luminosities obj.luminosities(1)]; %adding last luminocity value which will never be shown
             
