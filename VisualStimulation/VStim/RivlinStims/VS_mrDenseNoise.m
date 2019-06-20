@@ -202,7 +202,7 @@ classdef VS_mrDenseNoise < VStim
             
             obj.sendTTL(2,false);
             obj.applyBackgound;
-            Screen('DrawingFinished', obj.PTB_win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
+            Screen('Flip', obj.PTB_win);
             obj.sendTTL(1,false);
             disp('Session ended');
             filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDenseNoise_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
