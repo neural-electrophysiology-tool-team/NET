@@ -75,9 +75,10 @@ classdef VS_fullFieldFlash < VStim
                         equalizedLum=[equalizedLum obj.luminosities(((i+2)*addEveryN+1):end)];
                         equalizedDelays=[equalizedDelays obj.delays(((i+2)*addEveryN+1):end)];
                     end
+                    obj.nTotTrials=obj.nTotTrials+(addN+1)*2;
                 end
             end
-            obj.nTotTrials=obj.nTotTrials+(addN+1)*2;
+            
             
             %Pre allocate memory for variables
             obj.on_Flip=nan(1,obj.nTotTrials);
