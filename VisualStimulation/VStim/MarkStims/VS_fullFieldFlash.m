@@ -78,7 +78,7 @@ classdef VS_fullFieldFlash < VStim
                     obj.nTotTrials=obj.nTotTrials+(addN+1)*2;
                 end
             end
-            
+            obj.luminosities=[obj.luminosities obj.luminosities(1)]; %adding last luminocity value which will never be shown
             
             %Pre allocate memory for variables
             obj.on_Flip=nan(1,obj.nTotTrials);
