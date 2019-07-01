@@ -2,12 +2,14 @@ classdef VS_fullFieldFlash < VStim
     properties (SetAccess=public)
         flashLuminosity = 255; %(L_high-L_low)/L_low
         randomize = true;
+        equalize = true; %Make distribution of intenisty diffs more uniform by adding large diffs. Currently all added diffs will have inter trial delay of obj.interTrialDelay(1)
         Back2Background=false; %display images between luminosities
         screenTriggerDuration=0.1; %sec
     end
     properties (Constant)
         flashLuminosityTxt='The luminocity value for the flash, if array->show all given contrasts';
         randomizeTxt='Randomize stimuli';
+        equalizeTxt='Make distribution of intensity differences more uniform';
         remarks={'Categories in Flash stimuli are:','luminosity, interTrialDelay'};
     end
     properties (SetAccess=protected)
@@ -46,8 +48,36 @@ classdef VS_fullFieldFlash < VStim
                 randomPermutation=randperm(obj.nTotTrials);
                 obj.luminosities=obj.luminosities(randomPermutation);
                 obj.delays=obj.delays(randomPermutation);
+                if obj.equalize
+                    addPercent=10; %Add addPercent% more changes which will have larger intensity gap
+                    addN=floor(length(obj.luminosities)*addPercent/100);
+                    addEveryN=floor(length(obj.luminosities)/addN);
+                    nFromEnds=max(floor(nLuminosities/10),1); %jump from the lowest 10% to the highest 10%. minimum is 1;
+                    lowLums=obj.flashLuminosity(1:nFromEnds);
+                    highLums=obj.flashLuminosity((end-(nFromEnds-1)):end);
+                    originalLum=obj.luminosities;
+                    originalDelay=obj.delays;
+                    equalizedLum=obj.luminosities(1:addEveryN);
+                    equalizedDelays=obj.delays(1:addEveryN);
+                    totalAdded=0;
+                    for i=1:2:addN
+                            equalizedLum=[equalizedLum lowLums(randi([1 nFromEnds])) highLums(randi([1 nFromEnds])) ...
+                                obj.luminosities((i*addEveryN+1):((i+1)*addEveryN)) highLums(randi([1 nFromEnds])) lowLums(randi([1 nFromEnds])) ...
+                                obj.luminosities(((i+1)*addEveryN+1):min((i+2)*addEveryN,length(obj.luminosities)))];
+                            totalAdded=totalAdded+2;
+                            equalizedDelays=[equalizedDelays obj.interTrialDelay(1) obj.interTrialDelay(1)  ...
+                                obj.delays((i*addEveryN+1):((i+1)*addEveryN)) obj.interTrialDelay(1) obj.interTrialDelay(1) ...
+                                obj.delays(((i+1)*addEveryN+1):min((i+2)*addEveryN,length(obj.delays)))];
+                    end
+                    %make sure we don't lose luminosities becuase of
+                    %rounding
+                    if ((i+2)*addEveryN)<length(obj.luminosities)
+                        equalizedLum=[equalizedLum obj.luminosities(((i+2)*addEveryN+1):end)];
+                        equalizedDelays=[equalizedDelays obj.delays(((i+2)*addEveryN+1):end)];
+                    end
+                end
             end
-            obj.luminosities=[obj.luminosities obj.luminosities(1)]; %adding last luminocity value which will never be shown
+            obj.nTotTrials=obj.nTotTrials+(addN+1)*2;
             
             %Pre allocate memory for variables
             obj.on_Flip=nan(1,obj.nTotTrials);
