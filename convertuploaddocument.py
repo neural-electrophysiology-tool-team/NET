@@ -16,6 +16,29 @@ import boto3
 from boto3.s3.transfer import TransferConfig
 from google.cloud import storage
 
+class WindowsInhibitor:
+    '''Prevent OS sleep/hibernate in windows; code from:
+    https://github.com/h3llrais3r/Deluge-PreventSuspendPlus/blob/master/preventsuspendplus/core.py
+    API documentation:
+    https://msdn.microsoft.com/en-us/library/windows/desktop/aa373208(v=vs.85).aspx'''
+    ES_CONTINUOUS = 0x80000000
+    ES_SYSTEM_REQUIRED = 0x00000001
+
+    def __init__(self):
+        pass
+
+    def inhibit(self):
+        import ctypes
+        print("Preventing Windows from going to sleep")
+        ctypes.windll.kernel32.SetThreadExecutionState(
+            WindowsInhibitor.ES_CONTINUOUS | \
+            WindowsInhibitor.ES_SYSTEM_REQUIRED)
+
+    def uninhibit(self):
+        import ctypes
+        print("Allowing Windows to go to sleep")
+        ctypes.windll.kernel32.SetThreadExecutionState(
+            WindowsInhibitor.ES_CONTINUOUS)
 
 class convertuploaddocument:
     """Class which allows for upload and batch conversion
@@ -77,7 +100,9 @@ class convertuploaddocument:
         self.field['folder'] = ['\\' + os.path.join(*word[:-1]) for word in
                                 [f.split('\\') for f in self.field['fullpathmsrd']]]
         self.field['recNames'] = self.field['MEAfiles'].apply(lambda x: hashlib.md5(x.encode()).hexdigest())
-
+        self.field['OrigFileName'] = self.field['MEAfiles']
+        self.field['MEAfiles'] = self.field['recNames']+'.h5'
+        self.field['MEAfiles'].loc[::2] = self.field['MEAfiles'].loc[::2].apply(lambda x: x.replace('h5', 'bin'))
         def setrecformat(x):
             if 'h5' in x:
                 return ('MCH5Recording')
@@ -174,15 +199,16 @@ class convertuploaddocument:
         self.logger.info('Process: Copy h5 to local network location')
         subprocess.call(
             ["xcopy", f.replace("msrd", "h5"), os.path.join(self.localsharepath, d.replace('/', '\\')) + '\\',
-             "/K/O/X/i"])
+             '/k/c/i/y/z'])
         self.logger.info('Process: %s copied succesfully' % f.replace("msrd", "h5"))
         if archive:
             self.logger.info('Process: Copy MSRD and MSRS to local network archive')
+#             set_trace()
             subprocess.call(
-                ["xcopy", f, os.path.join(self.localarchivepath, d.replace('/', '\\')) + '\\', "/K/O/X/i/Y"])
+                ["xcopy", f, os.path.join(self.localarchivepath, d.replace('/', '\\')) + '\\', '/k/c/i/y/z'])
             subprocess.call(
-                ["xcopy", f.replace("msrd", "msrs"), os.path.join(self.localarchivepath, d.replace('/', '\\')) + '\\',
-                 "/K/O/X/i/Y"])
+                ["xcopy", f.replace("msrd", "msrs"), os.path.join(self.localarchivepath, 
+                                                                  d.replace('/', '\\')) + '\\','/k/c/i/y/z'])
             self.logger.info('Process: %s msrd and msrs copied succesfully to archive' % f.split('.')[0])
 
     def createspreadsheet(self):
@@ -223,7 +249,14 @@ class convertuploaddocument:
             :param localcopyflag: if True, also copies file to a local network direction
             """
 
-            if not os.path.isfile(f.replace('.msrd', '.h5')):
+            if ((not os.path.isfile(f.replace('.msrd', '.h5'))) | self.overwriteh5):
+                if os.path.isfile(f.replace('.msrd', '.h5')):
+                    try:
+                        os.remove(f.replace('.msrd', '.h5'))
+                    except:
+                        self.logger.error(' %s is locked, no overwrite possible' % f.split('.')[0])
+                        
+                print('Conversion to H5 running')
                 bashCommand = '%s -t hdf5 "%s"' % (mcspath, f.replace('.msrd', '.msrs'))
                 process = subprocess.Popen(bashCommand, stdout=subprocess.PIPE)
                 output, error = process.communicate()
@@ -232,11 +265,19 @@ class convertuploaddocument:
                 else:
                     self.logger.info('Process: Successfully converted file to H5')
                     # Workaround since there is no way to specify output file name with MCS commandline tool
-                    os.rename(f.replace('.msrd', '.h5'), os.path.join('//'.join(f.split('//')[:-1]), hashlib.md5(
-                        f.split('//')[-1].split('.')[0].encode()).hexdigest() + '.h5'))
+                    try: 
+                        hashstring = hashlib.md5(f.split('\\')[-1].split('.')[0]).encode().hexdigest()
+                        os.rename(f.replace('.msrd', '.h5'), os.path.join('\\'.join(f.split('\\')[:-1]), hashstring + '.h5'))
+                    except exception as e:
+                        self.logger.error('File rename to hash failed: /n %s' % e)
+                        os.remove(f.replace('.msrd', '.h5'))
+                        pass
+                    
+                    f = os.path.join('\\'.join(f.split('\\')[:-1]),
+                                     hashlib.md5(f.split('\\')[-1].split('.')[0].encode()).hexdigest() + '.h5')
                     self.logger.info('Process: File renamed to md5 hash successfully')
-                    f = os.path.join('//'.join(f.split('//')[:-1]),
-                                     hashlib.md5(f.split('//')[-1].split('.')[0].encode()).hexdigest() + '.h5')
+                    
+                    print("1-"+f)
 
             if (cloudflag == "gcs"):
                 self.logger.info('Process: Starting upload of HDF5 to target directory of GS')
@@ -251,29 +292,72 @@ class convertuploaddocument:
                 key_path = d + '/' + f.replace('.msrd', '.h5').split('\\')[-1]
                 self.logger.info('Process: %s Uploading' % file_path)
                 self.logger.info('Process: File uploading to: %s' % key_path)
-                self.multi_part_upload_with_s3(file_path=file_path, key_path=key_path, bucket="meadata")
+                try:
+                    self.multi_part_upload_with_s3(file_path=file_path, key_path=key_path, bucket="meadata")
+                except exception as e:
+                    self.logger.error('File failed to upload with error: \n %s' % e)
+                    pass
             else:
                 self.logger.info('Process: Not uploading to cloud storage')
             if (localcopyflag == True):
+                print("2-"+f)
                 self.localnetworkcopy(f, d)
 
         self.logger.info('Start: Conversion from MSDS to H5')
         self.parsefields(getvalchar=['=', '>'], nextfieldchar=[',', '_'])
-        self.createDirStructure()
+        try:
+            self.createDirStructure()
+        except:
+            print('Error creating directory structure. Are you sure you scanned for new experiments?')
         self.logger.info('Process: Created target directory structure')
         with cf.ProcessPoolExecutor() as executor:
             _ = [executor.submit(processfiles(f=self.files[i], d=self.directory[i])) for i in range(0, len(self.files))]
         self.logger.info('End: Conversion from MSDS to H5')
+        
+    def wexac_copy(self,rawflag = False, h5flag = True):
+        
+        if rawflag:
+            self.logger.info('Process: Copy raw data to Wexac archive')
+            subprocess.call(
+                ["xcopy", self.searchpath, self.localarchivepath,'/S /Y /D'])
+            self.logger.info('Process: Raw data copied succesfully to archive')
+        if h5flag:
+            for p, d, fi in os.walk(self.localarchivepath):
+                for ff in fi:
+                    if ff.endswith(self.suffix):
+                        hashstring = hashlib.md5(ff.split('.')[0].encode()).hexdigest()
+                        if not os.path.exists(os.path.join(self.WexacH5Path, hashstring+'.h5')):                            
+                            f = os.path.join(p, ff)
+                            bashCommand = '%s -t hdf5 "%s"' % (self.mcspath, f.replace(self.suffix, 'msrs'))
+                            process = subprocess.Popen(bashCommand, stdout=subprocess.PIPE)
+                            output, error = process.communicate()
+                            if error is not None:
+                                self.logger.error('File failed to convert with error: \n %s' % error)
+                            else:
+                                try:
+                                    os.rename(f.replace('.msrd', '.h5'),os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'))
+                                except:
+                                    pass
+                                subprocess.call(["xcopy", os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'), self.WexacH5Path,'/c/i/y/z'])
+                                os.remove(os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'))
+                                self.logger.info('Process: Successfully converted file to H5')
+                                self.logger.info('Process: Saving Excel Experiment Record')
+                                self.field['folder'] = self.WexacH5Path
+                                self.logger.info('Process: Save completed succesfully')
+            self.field = self.field.replace("unspecified", "")
+            self.field.to_excel(os.path.join(self.WexacH5Path, 'experiments.xlsx'), index=False)
+                                
 
     def __init__(self, searchpath="D:\\Multi Channel DataManager\\", startfresh=False,
-                 suffix='.msrd', gcs_credentials_path="D:\\code\\user=ND\\divine-builder-142611-9884de65797a.json",
+                 suffix='msrd', gcs_credentials_path="D:\\code\\user=ND\\divine-builder-142611-9884de65797a.json",
                  gcs_project_id='divine-builder-142611', bucketname='meadata',
                  logpath=os.path.join('d:\\', 'code', 'user=ND'),
                  mcspath=os.path.join('d:\\', 'code', 'user=ND', 'McsDataCommandLineConverter',
                                       "McsDataCommandLineConverter.exe"),
                  cloudflag="aws", localcopyflag=True, localsharepath="\\\\132.77.73.171\\MEA_DATA\\",
                  localarchivepath="\\\\data.wexac.weizmann.ac.il\\rivlinlab-arc\\",
-                 awsaccesskey="D:\\code\\user=ND\\ND_AccessKey.csv"):
+                 WexacH5Path = "\\\\data.wexac.weizmann.ac.il\\rivlinlab\\bndolev\\MEA_DATA_H5\\",
+                 awsaccesskey="D:\\code\\user=ND\\ND_AccessKey.csv", clearlogflag = False, overwriteh5=False):
         """Initialize class
         :param searchpath: path to directory with data files
         :param startfresh: flag, if 1 then attempt to upload all files
@@ -295,6 +379,12 @@ class convertuploaddocument:
         self.logger.setLevel(logging.INFO)
 
         # create a file handler
+        if clearlogflag:
+            if os.path.exists(os.path.join(self.logpath, 'SpreadSheet_RunLog.log')):
+                try:
+                    os.remove(os.path.join(self.logpath, 'SpreadSheet_RunLog.log'))
+                except:
+                    pass  
         self.handler = logging.FileHandler(os.path.join(self.logpath, 'SpreadSheet_RunLog.log'), mode='a')
         self.handler.setLevel(logging.INFO)
 
@@ -319,3 +409,5 @@ class convertuploaddocument:
         self.localsharepath = localsharepath
         self.localarchivepath = localarchivepath
         self.awsaccesskey = awsaccesskey
+        self.overwriteh5 = overwriteh5
+        self.WexacH5Path = WexacH5Path
