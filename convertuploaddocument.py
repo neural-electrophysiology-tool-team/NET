@@ -328,23 +328,26 @@ class convertuploaddocument:
                         hashstring = hashlib.md5(ff.split('.')[0].encode()).hexdigest()
                         if not os.path.exists(os.path.join(self.WexacH5Path, hashstring+'.h5')):                            
                             f = os.path.join(p, ff)
-                            bashCommand = '%s -t hdf5 "%s"' % (self.mcspath, f.replace(self.suffix, 'msrs'))
-                            process = subprocess.Popen(bashCommand, stdout=subprocess.PIPE)
-                            output, error = process.communicate()
-                            if error is not None:
-                                self.logger.error('File failed to convert with error: \n %s' % error)
-                            else:
-                                try:
-                                    os.rename(f.replace('.msrd', '.h5'),os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'))
-                                except:
-                                    pass
-                                subprocess.call(["xcopy", os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'), self.WexacH5Path,'/c/i/y/z'])
-                                os.remove(os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'))
-                                self.logger.info('Process: Successfully converted file to H5')
-                                self.logger.info('Process: Saving Excel Experiment Record')
-                                self.field['folder'] = self.WexacH5Path
-                                self.logger.info('Process: Save completed succesfully')
+                            try:
+                                bashCommand = '%s -t hdf5 "%s"' % (self.mcspath, f.replace(self.suffix, 'msrs'))
+                                process = subprocess.Popen(bashCommand, stdout=subprocess.PIPE)
+                                output, error = process.communicate()
+                                if error is not None:
+                                    self.logger.error('File failed to convert with error: \n %s' % error)
+                                else:
+                                    try:
+                                        os.rename(f.replace('.msrd', '.h5'),os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'))
+                                    except:
+                                        pass
+                                    subprocess.call(["xcopy", os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'), self.WexacH5Path,'/c/i/y/z'])
+                                    os.remove(os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'))
+                                    self.logger.info('Process: Successfully converted file to H5')
+                                    self.logger.info('Process: Saving Excel Experiment Record')
+                                    self.logger.info('Process: Save completed succesfully')
+                            except:
+                                 self.logger.error(' %s is locked, no overwrite possible' % f.split('.')[0])
             self.field = self.field.replace("unspecified", "")
+            self.field['folder'] = self.WexacH5Path
             self.field.to_excel(os.path.join(self.WexacH5Path, 'experiments.xlsx'), index=False)
                                 
 
