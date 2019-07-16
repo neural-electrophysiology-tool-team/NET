@@ -206,7 +206,7 @@ classdef MEAAnalysis < recAnalysis
             rez = set_cutoff(rez);
             save(resultsFileName,'rez', '-v7.3');
             
-            fprintf('Total time used for running kilo-sort was %f hours', toc/60/60);
+            fprintf('Total time used for running kilo-sort was %f hours\n', toc/60/60);
             delete(ops.fproc);
         end
         
