@@ -55,6 +55,19 @@ classdef MCH5Recording < dataRecording
     includeOnlyDigitalDataInTriggers=0; %this is to make frameTimeFromDiode.m to work
     ButterFilt = 0; %runs a highpass filter if saving double to binary.
     fileExtension = 'h5'
+    sample_ms_Local
+    startDate_Local
+    endDate_Local
+    samplingFrequency_Local
+    recordingDuration_ms_Local
+    dataLength_Local
+  end
+  
+  properties (Hidden)
+%     fileOpenStruct
+    cumEnd
+    cumStart
+       
   end
   
    properties (Constant, Hidden)
@@ -68,6 +81,7 @@ classdef MCH5Recording < dataRecording
         pathToRecording='/Data/Recording_0/';
         pathToAnalogStream = '/Data/Recording_0/AnalogStream/'; %This is in case there is only one recording in HDF5 file. If there are more - code should be revised
         maxNumberOfDigitalChannels=16; %up to 16 digIn channels
+        unixEpochInTicks=621355968000000000;
    end
     
   properties (Constant = true)
@@ -420,57 +434,129 @@ classdef MCH5Recording < dataRecording
   end
   
   methods (Hidden = true)
-    
-    %class constructor
-    function obj = MCH5Recording(recordingFile)
-      %get data files
-      if nargin == 0
-        recordingFile=[];
-      elseif nargin>1
-        disp('MCH5Recording: Object was not constructed since too many parameters were given at construction');
-        return;
-      end
-
-      obj = obj.getRecordingFiles(recordingFile, 'h5');
       
-      % Find the .h5 file
-      obj.fullFilename = fullfile(obj.recordingDir, obj.recordingName);
-
-      
-      if exist([obj.recordingDir filesep obj.recordingName '_metaData.mat'],'file') && ~obj.overwriteMetaData
-          obj = obj.loadMetaData; %needs recNameHD5
-      else
-          obj = obj.extractMetaData;
-      end
-     
-      %layout
-      obj=obj.loadChLayout;
-      if isempty(obj.chLayoutNumbers)
-          if obj.totalChannels<=32
-              obj.layoutName='layout_300_6x6_FlexMEA';
-              obj.electrodePitch=300;
-          elseif obj.totalChannels<=60
-              obj.layoutName='layout_200_8x8.mat';
-              obj.electrodePitch=200;
-          elseif obj.totalChannels<=120
-              obj.layoutName='layout_100_12x12.mat';
-              obj.electrodePitch=100;
-          elseif obj.totalChannels<=252
-%               obj.layoutName='layout_100_16x16.mat';
-              obj.layoutName='layout_100_16x16_newSetup.mat';
-              obj.electrodePitch=100;
+      %class constructor
+      function obj = MCH5Recording(recordingFile)
+          %get data files
+          if nargin == 0
+              recordingFile=[];
+          elseif nargin>1
+              disp('MCH5Recording: Object was not constructed since too many parameters were given at construction');
+              return;
           end
-          load(obj.layoutName);
-          obj.chLayoutNumbers=En;
-          obj.chLayoutNames=Ena;
-          obj.chLayoutPositions=Enp;
-      end  
-%        obj=obj.configureN2S; %This was before newSetup layout
-    end
-    
-    function delete(obj) %do nothing
-    end
-    
+          
+          obj = obj.getRecordingFiles(recordingFile, 'h5');
+          
+          obj.fullFilename = fullfile(obj.recordingDir, obj.recordingName);
+          % Find the .h5 file
+          if ~strcmp(obj.fullFilename(end-1:end),'h5')
+              obj.fullFilename=[obj.fullFilename '.h5'];
+          end
+          
+          %%%%%%%%%%%% MULTIPLE FILE MODE %%%%%%%%%%%%%%
+          if obj.nRecordings>1
+              obj.multifileMode=true;
+          else
+              obj.multifileMode=false;
+          end
+          
+          %open files for reading and getting file data
+          for i=1:obj.nRecordings %This code assumes that there are electrode data in each of the files (which is where it get the sampling rate)
+              tmpFileName=[obj.recordingDir filesep obj.dataFileNames{i}];
+              if ~exist(tmpFileName,'file')
+                  error(['Recording file does not exist: ' tmpFileName]);
+              end
+              if exist([obj.recordingDir filesep obj.recordingName '_metaData.mat'],'file') && ~obj.overwriteMetaData && obj.nRecordings==1
+                    obj = obj.loadMetaData; %needs recNameHD5
+              else
+                  obj = obj.extractMetaData;
+              end  
+              
+              infoChannel=h5read(obj.fullFilename, [obj.pathToRawDataStreamGroup '/InfoChannel']);
+              obj.sample_ms_Local(i) = double(infoChannel.Tick(1))/1000;
+              obj.samplingFrequency_Local(i) = 1e3/obj.sample_ms_Local(i); %Assuming all chanels are the same
+              lengthInfo = h5info(obj.fullFilename, [obj.pathToRawDataStreamGroup '/ChannelData']);
+              obj.dataLength_Local(i) = lengthInfo.Dataspace.Size(1);
+              obj.recordingDuration_ms_Local(i)=obj.sample_ms_Local(i)*obj.dataLength_Local(i);
+              
+              %get start date.
+              try
+                  dateInTicks=h5readatt(obj.fullFilename,pathToAllRecordings,'DateInTicks');
+                  %%%%%%%%%%   EXPLANATION   %%%%%%%%
+                  %dateInTicks is in .NET ticks, i.e. number of 0.1us (100ns) that has passed since 01.01.0001 00:00.
+                  %Unix time is number of seconds since 01.01.1970, which in
+                  %ticks is 621355968000000000 (621355968000000000 0.1us has
+                  %passed between year 0001 to 1970). So subtract number of ticks
+                  %since 1970 from recording time in ticks, and get the number of
+                  %ticks since 1970. Convert this to second to get unix time.
+                  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                  
+                  unixTime=(dateInTicks-obj.unixEpochInTicks)*100e-9;
+                  startDate=datenum(datetime(unixTime,'ConvertFrom','posixtime'));
+              catch
+                  try %get only date, but works on both window+mac
+                      startDate = datenum(datetime(h5readatt(obj.fullFilename,pathToAllRecordings,'Date'), 'InputFormat','eeee, d MMMMM yyyy'));
+                  catch
+                      %Fix that will only works windows.
+                      dateInTicks=h5readatt(obj.fullFilename,obj.pathToAllRecordings,'DateInTicks'); %This is in .NET date
+                      dt=System.DateTime(dateInTicks); %create .NET DateTime Struct
+                      dateInString=char(dt.ToString);
+                      startDate=datenum(dateInString,'dd/mm/yyyy');
+                  end
+              end
+              %notice that these fields are not the same as the ones in data tool (2 hour delay)
+              obj.startDate_Local(i)=startDate;
+              recordingDuration_ms = h5readatt(obj.fullFilename,obj.pathToRecording,'Duration')/1000; %h5 duration is given in us
+              obj.endDate_Local(i)=obj.startDate_Local(i)+recordingDuration_ms;
+          end
+          obj.recordingDuration_ms=sum(obj.recordingDuration_ms_Local);
+          obj.cumEnd=cumsum(obj.recordingDuration_ms_Local);
+          obj.cumStart=[0 obj.cumEnd(1:end-1)];
+          obj.startDate=obj.startDate_Local(1);
+          obj.endDate=obj.endDate_Local(end);
+          
+          %check that files were entered in the correct order
+          if obj.multifileMode
+              for i=2:obj.nRecordings
+                  if obj.startDate_Local(i)<obj.startDate_Local(i-1)
+                      disp('Error: mcd files were not entered in their chronological order!!! Please reorder before running');
+                      return;
+                  end
+              end
+          end
+          
+          
+          %%%%%%%%%%%%%%%%%%%%%%%% MULTIPLE FILE MODE- END %%%%%%%%%%%%%%%%%
+          
+          
+          %layout
+          obj=obj.loadChLayout;
+          if isempty(obj.chLayoutNumbers)
+              if obj.totalChannels<=32
+                  obj.layoutName='layout_300_6x6_FlexMEA';
+                  obj.electrodePitch=300;
+              elseif obj.totalChannels<=60
+                  obj.layoutName='layout_200_8x8.mat';
+                  obj.electrodePitch=200;
+              elseif obj.totalChannels<=120
+                  obj.layoutName='layout_100_12x12.mat';
+                  obj.electrodePitch=100;
+              elseif obj.totalChannels<=252
+                  %               obj.layoutName='layout_100_16x16.mat';
+                  obj.layoutName='layout_100_16x16_newSetup.mat';
+                  obj.electrodePitch=100;
+              end
+              load(obj.layoutName);
+              obj.chLayoutNumbers=En;
+              obj.chLayoutNames=Ena;
+              obj.chLayoutPositions=Enp;
+          end
+          %        obj=obj.configureN2S; %This was before newSetup layout
+      end
+      
+      function delete(obj) %do nothing
+      end
+      
   end
   
   methods
@@ -480,51 +566,22 @@ classdef MCH5Recording < dataRecording
         %channel. assuming they are the same for all, just the first one 
         %is taken (i.e. time tick, ADZero,RawDataType,ConcersionFactor,
         %HighPassFilterType etc
-                   
-        if ~strcmp(obj.fullFilename(end-1:end),'h5')
-            obj.fullFilename=[obj.fullFilename '.h5'];
-        end
         
-        %get start date. 
-        try
-            dateInTicks=h5readatt(obj.fullFilename,'/Data','DateInTicks');
-            %%%%%%%%%%   EXPLANATION   %%%%%%%%
-            %dateInTicks is in .NET ticks, i.e. number of 0.1us (100ns) that has passed since 01.01.0001 00:00.            
-            %Unix time is number of seconds since 01.01.1970, which in
-            %ticks is 621355968000000000 (621355968000000000 0.1us has
-            %passed between year 0001 to 1970). So subtract number of ticks
-            %since 1970 from recording time in ticks, and get the number of
-            %ticks since 1970. Convert this to second to get unix time.
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            
-            unixTime=(dateInTicks-621355968000000000)*100e-9;
-            obj.startDate=datenum(datetime(unixTime,'ConvertFrom','posixtime'));
-        catch
-            try %get only date, but works on both window+mac
-                obj.startDate = datenum(datetime(h5readatt(obj.fullFilename,'/Data','Date'), 'InputFormat','eeee, d MMMMM yyyy'));
-            catch
-            %Fix that will only works windows. 
-            dateInTicks=h5readatt(obj.fullFilename,'/Data','DateInTicks'); %This is in .NET date
-            dt=System.DateTime(dateInTicks); %create .NET DateTime Struct
-            dateInString=char(dt.ToString);
-            obj.startDate=datenum(dateInString,'dd/mm/yyyy');
-            end
-        end
-        obj.info=h5info(obj.fullFilename, obj.pathToAllRecordings);
-        obj.analogInfo = h5info(obj.fullFilename, obj.pathToAnalogStream);
-        obj.nStreams = size(obj.analogInfo.Groups,1);
         
         %get streams' numbers and paths (for raw electrode, digital and aux
-        %streams. Usually it's 0,1,2 but just to make sure
-        for i=1:obj.nStreams
-            obj.streamPaths{i}=obj.analogInfo.Groups(i).Name;
-            obj.streamsSubTypes{i}=h5readatt(obj.fullFilename,obj.streamPaths{i},'DataSubType');
-        end    
-        obj.electrodeStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultRawDataStreamName))-1; %'Electrode';'Auxiliary';'Digital';
-        obj.auxStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultAnalogDataStreamName))-1;
-        obj.digitalStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultDigitalDataStreamName))-1;
-       
-        
+          %streams). Usually it's 0,1,2 but just to make sure
+          obj.info=h5info(obj.fullFilename, obj.pathToAllRecordings);
+          obj.analogInfo = h5info(obj.fullFilename, obj.pathToAnalogStream);
+          obj.nStreams = size(obj.analogInfo.Groups,1);
+          
+          for i=1:obj.nStreams
+              obj.streamPaths{i}=obj.analogInfo.Groups(i).Name;
+              obj.streamsSubTypes{i}=h5readatt(obj.fullFilename,obj.streamPaths{i},'DataSubType');
+          end
+          obj.electrodeStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultRawDataStreamName))-1; %'Electrode';'Auxiliary';'Digital';
+          obj.auxStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultAnalogDataStreamName))-1;
+          obj.digitalStreamNum=find(ismember(obj.streamsSubTypes,obj.defaultDigitalDataStreamName))-1;
+          
         %get meta data for analog stream
         if isempty(obj.auxStreamNum)
             disp('No Analog Data Recorded!');
