@@ -28,6 +28,14 @@ maxFrameDeviation=0.5/60*1000; %ms
 plotDiodeTransitions=0;
 T=[]; %digital triggers in the recording
 
+%LPF parameters
+F=filterData(20000);
+F.lowPassStopCutoff=1/100;
+F.lowPassPassCutoff=1/120;
+F.highPassStopCutoff=0.000625;
+F.highPassPassCutoff=0.00065625;
+
+
 %% Output list of default variables
 %print out default arguments and values if no inputs are given
 if nargin==0
@@ -52,16 +60,7 @@ end
 %% Main function
 Fs=dataRecordingObj.samplingFrequency;
 frameSamples=round(1/60*Fs);
-
-%determine the chunck size
-if maxChunck>tEnd
-    chunkStart=tStart;
-    chunkEnd=tEnd;
-else
-    chunkStart=0:maxChunck:tEnd;
-    chunkEnd=[chunkStart(2:end)-chunckOverlap tEnd];
-end
-nChunks=numel(chunkStart);
+F=F.designLowPass;
 
 %extract digital triggers times if they were not provided during input
 hWB=waitbar(0,'Getting digital triggers...');
@@ -76,21 +75,44 @@ if isempty(T{trialStartEndDigiTriggerNumbers(1)}) || isempty(T{trialStartEndDigi
     return;
 end
 
-%estimate transition points
-if isempty(transition)
-    hWB=waitbar(0,hWB,'Classifying transition on sample data...');
-    %take the analog data during the first 10 trials (if available) with length of double the trial size 
-    avgTrialDuration=round(mean(T{trialStartEndDigiTriggerNumbers(2)}-T{trialStartEndDigiTriggerNumbers(1)})*2);
-    [Atmp]=dataRecordingObj.getAnalogData(analogChNum,T{trialStartEndDigiTriggerNumbers(1)}(1:min(10,numel(T{trialStartEndDigiTriggerNumbers(1)})))-100,avgTrialDuration);
-    Atmp=permute(Atmp,[3 1 2]);Atmp=Atmp(:);
-    medAtmp = fastmedfilt1d(Atmp,round(frameSamples*0.8));
-    eva = evalclusters(medAtmp,'kmeans','DaviesBouldin','KList',[2:4]);
-    [idx,cent] = kmeans(medAtmp,eva.OptimalK,'Replicates',5);
-    cent=sort(cent);
-    transitions=(cent(1:end-1)+cent(2:end))/2;
+%determine the chunck size
+if ~noisyAnalog
+    if maxChunck>tEnd
+        chunkStart=tStart;
+        chunkEnd=tEnd;
+    else
+        chunkStart=0:maxChunck:tEnd;
+        chunkEnd=[chunkStart(2:end)-chunckOverlap tEnd];
+    end
+else
+    if T{trialStartEndDigiTriggerNumbers(1)}+maxChunck>tEnd
+        chunkStart=T{trialStartEndDigiTriggerNumbers(1)};
+        chunkEnd=tEnd;
+    else
+        chunkStart=T{trialStartEndDigiTriggerNumbers(1)}:maxChunck:tEnd;
+        chunkEnd=[chunkStart(2:end)-chunckOverlap tEnd];
+    end
 end
-%show the threshold separation, this will close at the end of the detection.
-f=figure;plot(medAtmp);hold on;line([1 numel(medAtmp)],[transitions(1) transitions(1)]);
+
+nChunks=numel(chunkStart);
+
+if ~noisyAnalog %if noisy, estimate for each chunk
+    %estimate transition points
+    if isempty(transition)
+        hWB=waitbar(0,hWB,'Classifying transition on sample data...');
+        %take the analog data during the first 10 trials (if available) with length of double the trial size 
+        avgTrialDuration=round(mean(T{trialStartEndDigiTriggerNumbers(2)}-T{trialStartEndDigiTriggerNumbers(1)})*2);
+        [Atmp]=dataRecordingObj.getAnalogData(analogChNum,T{trialStartEndDigiTriggerNumbers(1)}(1:min(10,numel(T{trialStartEndDigiTriggerNumbers(1)})))-100,avgTrialDuration);
+        Atmp=permute(Atmp,[3 1 2]);Atmp=Atmp(:);
+        medAtmp = fastmedfilt1d(Atmp,round(frameSamples*0.8));
+        eva = evalclusters(medAtmp,'kmeans','DaviesBouldin','KList',[2:4]);
+        [idx,cent] = kmeans(medAtmp,eva.OptimalK,'Replicates',5);
+        cent=sort(cent);
+        transitions=(cent(1:end-1)+cent(2:end))/2;
+    end
+    %show the threshold separation, this will close at the end of the detection.
+    f=figure;plot(medAtmp);hold on;line([1 numel(medAtmp)],[transitions(1) transitions(1)]);
+end
 
 %main loop
 hWB=waitbar(0,hWB,'Extracting analog diode data from recording...');
@@ -98,8 +120,19 @@ upCross=cell(1,nChunks);
 downCross=cell(1,nChunks);
 for i=1:nChunks
     [A,t_ms]=dataRecordingObj.getAnalogData(1,chunkStart(i),chunkEnd(i)-chunkStart(i));
-    A=squeeze(A);
-    medA = fastmedfilt1d(A,round(frameSamples*0.8));
+    if ~noisyAnalog
+        A=squeeze(A);
+        medA = fastmedfilt1d(A,round(frameSamples*0.8));
+    else
+        Ftmp=F.getFilteredData(A);
+        Aflat=A-Ftmp; %flatten oscilations and drift
+        medA = fastmedfilt1d(Aflat(:),round(frameSamples*2));
+        eva = evalclusters(medA,'kmeans','DaviesBouldin','KList',[2:4]);
+        [idx,cent] = kmeans(medA,eva.OptimalK,'Replicates',2);
+        cent=sort(cent);
+        transitions=(cent(1:end-1)+cent(2:end))/2;
+    end
+%     f=figure;plot(medA);hold on;line([1 numel(medA)],[transitions(1) transitions(1)]);
     upCross{i}=chunkStart(i)+find(medA(1:end-1)<transitions(1) & medA(2:end)>=transitions(1))/Fs*1000;
     downCross{i}=chunkStart(i)+find(medA(1:end-1)>transitions(1) & medA(2:end)<=transitions(1))/Fs*1000;
     %plot(medA(1:5000000));hold on;plot(upCross{i}(1:20)*Fs/1000,medA(round(upCross{i}(1:20)*Fs/1000)),'or');plot(downCross{i}(1:20)*Fs/1000,medA(round(downCross{i}(1:20)*Fs/1000)),'sg')
@@ -108,7 +141,9 @@ end
 close(hWB);
 upCross=cell2mat(upCross');
 downCross=cell2mat(downCross');
-close(f);
+if ~noisyAnalog
+    close(f);
+end
 
 udCross{1}=upCross;udCross{2}=downCross;
 frameShifts=udCross;

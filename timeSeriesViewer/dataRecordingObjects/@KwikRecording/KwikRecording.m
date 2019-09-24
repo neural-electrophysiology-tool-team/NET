@@ -152,7 +152,7 @@ classdef KwikRecording < dataRecording
     function [V_uV,T_ms]=getAnalogData(obj,channels,startTime_ms,window_ms,name)
             %Extract Kwik recording analog data. If no channels specified,
             %extracts the data according to E-Phys' Kwik, taking first ADC
-            %channel. Otherwise it take the channels specified.
+            %channel. Otherwise` it take the channels specified.
             %Since the analog stream is just a data channel, this function
             %just uses getData for the relevant channel.
             %Usage: [V_uV,T_ms]=obj.getAnalogData(channels,startTime_ms,window_ms,name);
@@ -176,7 +176,7 @@ classdef KwikRecording < dataRecording
             for i=0:channels.getLength-1
                if strcmp(channels.item(i).getAttribute("name"),"ADC1") 
                    analogChNum=str2num(channels.item(i).getAttribute("number"))+1;
-                   break
+%                    break %in some cases there are more than 1 ADC1 for some reason, so make sure the last one is the right one
                end
             end    
         else
