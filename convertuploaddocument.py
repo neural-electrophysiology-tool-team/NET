@@ -91,18 +91,21 @@ class convertuploaddocument:
         self.logger.info('End: Scan for files')
 
     def parsefields(self, getvalchar='<', nextfieldchar='_'):
+
         self.field['fullpathmsrd'] = self.files * 2
         self.field.sort_values(by=['fullpathmsrd'], inplace=True)
         self.field.reset_index(drop=True, inplace=True)
         self.field['MEAfiles'] = self.field['fullpathmsrd'].apply(
             lambda x: x.split('\\')[-1].replace(self.suffix, 'h5'))
+        self.field['recNames'] = self.field['MEAfiles'].apply(lambda x: hashlib.md5(x.replace('.h5', '').encode()).hexdigest())
         self.field['MEAfiles'].loc[::2] = self.field['MEAfiles'].loc[::2].apply(lambda x: x.replace('h5', 'bin'))
-        self.field['folder'] = ['\\' + os.path.join(*word[:-1]) for word in
+        self.field['OrigFileFolder'] = ['\\' + os.path.join(*word[:-1]) for word in
                                 [f.split('\\') for f in self.field['fullpathmsrd']]]
-        self.field['recNames'] = self.field['MEAfiles'].apply(lambda x: hashlib.md5(x.encode()).hexdigest())
+        self.field['folder'] = self.WexacH5Path
         self.field['OrigFileName'] = self.field['MEAfiles']
         self.field['MEAfiles'] = self.field['recNames']+'.h5'
         self.field['MEAfiles'].loc[::2] = self.field['MEAfiles'].loc[::2].apply(lambda x: x.replace('h5', 'bin'))
+        self.field['recNames'] = self.field['MEAfiles']
         def setrecformat(x):
             if 'h5' in x:
                 return ('MCH5Recording')
@@ -232,6 +235,7 @@ class convertuploaddocument:
             self.logger.info('Process: Not uploading spreadsheet to cloud storage')
         if self.localcopyflag == True:
             self.localnetworkcopy(spreadsheetpath, self.localsharepath)
+            subprocess.call(["xcopy", spreadsheetpath, self.WexacH5Path,'/c/i/y/z'])
         return (self.field)
 
     def converttoh5(self):
@@ -342,13 +346,14 @@ class convertuploaddocument:
                                     subprocess.call(["xcopy", os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'), self.WexacH5Path,'/c/i/y/z'])
                                     os.remove(os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'))
                                     self.logger.info('Process: Successfully converted file to H5')
-                                    self.logger.info('Process: Saving Excel Experiment Record')
-                                    self.logger.info('Process: Save completed succesfully')
+                                    
                             except:
                                  self.logger.error(' %s is locked, no overwrite possible' % f.split('.')[0])
             self.field = self.field.replace("unspecified", "")
             self.field['folder'] = self.WexacH5Path
+            self.logger.info('Process: Saving Excel Experiment Record')
             self.field.to_excel(os.path.join(self.WexacH5Path, 'experiments.xlsx'), index=False)
+            self.logger.info('Process: Save completed succesfully')
                                 
 
     def __init__(self, searchpath="D:\\Multi Channel DataManager\\", startfresh=False,
@@ -373,9 +378,10 @@ class convertuploaddocument:
         :param cloudflag: flag, if 1 then attempt to upload files to google
         :param localsharepath: path to local network shared directory
         """
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = gcs_credentials_path
-        self.gcs_client = storage.Client(project=gcs_project_id)
-        self.bucket = self.gcs_client.get_bucket(bucketname)
+        if cloudflag != 'None':
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = gcs_credentials_path
+            self.gcs_client = storage.Client(project=gcs_project_id)
+            self.bucket = self.gcs_client.get_bucket(bucketname)
 
         self.logpath = logpath
         self.logger = logging.getLogger(__name__)

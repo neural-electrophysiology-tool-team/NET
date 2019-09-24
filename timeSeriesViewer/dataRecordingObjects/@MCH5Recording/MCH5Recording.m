@@ -325,6 +325,7 @@ classdef MCH5Recording < dataRecording
 %                     tmpStartTime=tmpEndTime;
 %                 end
 %             end
+
 %         else %single file mode
             for i=1:nWindows
 %                 obj.getDataConfig.startend=[startTime_ms(i);startTime_ms(i)+window_ms];
