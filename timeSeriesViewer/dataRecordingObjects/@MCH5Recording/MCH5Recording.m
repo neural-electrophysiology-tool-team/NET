@@ -488,13 +488,28 @@ classdef MCH5Recording < dataRecording
         
         %get start date. 
         try
-            obj.startDate = datenum(datetime(h5readatt(obj.fullFilename,'/Data','Date'), 'InputFormat','eeee, d MMMMM yyyy'));
+            dateInTicks=h5readatt(obj.fullFilename,'/Data','DateInTicks');
+            %%%%%%%%%%   EXPLANATION   %%%%%%%%
+            %dateInTicks is in .NET ticks, i.e. number of 0.1us (100ns) that has passed since 01.01.0001 00:00.            
+            %Unix time is number of seconds since 01.01.1970, which in
+            %ticks is 621355968000000000 (621355968000000000 0.1us has
+            %passed between year 0001 to 1970). So subtract number of ticks
+            %since 1970 from recording time in ticks, and get the number of
+            %ticks since 1970. Convert this to second to get unix time.
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            
+            unixTime=(dateInTicks-621355968000000000)*100e-9;
+            obj.startDate=datenum(datetime(unixTime,'ConvertFrom','posixtime'));
         catch
+            try %get only date, but works on both window+mac
+                obj.startDate = datenum(datetime(h5readatt(obj.fullFilename,'/Data','Date'), 'InputFormat','eeee, d MMMMM yyyy'));
+            catch
             %Fix that will only works windows. 
             dateInTicks=h5readatt(obj.fullFilename,'/Data','DateInTicks'); %This is in .NET date
             dt=System.DateTime(dateInTicks); %create .NET DateTime Struct
             dateInString=char(dt.ToString);
             obj.startDate=datenum(dateInString,'dd/mm/yyyy');
+            end
         end
         obj.info=h5info(obj.fullFilename, obj.pathToAllRecordings);
         obj.analogInfo = h5info(obj.fullFilename, obj.pathToAnalogStream);
