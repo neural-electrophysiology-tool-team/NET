@@ -33,7 +33,7 @@ classdef (Abstract) dataRecording < handle
     
     properties (SetAccess=protected) %these are properties that are not synchronized or loaded from meta files
         multifileMode %(logical 1x1) if multi files were selected %%%for now - false
-        folderMode = false; 
+        folderMode = false; %false forever (yuval)
     end
     
     properties (Constant, Abstract)
@@ -527,6 +527,12 @@ classdef (Abstract) dataRecording < handle
                         obj.recordingDir=[cd filesep];
                     end
                 else
+                    if all(strcmp(pathstr,pathstr{1}))
+                        pathstr=pathstr{1};
+                        multiFolder=0;
+                    else
+                        multiFolder=1;
+                    end
                     obj.recordingDir=pathstr;
                     if ispc
                         if ~iscell(obj.recordingDir)
@@ -572,7 +578,7 @@ classdef (Abstract) dataRecording < handle
             else
                 obj.recordingName=name;
             end
-            if ~iscell(obj.recordingDir)
+            if ~multiFolder
                 obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
             else
                 obj.metaDataFile=[obj.recordingDir{1} filesep obj.recordingName '_metaData'];
