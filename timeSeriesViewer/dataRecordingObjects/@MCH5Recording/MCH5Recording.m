@@ -730,9 +730,12 @@ classdef MCH5Recording < dataRecording
       if strcmp(rawDataType,'Int'), rawDataType='int'; end
       if databit==24, databit=32; end %MCs ADC works in 24 bits quantization, but stores in 32 bit format (Try to get aroung this)
       obj.datatype = [rawDataType '32'];                
-                
-      disp('saving meta data');
-      obj.saveMetaData;
+      
+      if ~obj.multifileMode
+          disp('saving meta data');
+          obj.saveMetaData;
+      end
+      
     end
     function obj = configureN2S(obj)
     % This function creats the n2s transormation.

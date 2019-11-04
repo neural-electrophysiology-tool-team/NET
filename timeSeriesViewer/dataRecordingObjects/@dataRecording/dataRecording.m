@@ -529,9 +529,6 @@ classdef (Abstract) dataRecording < handle
                 else
                     if all(strcmp(pathstr,pathstr{1}))
                         pathstr=pathstr{1};
-                        multiFolder=0;
-                    else
-                        multiFolder=1;
                     end
                     obj.recordingDir=pathstr;
                     if ispc
@@ -578,7 +575,7 @@ classdef (Abstract) dataRecording < handle
             else
                 obj.recordingName=name;
             end
-            if ~multiFolder
+            if ~iscell(obj.recordingDir)
                 obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
             else
                 obj.metaDataFile=[obj.recordingDir{1} filesep obj.recordingName '_metaData'];
