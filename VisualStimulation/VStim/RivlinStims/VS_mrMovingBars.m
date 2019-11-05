@@ -1,37 +1,37 @@
 classdef VS_mrMovingBars < VStim
     properties (SetAccess=public)
 
-        txtBnumTrials=5;
-        txtBnumDirs=12;
-        txtBbarWidth=325;%36;
-        txtBbarLength=117;%180;
-        txtBspeed=78;%324;
-        txtBmaskRadius=100;% 225;
-        txtBbarIntensity=255;
-        popBbarColor = [1 1 1]; %white
-        txtBpreStimWait=5;
-        txtBdelay=0;
-        txtBinterTrialWait=0.5;
-        save_stimulus=0;
+        txtBnumTrials   = 5;
+        txtBnumDirs     = 8;
+        txtBbarWidth    = 333;%36;
+        txtBbarLength   = 120;%180;
+        txtBspeed       = 80;%324;
+        txtBmaskRadius  = 500;% 225;
+        txtBbarIntensity= 255;
+        popBbarColor    = [1 1 1]; %white
+        txtBpreStimWait = 5;
+        txtBdelay       = 2;
+        txtBinterTrialWait = 2;
+        save_stimulus   = 0;
         txtBscrIntensity = 0;
-        popBscrColor = [1 1 1]; %white
+        popBscrColor    =[1 1 1]; %white
         chkBshowFlashesForGUI = 0;
         txtBflashPeriod = 1;
         txtBflashNumber = 2;
-        txtBdirList = nan;
-        chkBsaveImage=0;
-        txtBsaveImageTime=2;
+        txtBdirList     = nan;
+        chkBsaveImage   = 0;
+        txtBsaveImageTime = 2;
     end
     properties (Hidden,Constant)
-        barLuminosityTxt='The luminocity value for the rectangles, if array->show all given contrasts';
-        barWidthTxt='The width of the moving bar [pixels] - parallel to motion direction (<10)';
-        barLengthTxt='The length of the moving bar [pixels] - perpendicular to motion direction (<number of pixels in the smaller screen axis)';
-        numberOfDirectionsTxt='The number of directions to test (directions will be distributed uniformly over 360 degrees)';
-        randomizeTxt='Randomize the order of different trials';
-        speedTxt='The speed of the moving object [pixels/sec]';
-        parallelsOffsetTxt='the offset [pixels] of parallel propagation paths'
-        skipFramesTxt='if to only show a subset of frames';
-        remarks={'Categories in stimuli are: speed, offset'};
+        barLuminosityTxt    = 'The luminocity value for the rectangles, if array->show all given contrasts';
+        barWidthTxt         = 'The width of the moving bar [pixels] - parallel to motion direction (<10)';
+        barLengthTxt        = 'The length of the moving bar [pixels] - perpendicular to motion direction (<number of pixels in the smaller screen axis)';
+        numberOfDirectionsTxt = 'The number of directions to test (directions will be distributed uniformly over 360 degrees)';
+        randomizeTxt        = 'Randomize the order of different trials';
+        speedTxt            = 'The speed of the moving object [pixels/sec]';
+        parallelsOffsetTxt  = 'the offset [pixels] of parallel propagation paths'
+        skipFramesTxt       = 'if to only show a subset of frames';
+        remarks             = {'Categories in stimuli are: speed, offset'};
     end
     properties (SetAccess=protected)
         speeds
@@ -80,33 +80,35 @@ classdef VS_mrMovingBars < VStim
             tex = Screen('MakeTexture', obj.PTB_win, barTex);
             
             [x,y] = RectCenter(obj.rect);
-            obj.txtBmaskRadius=obj.txtBmaskRadius+obj.txtBbarLength/2; %added to fix the stating and ending position of bar
+            obj.txtBmaskRadius=obj.txtBmaskRadius+obj.txtBbarLength/2; %added to fix the starting and ending position of bar
             start_txtBmaskRadius = obj.txtBmaskRadius;
             endtxtBmaskRadius = -obj.txtBmaskRadius;
             frame_rate=1/Screen('GetFlipInterval',obj.PTB_win);
-            obj.sendTTL(2,false);
-            for trial=1:length(directions)
-                direction=directions(trial);
-                screen_full_color = obj.txtBscrIntensity*obj.popBscrColor;
-                [width, height]=Screen('WindowSize', obj.PTB_win);
-                srcRect=[0 0 floor(height/2) width];
-                mask = makeCircularMaskForGUI(obj.txtBmaskRadius,width, height,'color',screen_full_color);
-                masktex=Screen('MakeTexture', obj.PTB_win, mask);
-                maskradius = obj.txtBmaskRadius;
-             while maskradius >= endtxtBmaskRadius  
-                    x_txtBmaskRadius = maskradius;
-                    y_txtBmaskRadius = maskradius;
-                    screen_full_color = obj.txtBscrIntensity*obj.popBscrColor;
+            obj.sendTTL(1,true);
+            for trial = 1 : length(directions)
+                direction           = directions(trial);
+                screen_full_color   = obj.txtBscrIntensity*obj.popBscrColor;
+                [width, height]     = Screen('WindowSize', obj.PTB_win);
+                srcRect             = [0 0 floor(height/2) width];
+                mask                = makeCircularMaskForGUI(obj.txtBmaskRadius,width, height,'color',screen_full_color);
+                masktex             = Screen('MakeTexture', obj.PTB_win, mask);
+                maskradius          = obj.txtBmaskRadius;
+                obj.sendTTL(2,true);
+                while maskradius >= endtxtBmaskRadius  
+                    x_txtBmaskRadius    = maskradius;
+                    y_txtBmaskRadius    = maskradius;
+                    screen_full_color   = obj.txtBscrIntensity*obj.popBscrColor;
                     Screen('FillRect', obj.PTB_win, screen_full_color, []);
-                    startPos = [x-(x_txtBmaskRadius*cosd(direction)) y-(y_txtBmaskRadius*sind(direction))];% startPosition [x y]
-                    dstRect = [0 0 obj.txtBbarLength+(2*padding) obj.txtBbarWidth];
-                    dstRect = CenterRectOnPoint(dstRect, startPos(1), startPos(2));
+                    startPos    = [x-(x_txtBmaskRadius*cosd(direction)) y-(y_txtBmaskRadius*sind(direction))];% startPosition [x y]
+                    dstRect     = [0 0 obj.txtBbarLength+(2*padding) obj.txtBbarWidth];
+                    dstRect     = CenterRectOnPoint(dstRect, startPos(1), startPos(2));
                     Screen('DrawTexture',obj.PTB_win,tex,[],dstRect,direction,1);
                     obj.sendTTL(3,true);
                     Screen('Flip', obj.PTB_win);
                     obj.sendTTL(3,false);
                     maskradius = maskradius-(obj.txtBspeed/frame_rate);
-            end
+                end
+                obj.sendTTL(2,false);
                 disp(['Direction ' num2str(trial) '/' num2str(obj.txtBnumTrials*obj.txtBnumDirs)]);
                 WaitSecs(obj.txtBinterTrialWait);%pause to allow recording device to prepare for new trial
             end
