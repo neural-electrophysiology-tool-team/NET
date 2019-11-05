@@ -17,7 +17,9 @@ ic = [ic1;ic2];
 ind = cellfun(@(x) numel(x), spikesByCluster);
 ic(3,:) = cumsum([0,ind(1:end-1)])+1;
 ic(4,:) = cumsum(ind);
-t = cat(1,spikesByCluster{:});
+% t = cat(1,spikeTimes(spikesByCluster{:}));
+t = cell2mat(spikesByCluster');
+t = spikeTimes(t);
 save([varargin{1}(1:end-4) '_gridSorter.mat'],'t','ic','-v7.3');
 
 % for iClu=1:nClu

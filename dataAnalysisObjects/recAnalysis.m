@@ -177,7 +177,7 @@ classdef (Abstract) recAnalysis < handle
             par=parseObj.Results;
             
             [funName] = dbstack;funName=funName.name;funName=strsplit(funName,'.');funName=funName{end};
-            saveFileName=obj.files.(funName);
+            saveFileName=join(obj.files.(funName),'');
             
             if exist(saveFileName,'file') & ~par.overwrite
                 if nargout==1
@@ -417,8 +417,8 @@ classdef (Abstract) recAnalysis < handle
                     obj.currentExpFolder=obj.recTable.folder{pRec(1)};
                     obj=obj.getFileNames;
                     
-                    [stat,mess,messid]=mkdir(obj.currentAnalysisFolder); %creates analysis directory if not existing
-                    [stat,mess,messid]=mkdir(obj.currentPlotFolder); %creates analysis directory if not existing
+                    [stat,mess,messid]=mkdir(join(obj.currentAnalysisFolder,'')); %creates analysis directory if not existing
+                    [stat,mess,messid]=mkdir(join(obj.currentPlotFolder,'')); %creates analysis directory if not existing
                     fprintf('Current exp. set to: %s-%s @ %s\n',obj.recTable.MEAfiles{pRec(1)},num2str(obj.recTable.MEAfiles{pRec(end)}),obj.recTable.folder{pRec(1)});
                 elseif numel(pRec)==0
                     disp('Selected recording/s were not found in recording list');

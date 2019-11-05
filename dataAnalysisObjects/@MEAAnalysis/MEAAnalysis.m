@@ -206,7 +206,7 @@ classdef MEAAnalysis < recAnalysis
             rez = set_cutoff(rez);
             save(resultsFileName,'rez', '-v7.3');
             
-            fprintf('Total time used for running kilo-sort was %f hours', toc/60/60);
+            fprintf('Total time used for running kilo-sort was %f hours\n', toc/60/60);
             delete(ops.fproc);
         end
         
@@ -276,7 +276,10 @@ classdef MEAAnalysis < recAnalysis
                 paramDir = fullfile(join(C(1:end-1),'/'));
                 resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
                 load(resultsFileName, 'rez');
-                rezToPhy(rez, paramDir{1});
+                if contains(paramDir{1}, 'wexac')
+                    paramDir{1} = strrep(paramDir{1},'\','\\');
+                end
+                rezToPhy(rez,paramDir{1});
                 jrc('import-ksort',paramDir{1});
             else
                 disp('Data from ksort already imported');
