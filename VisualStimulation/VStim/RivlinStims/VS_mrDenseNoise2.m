@@ -1,29 +1,29 @@
-classdef VS_mrDenseNoise < VStim
+classdef VS_mrDenseNoise2 < VStim
     properties
         %all these properties are modifiable by user and will appear in visual stim GUI
         %Place all other variables in hidden properties
         %test
-        brtIntensity    = 255; %white
-        drkIntensity    = 0; %black
-        scrIntensity    = 0; %background
-        noiseColor      = [1 1 1]; %black/white
-        popDNscrColor   = [1 1 1]; %background
-        duration        = 10; %300sec = 5min
-        tmpFrq          = 30; %hz
-        nPxls_x         = 100;
-        nPxls_y         = 75;
+        txtDNbrtIntensity    = 255; %white
+        txtDNdrkIntensity    = 0; %black
+        txtDNscrIntensity    = 0; %background
+        popDNnoiseColor      = [1 1 1]; %black/white
+        popDNscrColor        = [1 1 1]; %background
+        txtDNduration        = 10; %300sec = 5min
+        txtDNtmpFrq          = 30; %hz
+        txtDNnPxls_x         = 100;
+        txtDNnPxls_y         = 75;
         padRows              = 0;
         padColumns           = 0;
-%         maskRect        = false;
-%         rectWidth       = 264;
-%         rectHeight      = 264;
-%         maskRadius      = 2000;
-        preStimWait     = 1;
-        postStimWait     = 1;
+        chkDNmaskRect        = false;
+%         txtDNrectWidth       = 264;
+%         txtDNrectHeight      = 264;
+%         txtDNmaskRadius      = 2000;
+        txtDNpreStimWait     = 0;
         makeBWnoise          = true;
         noiseType            = 'sparse';    %sparse / single / full
         percentChange        = 20;
-        indicator_row        = false;
+        indicator_row        = true;
+        reporter_square      = true;
 
     end
     properties (Hidden,Constant)
@@ -38,29 +38,32 @@ classdef VS_mrDenseNoise < VStim
         largeRectSparsityTxt='%of non grey squares';
         smallRectSparsityTxt='%of non grey squares';
         makeBWnoiseTxt = 'check for BW, uncheck for gaussian noise';
-        noiseTypeTxt = 'text: sparse - change only X% of the pixels, single - change 1 pixel, full - change 50% of the pixels';
+        noiseTypeTxt = 'noise type: sparse/single/full';
         percentChangeTxt = 'in sparse noise: how many pixels should change in each frame';
-        brtIntensityTxt = 'scalar, between 0 and 255, the color of the bright noise';            
-        drkIntensityTxt = 'scalar, between 0 and 255, the color of the dark noise';
-        scrIntensityTxt = 'scalar, between 0 and 255, the color of the screen between intervals and of non-noise pixels'
-        noiseColorTxt = 'color of the noise pixels, in RGB values of 0 to 1';
-        scrColorTxt = 'color of the non-noise pixels, in RGB values of 0 to 1';
-        durationTxt = 'Duration of the stimulus, in seconds';
-        tmpFrqTxt = 'Temporal Frequency of the frames (frames/s)';
-        nPxls_xTxt = 'Number of noise pixels in the x axis';
-        nPxls_yTxt = 'Number of noise pixels in the y axis';
-        padRowsTxt = 'add zeros to fix dimentions of pixels in x axis';
-        padColumnsTxt = 'add zeros to fix dimentions of pixels in y axis';
-        %     maskRect
-        %     rectWidth
-        %     rectHeight
-        %     maskRadius
-        preStimWaitTxt = 'time (s) to wait before the stimulation';
-        postStimWaitTxt = 'time (s) to wait after the stimulation';
-        indicator_rowTxt = 'check to use the first row as a frame indicator';
-        %     saveImageTime
-        %     saveImage
+        %     txtDNbrtIntensity     scalar, between 0 and 255, the color of the
+        %                           bright noise
+        %     txtDNdrkIntensity     scalar, between 0 and 255, the color of the
+        %                           dark noise
+        %     txtDNscrIntensity;    scalar, between 0 and 255, the color of the screen
+        %                           between intervals
+        %     popDNnoiseColor       RGB colors (B/W, green, UV) for noise
+        %     popDNscrColor         RGB colors (B/W, green, UV) for screen
+        %     txtDNduration         Duration of the stimulus
+        %     txtDNtmpFrq           Temporal Frq of frames (frames/s)
+        %     txtDNnPxls            Number of noise pixels in the x axis
+        %     txtDNnPxls            Number of noise pixels in the y axis
+        %     chkDNmaskRect
+        %     txtDNrectWidth
+        %     txtDNrectHeight
+        %     txtDNpreStimWait      scalar,time (s) to wait before beginning recording
+        %     chkDNbinaryNoise
+        %     chkDNsinglePxl        Black white pixels or gradual colors
+        %     txtDNmaskRadius
+        %     txtDNsaveImageTime
+        %     chkDNsaveImage
         %     btnDNdebug            Debug mode when there in no parallel connection
+        %     padRows                  add zeros to fix dimentions of pixels in x axis
+        %     padColumns                  add zeros to fix dimentions of pixels in y axis
         remarks={''};
     end
     properties (Hidden, SetAccess=protected)
@@ -79,26 +82,27 @@ classdef VS_mrDenseNoise < VStim
             screenProps=Screen('Resolution',obj.PTB_win);
             
             %generate stimulus
-            brtColor = obj.brtIntensity*obj.noiseColor;
-            drkColor = obj.drkIntensity*obj.noiseColor;
-            scrColor  = obj.scrIntensity*obj.popDNscrColor;
+            brtColor = obj.txtDNbrtIntensity*obj.popDNnoiseColor;
+            drkColor = obj.txtDNdrkIntensity*obj.popDNnoiseColor;
+            scrColor  = obj.txtDNscrIntensity*obj.popDNscrColor;
             screenRect = obj.rect;
             frame_rate = obj.fps;
+            ifi = Screen('GetFlipInterval',obj.PTB_win);
             
-%             if obj.maskRect
-%                 obj.maskRadius = max(ceil(obj.rectWidth/2),ceil(obj.rectHeight/2));
-%                 mask = makeRectangularMaskForGUI(obj.rectWidth,obj.rectHeight);
-%                 masktex=Screen('MakeTexture', obj.PTB_win, mask);
-%             end
+            if obj.chkDNmaskRect
+                obj.txtDNmaskRadius = max(ceil(obj.txtDNrectWidth/2),ceil(obj.txtDNrectHeight/2));
+                mask = makeRectangularMaskForGUI(obj.txtDNrectWidth,obj.txtDNrectHeight);
+                masktex=Screen('MakeTexture', obj.PTB_win, mask);
+            end
             
             [screenXpixels, screenYpixels] = Screen('WindowSize', obj.PTB_win);
             
             % Get the centre coordinate of the obj.PTB_win
-            xNoisePxls = obj.nPxls_x;% 2.*round(nPxls/2)/2; %num cells x %for mightex
-            yNoisePxls = obj.nPxls_y; %num cells y
+            xNoisePxls = obj.txtDNnPxls_x;% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
+            yNoisePxls = obj.txtDNnPxls_y; %num cells y
             nNoisePxls = xNoisePxls * yNoisePxls;
             blankScreen = repmat(scrColor',1,nNoisePxls);
-            colorsArraySize = obj.duration*obj.tmpFrq; % number of frames
+            colorsArraySize = obj.txtDNduration*obj.txtDNtmpFrq; % number of frames
             colorsArray = [];
             
             % calculate Gaussian noise parameters
@@ -111,6 +115,7 @@ classdef VS_mrDenseNoise < VStim
             
             % run test Flip (sometimes this first flip is slow and so it is not included in the anlysis
             obj.visualFieldBackgroundLuminance=obj.visualFieldBackgroundLuminance;
+            obj.sendTTL(1,true);
             
             % build noise array (color*pixelNum*frames)
             disp('Building noise array');
@@ -148,34 +153,42 @@ classdef VS_mrDenseNoise < VStim
                 end
                 
                 % optional padding of the stimulation area
-                sqMat = reshape(permute(noiseColorsMat,[2,3,1]),obj.nPxls_y,obj.nPxls_x,3);
+                sqMat = reshape(permute(noiseColorsMat,[2,3,1]),obj.txtDNnPxls_y,obj.txtDNnPxls_x,3);
                 sqMat = padarray(sqMat,[obj.padRows obj.padColumns]);
                 
                 if obj.indicator_row
-                    sqMat(1,:) = mod(frames,2)*brtColor(1);
+%                     sqMat = padarray(sqMat,1,mod(frames,2)*brtColor(1),'pre');
+                    sqMat = padarray(sqMat,2,0,'post');
+                    sqMat(end,:,1) = 255;
                 end
                 
                 newNoiseColorsMat = reshape(permute(sqMat,[3,1,2]),3,[],1);
-                if frames==1
-                    colorsArray = zeros([size(newNoiseColorsMat),colorsArraySize],'uint8');
-                end
-                colorsArray(:,:,frames) = newNoiseColorsMat;
-%                 colorsArray = cat(3, colorsArray, newNoiseColorsMat);
+                
+                colorsArray = cat(3, colorsArray, newNoiseColorsMat);
             end
             
-            % save a more compact matrix
-            if all(obj.noiseColor == [1 1 1])
+            if all(obj.popDNnoiseColor == [1 1 1]) && obj.makeBWnoise
+                noiseArray = colorsArray(1,:,:) == brtColor(1);
+            elseif all(obj.popDNnoiseColor == [1 1 1])
                 noiseArray = colorsArray(1,:,:);
             else
                 noiseArray = colorsArray;
             end
             
-            realXNoisePxls = obj.nPxls_x+(obj.padColumns*2); %including padding
-            realYNoisePxls = obj.nPxls_y+(obj.padRows*2);
-                       
+            realXNoisePxls = obj.txtDNnPxls_x+(obj.padColumns*2); %including padding
+            realYNoisePxls = obj.txtDNnPxls_y+(obj.padRows*2);
+            
+            if obj.indicator_row
+                realYNoisePxls = realYNoisePxls + 2;
+            end
+            
             ySizeNoisePxls=(screenYpixels/realYNoisePxls);
             xSizeNoisePxls=(screenXpixels/realXNoisePxls);
             baseRect = [0 0 xSizeNoisePxls ySizeNoisePxls];
+            
+            if obj.reporter_square
+                repSq = [screenXpixels-100 screenYpixels-100 screenXpixels screenYpixels];
+            end
             
             xPos = repelem(0:realXNoisePxls-1,realYNoisePxls);
             yPos = repmat(0:realYNoisePxls-1,1,realXNoisePxls);
@@ -186,53 +199,42 @@ classdef VS_mrDenseNoise < VStim
             
             % Make our rectangle coordinates
             allRectsRight = CenterRectOnPointd(baseRect,xPosRight',yPosRight')';
-
+            
+            % estimate presentation error based on 100 frames
+            disp('Estimating timing offset');
+            Priority(MaxPriority(obj.PTB_win));
+            vbl_estimate = GetSecs();
+            for i = 1:100
+                vbl_estimate(i) = Screen('Flip', obj.PTB_win,vbl_estimate(end)+1/obj.txtDNtmpFrq);
+            end
+            obj.prelim_presentation_error = mean(diff(vbl_estimate)) - 1/obj.txtDNtmpFrq;
+            
             % start stimulation
             disp('Starting Stimulation');
             Screen('FillRect', obj.PTB_win, scrColor, []);
             Screen('Flip',obj.PTB_win);
-            
-            waitFrame = frame_rate / obj.tmpFrq;
-            obj.sendTTL(1,true);
-            WaitSecs(obj.preStimWait);
+            WaitSecs(obj.txtDNpreStimWait);
             obj.sendTTL(2,true);
+            
+            obj.vbl = zeros(1,colorsArraySize+1);
+            obj.vbl(1) = GetSecs();
             for i = 1:colorsArraySize
-<<<<<<< HEAD
                 % Draw the rect to the screen
                 Screen('FillRect', obj.PTB_win, colorsArray(:,:,i), allRectsRight);
+                if obj.reporter_square
+                    Screen('FillRect',obj.PTB_win,brtColor*mod(i,2),repSq);
+                end
                 %Screen('DrawTexture',obj.PTB_win,masktex);
                 Screen('DrawingFinished', obj.PTB_win);
                 obj.sendTTL(3,true);
-                vbl(i) = Screen('Flip', obj.PTB_win,vbl(end)+1/obj.txtDNtmpFrq - presentation_error);
+                obj.vbl(i+1) = Screen('Flip', obj.PTB_win,obj.vbl(i)+1/obj.txtDNtmpFrq-obj.prelim_presentation_error);
                 obj.sendTTL(3,false);
-            end           
-            Priority(0);
-=======
-                for j = 1:waitFrame
-                    % Draw the rect to the screen
-                    Screen('FillRect', obj.PTB_win, colorsArray(:,:,i), allRectsRight);
-                    %Screen('DrawTexture',obj.PTB_win,masktex);
-                    Screen('DrawingFinished', obj.PTB_win);
-                    if j==1
-                        obj.sendTTL(3,true);
-                        Screen('Flip',obj.PTB_win);
-                        obj.sendTTL(3,false);
-                    else
-                        Screen('Flip',obj.PTB_win);
-                    end
-                end
             end
->>>>>>> 34c95d87528d22b4225ac7ae753729809683d581
+            Priority(0);
             
-            Screen('FillRect', obj.PTB_win, scrColor, []);
-            Screen('Flip',obj.PTB_win);
             obj.sendTTL(2,false);
-<<<<<<< HEAD
             obj.applyBackgound;
-            Screen('Flip', obj.PTB_win);
-=======
-            WaitSecs(obj.postStimWait);
->>>>>>> 34c95d87528d22b4225ac7ae753729809683d581
+            Screen('Flip', obj.PTB_win); % Tell PTB that no further drawing commands will follow before Screen('Flip')
             obj.sendTTL(1,false);
             disp('Session ended');
             filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDenseNoise_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
@@ -240,7 +242,7 @@ classdef VS_mrDenseNoise < VStim
         end
         
         %class constractor
-        function obj=VS_mrDenseNoise(w,~)
+        function obj=VS_mrDenseNoise2(w,h)
             obj = obj@VStim(w); %ca
             %get the visual stimulation methods
             obj.trialsPerCategory=obj.defaultTrialsPerCategory;
