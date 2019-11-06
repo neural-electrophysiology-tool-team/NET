@@ -371,13 +371,18 @@ classdef (Abstract) dataRecording < handle
 %                 convertDataType=false;
 %             end
             
+            if iscell(obj.recordingDir)
+               recordingDir=obj.recordingDir{1}; 
+            else 
+                recordingDir=obj.recordingDir;
+            end
             
             %converts data recording object to kilo sort binary format for sorting
             if nargin<3
                 dataChannels=obj.channelNumbers;
             end
             if nargin<2 || isempty(targetFile)
-                targetFile=[obj.recordingDir filesep obj.recordingName '.bin'];
+                targetFile=[recordingDir filesep obj.recordingName '.bin'];
                 disp(['File name for binary is:' targetFile]);
             end
             if ~any(strcmp(targetFile(end-3:end),{'.dat','.bin'}))
@@ -508,7 +513,7 @@ classdef (Abstract) dataRecording < handle
                         [pathstr{i}, name{i}, ext] = fileparts(recordingFile{i});
                         obj.dataFileNames{i}=[name{i} ext];
                         if ~exist([pathstr{i} filesep obj.dataFileNames{i}],'file')
-                            disp(['Searching for recording file: ' [pathstr filesep obj.dataFileNames{i}]]);
+                            disp(['Searching for recording file: ' [pathstr{i} filesep obj.dataFileNames{i}]]);
                             error('Object was not constructed since no valid recording file name was chosen');
                         end
                     end
