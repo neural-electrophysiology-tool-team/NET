@@ -62,76 +62,60 @@ class convertuploaddocument:
 
         self.logger.info('Start: Scan for new files')
         self.walk()
-        self.logger.info('Process: %d _total_ files found' % len(self.files))
-        oldfilelist = []
-
-        # Checks if this was run in the past, if so, only processes the new files
-        oldfileslog = os.path.join(self.logpath, 'filelist.p')
-        if self.startfresh:
-            self.logger.info('Start: Erasing File History')
-            pickle_out = open(oldfileslog, "wb")
-            pickle.dump([], pickle_out)
-            pickle_out.close()
-
-        if os.path.getsize(oldfileslog) > 0:
-            pickle_in = open(oldfileslog, "rb")
-            oldfilelist = pickle.load(pickle_in)
-            pickle_in.close()
-            self.logger.info('Process: %d _old_ files found' % len(oldfilelist))
-
-        pickle_out = open(oldfileslog, "wb")
-        pickle.dump(self.files, pickle_out)
-        pickle_out.close()
-        self.logger.info('Process: Old files list updated')
-
-        if len(oldfilelist) != 0:
-            self.files = list(set(self.files) - set(oldfilelist))
-        self.numfiles = len(self.files)
-        self.logger.info('Process: %d _new_ files found' % self.numfiles)
-        self.logger.info('End: Scan for files')
+        self.logger.info('Process: %d total files found' % len(self.files))
+        self.logger.info('End: Scan for files complete')
 
     def parsefields(self, getvalchar='<', nextfieldchar='_'):
+        self.field_completed = pd.read_excel('\\\\data.wexac.weizmann.ac.il\\rivlinlab-arc\\h5s\\experiments.xlsx')
+        
+        if os.path.exists('\\\\data.wexac.weizmann.ac.il\\rivlinlab-arc\\h5s\\experiments.xlsx'):
+            if not self.startfresh:
+                self.files = [f for f in self.files if f not in np.unique(self.field_completed.fullpathmsrd)]
+                self.logger.info('Process: start_fresh disabled, only %d new files will be processed' % len(self.files))
+        
+        if len(self.files)>0:
+            self.field['fullpathmsrd'] = self.files * 2
+            self.field.sort_values(by=['fullpathmsrd'], inplace=True)
+            self.field.reset_index(drop=True, inplace=True)
+            self.field['MEAfiles'] = self.field['fullpathmsrd'].apply(
+                lambda x: x.split('\\')[-1].replace(self.suffix, 'h5'))
+            self.field['recNames'] = self.field['MEAfiles'].apply(lambda x: hashlib.md5(x.replace('.h5', '').encode()).hexdigest())
+            self.field['MEAfiles'].loc[::2] = self.field['MEAfiles'].loc[::2].apply(lambda x: x.replace('h5', 'bin'))
+            self.field['OrigFileFolder'] = ['\\' + os.path.join(*word[:-1]) for word in
+                                    [f.split('\\') for f in self.field['fullpathmsrd']]]
+            self.field['folder'] = self.WexacH5Path
+            self.field['OrigFileName'] = self.field['MEAfiles']
+            self.field['MEAfiles'] = self.field['recNames']+'.h5'
+            self.field['MEAfiles'].loc[::2] = self.field['MEAfiles'].loc[::2].apply(lambda x: x.replace('h5', 'bin'))
+            self.field['recNames'] = self.field['MEAfiles']
+            def setrecformat(x):
+                if 'h5' in x:
+                    return ('MCH5Recording')
+                else:
+                    return ('binaryRecording')
 
-        self.field['fullpathmsrd'] = self.files * 2
-        self.field.sort_values(by=['fullpathmsrd'], inplace=True)
-        self.field.reset_index(drop=True, inplace=True)
-        self.field['MEAfiles'] = self.field['fullpathmsrd'].apply(
-            lambda x: x.split('\\')[-1].replace(self.suffix, 'h5'))
-        self.field['recNames'] = self.field['MEAfiles'].apply(lambda x: hashlib.md5(x.replace('.h5', '').encode()).hexdigest())
-        self.field['MEAfiles'].loc[::2] = self.field['MEAfiles'].loc[::2].apply(lambda x: x.replace('h5', 'bin'))
-        self.field['OrigFileFolder'] = ['\\' + os.path.join(*word[:-1]) for word in
-                                [f.split('\\') for f in self.field['fullpathmsrd']]]
-        self.field['folder'] = self.WexacH5Path
-        self.field['OrigFileName'] = self.field['MEAfiles']
-        self.field['MEAfiles'] = self.field['recNames']+'.h5'
-        self.field['MEAfiles'].loc[::2] = self.field['MEAfiles'].loc[::2].apply(lambda x: x.replace('h5', 'bin'))
-        self.field['recNames'] = self.field['MEAfiles']
-        def setrecformat(x):
-            if 'h5' in x:
-                return ('MCH5Recording')
-            else:
-                return ('binaryRecording')
+            self.field['recFormat'] = [setrecformat(x) for x in self.field['MEAfiles']]
 
-        self.field['recFormat'] = [setrecformat(x) for x in self.field['MEAfiles']]
-
-        flatten = lambda l: [item for sublist in l for item in sublist]
-        nvc = '|'.join(flatten([nextfieldchar]))
-        gvc = '|'.join(flatten([getvalchar]))
-        for ind in self.field.index:
-            word = self.field['fullpathmsrd'].loc[ind].split('\\')
-            keyvalpair = [re.split(nvc, w) for w in word]
-            for kv in keyvalpair:
-                for k in kv:
-                    if '=' in k:
-                        temp = re.split(gvc, k)[0]
-                        temp = temp[-np.min([6, len(temp)]):]  # maximum field length is 6 characters
-                        key = ''.join(j for j in temp if not j.isdigit())  #
-                        temp = re.split(gvc, k)[1:]
-                        val = ''.join(temp)
-                        if key not in self.field.columns:
-                            self.field[key] = 'unspecified'
-                        self.field[key].loc[ind] = val.split('.' + self.suffix)[0]
-        self.field.fillna('unspecified', inplace=True)
+            flatten = lambda l: [item for sublist in l for item in sublist]
+            nvc = '|'.join(flatten([nextfieldchar]))
+            gvc = '|'.join(flatten([getvalchar]))
+            for ind in self.field.index:
+                word = self.field['fullpathmsrd'].loc[ind].split('\\')
+                keyvalpair = [re.split(nvc, w) for w in word]
+                for kv in keyvalpair:
+                    for k in kv:
+                        if '=' in k:
+                            temp = re.split(gvc, k)[0]
+                            temp = temp[-np.min([6, len(temp)]):]  # maximum field length is 6 characters
+                            key = ''.join(j for j in temp if not j.isdigit())  #
+                            temp = re.split(gvc, k)[1:]
+                            val = ''.join(temp)
+                            if key not in self.field.columns:
+                                self.field[key] = 'unspecified'
+                            self.field[key].loc[ind] = val.split('.' + self.suffix)[0]
+            self.field.fillna('unspecified', inplace=True)
+        else:
+                self.logger.info('End: No new files to process')
 
     def makeGSdir(self, directory='database/'):
         """Creates a google storage bucket for data
@@ -330,7 +314,7 @@ class convertuploaddocument:
                 for ff in fi:
                     if ff.endswith(self.suffix):
                         hashstring = hashlib.md5(ff.split('.')[0].encode()).hexdigest()
-                        if not os.path.exists(os.path.join(self.WexacH5Path, hashstring+'.h5')):                            
+                        if not os.path.exists(os.path.join(os.path.join(self.WexacH5Path,hashstring+'\\'), hashstring+'.h5')):   
                             f = os.path.join(p, ff)
                             try:
                                 bashCommand = '%s -t hdf5 "%s"' % (self.mcspath, f.replace(self.suffix, 'msrs'))
@@ -343,18 +327,28 @@ class convertuploaddocument:
                                         os.rename(f.replace('.msrd', '.h5'),os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'))
                                     except:
                                         pass
-                                    subprocess.call(["xcopy", os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'), self.WexacH5Path,'/c/i/y/z'])
-                                    os.remove(os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'))
-                                    self.logger.info('Process: Successfully converted file to H5')
                                     
+                                    os.makedirs(os.path.join(self.WexacH5Path,hashstring+'\\'),exist_ok=True)
+                                    subprocess.call(["xcopy", os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'), os.path.join(self.WexacH5Path,hashstring+'\\'),'/c/i/y/z'])
+                                    os.remove(os.path.join('\\'.join(f.split('\\')[:-1]), hashstring+'.h5'))
+                                    self.logger.info('Process: Successfully converted file to H5 and copied')          
                             except:
                                  self.logger.error(' %s is locked, no overwrite possible' % f.split('.')[0])
+            if self.field_completed.shape[0] > 0:
+                self.field = self.field.append(self.field_completed, sort=False)
             self.field = self.field.replace("unspecified", "")
             self.field['folder'] = self.WexacH5Path
             self.logger.info('Process: Saving Excel Experiment Record')
-            self.field.to_excel(os.path.join(self.WexacH5Path, 'experiments.xlsx'), index=False)
-            self.logger.info('Process: Save completed succesfully')
-                                
+            if self.field.shape[0] > 0:
+                try:
+                    self.field.to_excel(os.path.join(self.WexacH5Path, 'experiments.xlsx'), index=False)
+                    self.logger.info('End: Excel written succesfully')
+                except:
+                    self.field.to_excel(os.path.join(self.WexacH5Path, 'experiments_new.xlsx'), index=False)
+                    print('Old experiment excel file is open somewhere and therefore could not be overwritten')
+                    self.logger.info('End: Save completed succesfully but excel saved to experiments_new because old file was locked')
+            else:
+                self.logger.info('End: No experiments found')                
 
     def __init__(self, searchpath="D:\\Multi Channel DataManager\\", startfresh=False,
                  suffix='msrd', gcs_credentials_path="D:\\code\\user=ND\\divine-builder-142611-9884de65797a.json",
@@ -363,8 +357,8 @@ class convertuploaddocument:
                  mcspath=os.path.join('d:\\', 'code', 'user=ND', 'McsDataCommandLineConverter',
                                       "McsDataCommandLineConverter.exe"),
                  cloudflag="aws", localcopyflag=True, localsharepath="\\\\132.77.73.171\\MEA_DATA\\",
-                 localarchivepath="\\\\data.wexac.weizmann.ac.il\\rivlinlab-arc\\",
-                 WexacH5Path = "\\\\data.wexac.weizmann.ac.il\\rivlinlab\\bndolev\\MEA_DATA_H5\\",
+                 localarchivepath="\\\\data.wexac.weizmann.ac.il\\rivlinlab-arc\\raw\\",
+                 WexacH5Path = "\\\\data.wexac.weizmann.ac.il\\rivlinlab-arc\\h5s\\",
                  awsaccesskey="D:\\code\\user=ND\\ND_AccessKey.csv", clearlogflag = False, overwriteh5=False):
         """Initialize class
         :param searchpath: path to directory with data files
@@ -407,6 +401,7 @@ class convertuploaddocument:
         colnames = ['fullpathmsrd', 'exclude', 'folder', 'coating', 'cleaning', 'MEAfiles', 'recFormat', 'recNames',
                     'comments']
         self.field = pd.DataFrame(columns=colnames)
+        self.field_completed = pd.DataFrame(columns=colnames)
         self.searchpath = searchpath
         self.startfresh = startfresh
         self.suffix = suffix
