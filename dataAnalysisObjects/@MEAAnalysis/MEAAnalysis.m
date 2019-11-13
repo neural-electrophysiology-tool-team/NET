@@ -276,7 +276,10 @@ classdef MEAAnalysis < recAnalysis
                 paramDir = fullfile(join(C(1:end-1),'/'));
                 resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
                 load(resultsFileName, 'rez');
-                rezToPhy(rez, paramDir{1});
+                if contains(paramDir{1}, 'wexac')
+                    paramDir{1} = strrep(paramDir{1},'\','\\');
+                end
+                rezToPhy(rez,paramDir{1});
                 jrc('import-ksort',paramDir{1});
             else
                 disp('Data from ksort already imported');

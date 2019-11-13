@@ -14,7 +14,7 @@ end
 obj.plotParams.plotChannelNumbers=1;
 
 obj.plotParams.colormap=parula(252);
-obj.plotParams.colormap=obj.plotParams.colormap.MyHotColorMap;
+obj.plotParams.colormap=obj.plotParams.colormap;
 
 colormap(obj.hPlotAxis,obj.plotParams.colormap);
 

@@ -98,7 +98,12 @@ classdef (Abstract) dataRecording < handle
             for i=1:numel(pNonConstantProps)
                 metaData.(props.allPropName{pNonConstantProps(i)})=obj.(props.allPropName{pNonConstantProps(i)});
             end
-            save([obj.recordingDir filesep obj.recordingName '_metaData.mat'],'metaData');
+            if iscell(obj.recordingDir)
+                recordingDir=obj.recordingDir{1};
+            else
+                recordingDir=obj.recordingDir;
+            end
+            save([recordingDir filesep obj.recordingName '_metaData.mat'],'metaData');
         end
         
         function [X,Y,Z]=getElectrodePositions(obj,electrodePitch)
@@ -181,23 +186,25 @@ classdef (Abstract) dataRecording < handle
             %txt should correspond to layout file name on path
             if iscell(obj.recordingDir)
                 recordingDir=obj.recordingDir{1};
+            else recordingDir=obj.recordingDir;
             end
-            chMapFiles=dir([obj.recordingDir filesep '*.chMap']);
+            
+            chMapFiles=dir([recordingDir filesep '*.chMap']);
             chMapFiles={chMapFiles.name};
             switch numel(chMapFiles)
                 case 0 %not channel map file found
                     disp('No .chMap files were found for this recording');
                     return;
                 case 1 %there is only one channel map file, this file will apply to all the recordings
-                    chMapFiles=[obj.recordingDir filesep chMapFiles{1}];
+                    chMapFiles=[recordingDir filesep chMapFiles{1}];
                 otherwise %there are several files, in which case each recording should have its own channel map file with the appropriate name
-                    chMapFiles=dir([obj.recordingDir filesep obj.recordingName(1:end-numel(obj.fileExtension)-1) '*.chMap']);
+                    chMapFiles=dir([recordingDir filesep obj.recordingName(1:end-numel(obj.fileExtension)-1) '*.chMap']);
                     chMapFiles={chMapFiles.name};
                     if numel(chMapFiles)~=1
                         disp('Channel map file name (*.chMap) does not correspond to the recording file name');
                         return;
                     else
-                        chMapFiles=[obj.recordingDir filesep chMapFiles{1}];
+                        chMapFiles=[recordingDir filesep chMapFiles{1}];
                     end
             end
             
@@ -364,13 +371,18 @@ classdef (Abstract) dataRecording < handle
 %                 convertDataType=false;
 %             end
             
+            if iscell(obj.recordingDir)
+               recordingDir=obj.recordingDir{1}; 
+            else 
+                recordingDir=obj.recordingDir;
+            end
             
             %converts data recording object to kilo sort binary format for sorting
             if nargin<3
                 dataChannels=obj.channelNumbers;
             end
             if nargin<2 || isempty(targetFile)
-                targetFile=[obj.recordingDir filesep obj.recordingName '.bin'];
+                targetFile=[recordingDir filesep obj.recordingName '.bin'];
                 disp(['File name for binary is:' targetFile]);
             end
             if ~any(strcmp(targetFile(end-3:end),{'.dat','.bin'}))
@@ -498,10 +510,10 @@ classdef (Abstract) dataRecording < handle
                     end
                     obj.nRecordings=numel(recordingFile);
                     for i=1:obj.nRecordings
-                        [pathstr, name{i}, ext] = fileparts(recordingFile{i});
+                        [pathstr{i}, name{i}, ext] = fileparts(recordingFile{i});
                         obj.dataFileNames{i}=[name{i} ext];
-                        if ~exist([pathstr filesep obj.dataFileNames{i}],'file')
-                            disp(['Searching for recording file: ' [pathstr filesep obj.dataFileNames{i}]]);
+                        if ~exist([pathstr{i} filesep obj.dataFileNames{i}],'file')
+                            disp(['Searching for recording file: ' [pathstr{i} filesep obj.dataFileNames{i}]]);
                             error('Object was not constructed since no valid recording file name was chosen');
                         end
                     end
@@ -520,6 +532,9 @@ classdef (Abstract) dataRecording < handle
                         obj.recordingDir=[cd filesep];
                     end
                 else
+                    if all(strcmp(pathstr,pathstr{1}))
+                        pathstr=pathstr{1};
+                    end
                     obj.recordingDir=pathstr;
                     if ispc
                         if ~iscell(obj.recordingDir)
@@ -530,7 +545,7 @@ classdef (Abstract) dataRecording < handle
                     end
                 end
                 
-                if obj.multifileMode & obj.folderMode %some of the condition below can be removed
+                if iscell(obj.recordingDir) %some of the condition below can be removed
                     if ~isdir(obj.recordingDir{1})
                         error('Object was not constructed since no valid folder was choosen');
                     end
@@ -565,7 +580,11 @@ classdef (Abstract) dataRecording < handle
             else
                 obj.recordingName=name;
             end
-            obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
+            if ~iscell(obj.recordingDir)
+                obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
+            else
+                obj.metaDataFile=[obj.recordingDir{1} filesep obj.recordingName '_metaData'];
+            end
         end
 
     end

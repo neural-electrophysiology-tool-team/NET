@@ -13,6 +13,7 @@
 %                           plotElectrodeNumbers
 %                           plotColorBar
 %                           Ilim
+%                           saturations
 %
 % Function give back :  Intensity plot on real space
 %
@@ -103,6 +104,12 @@ if plotColorBar
 end
 hold on;
 
+if exist('saturations','var')
+    saturations=saturations/max(saturations);
+else
+   saturations=ones(1,length(Channels));
+end
+
 if numel(markerSize)==1
     markerSize=markerSize*ones(1,length(Channels));
     plotSizeBar=false;
@@ -143,7 +150,10 @@ for i=1:length(Channels)
     y=0.5+translation(find(translation(:,3)==Channels(i)),2)-1;
     %check if possible to use scatter instead (make sure that ball sizes are correctly plotted with scatter
     if ~isnan(Act_norm(i))
-        plot(x,y,'.','color',cMap(ceil(1+Act_norm(i)*(nColors-1)),:),'markersize',markerSize(i));
+        colorHSV=rgb2hsv(cMap(ceil(1+Act_norm(i)*(nColors-1)),:));
+        colorHSV(2)=colorHSV(2)*saturations(i);
+        colorRGB=hsv2rgb(colorHSV);
+        plot(x,y,'.','color',colorRGB,'markersize',markerSize(i));
     end
 end
 

@@ -2,47 +2,47 @@ classdef (Abstract) VStim < handle
     properties (SetAccess=public)
         %all these properties are modifiable by user and will appear in visual stim GUI
         %Place all other variables in hidden properties
-        interTrialDelay = 0.5; %sec
-        trialsPerCategory = 2;
-        preSessionDelay = 1;
-        postSessionDelay = 0;
-        trialStartTrig = 'MC=2,Intan=6';
+        interTrialDelay     = 0.5; %sec
+        trialsPerCategory   = 5;
+        preSessionDelay     = 1;
+        postSessionDelay    = 0;
+        trialStartTrig      = 'MC=2,Intan=6';
         
     end
     properties (SetObservable, AbortSet = true, SetAccess=public)
-        visualFieldBackgroundLuminance = 64;
-        visualFieldDiameter = 0; %pixels
-        inVivoSettings = false;
-        DMDcorrectionIntensity = 0;
-        stimDuration = 2;
-        backgroundMaskSteepness = 0.2;
-        horizontalShift=0;
-        numPixels=100;
-        numMicrons=100;
-        sendMail=false;
+        visualFieldBackgroundLuminance  = 0;
+        visualFieldDiameter             = 0; %pixels
+        inVivoSettings                  = false;
+        DMDcorrectionIntensity          = 0;
+        stimDuration                    = 2;
+        backgroundMaskSteepness         = 0.2;
+        horizontalShift                 = 0;
+        numPixels                       = 100;
+        numMicrons                      = 100;
+        sendMail                        = false;
         
     end
     properties (Constant)
         backgroudLuminance = 0;
         maxTriggers=4;
-        visualFieldBackgroundLuminanceTxt = 'The luminance of the circular visual field that is projected to the retina';
-        visualFieldDiameterTxt = 'The diameter of the circular visual field that is projected to the retina [pixels], 0 takes maximal value';
-        stimDurationTxt='The duration of the visual stimuls [s]';
-        interTrialDelayTxt='The delay between trial end and new trial start [s], if vector->goes over all delays';
-        trialsPerCategoryTxt='The number of repetitions shown per category of stimuli';
-        preSessionDelayTxt='The delay before the begining of a recording session [s]';
-        postSessionDelayTxt='The delay after the ending of a recording session [s]';
-        backgroundMaskSteepnessTxt='The steepness of the border on the visual field main mask [0 1]';
-        numPixelsTxt = 'The number of pixels to convert to um';
+        visualFieldBackgroundLuminanceTxt   = 'The luminance of the circular visual field that is projected to the retina';
+        visualFieldDiameterTxt              = 'The diameter of the circular visual field that is projected to the retina [pixels], 0 takes maximal value';
+        stimDurationTxt                     = 'The duration of the visual stimuls [s]';
+        interTrialDelayTxt                  = 'The delay between trial end and new trial start [s], if vector->goes over all delays';
+        trialsPerCategoryTxt                = 'The number of repetitions shown per category of stimuli';
+        preSessionDelayTxt                  = 'The delay before the begining of a recording session [s]';
+        postSessionDelayTxt                 = 'The delay after the ending of a recording session [s]';
+        backgroundMaskSteepnessTxt          = 'The steepness of the border on the visual field main mask [0 1]';
+        numPixelsTxt                        = 'The number of pixels to convert to um';
     end
     properties (SetAccess=protected)
-        mainDir %main directory of visual stimulation toolbox
-        rect %the coordinates of the screen [pixels]: (left, top, right, bottom)
-        fps %monitor frames per second
-        ifi %inter flip interval for monitor
+        mainDir     % main directory of visual stimulation toolbox
+        rect        % the coordinates of the screen [pixels]: (left, top, right, bottom)
+        fps         % monitor frames per second
+        ifi         % inter flip interval for monitor
         actualStimDuration % the actual stim duration as an integer number of frames
-        centerX %the X coordinate of the visual field center
-        centerY %the Y coordinate of the visual field center
+        centerX     % the X coordinate of the visual field center
+        centerY     % the Y coordinate of the visual field center
         actualVFieldDiameter % the actual diameter of the visual field
         nTotTrials = []; %the total number of trials in a stimulatin session
         nPTBScreens=[];
@@ -51,31 +51,31 @@ classdef (Abstract) VStim < handle
     
     properties (Hidden, SetAccess=protected)
         fSep = '\';
-        escapeKeyCode = []; %the key code for ESCAPE
-        dirSep=filesep; %choose file/dir separator according to platform
-        OSPlatform = 1 %checks what is the OS for sending TTLs: Window (1) or Linux (2) or simulation mode (3)
+        escapeKeyCode   = []; %the key code for ESCAPE
+        dirSep          = filesep; %choose file/dir separator according to platform
+        OSPlatform      = 1 %checks what is the OS for sending TTLs: Window (1) or Linux (2) or simulation mode (3)
         binaryMultiplicator = [1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768]; %512 1024 2048 4096 8192 16384 32768
-        currentBinState = [false false false false false false false false false false false false false false false false]; %false false false false false false false
+        currentBinState     = [false false false false false false false false false false false false false false false false]; %false false false false false false false
         io %parallel port communication object for PC
-        pixelmicronratio = 100 / 13 ; % microns / pixels
-        parallelPortNum =  hex2dec('EFF8')%888; %Parallel port default number
-        displaySyncSignal=true;
+        pixelmicronratio    = 100 / 13 ; % microns / pixels
+        parallelPortNum     =  hex2dec('EFF8')%888; %Parallel port default number
+        displaySyncSignal   = true;
         pixelConversionFactor = 100/13; %microns per pixel
         sendMailTo %mail adresses to which a notificaion will be sent at the end of the stimulation (if sendMail=true)
         
-        PTB_win %Pointer to PTB window
-        whiteIdx %white index for screen
-        blackIdx %black index for screen
-        visualFieldRect % the coordinates of the rectanle of visual field [pixel]
-        masktexOn %the mask texture for visual field with on rectangle on bottom left corner
-        masktexOff %the mask texture for visual field with off rectangle on bottom left corner
-        visualFieldBackgroundTex %the background texture (circle) for visual field
-        errorMsg=[]; %The message the object returns in case of an error
-        simulationMode = false; %a switch that is used to prepare visual stimulation without applying the stimulation itself
-        lastExcecutedTrial = 0; %parameter that keeps the number of the last excecuted trial
-        syncSquareSizePix = 60; % the size of the the corder square for syncing stims
-        syncSquareLuminosity=255; % The luminocity of the square used for syncing 
-        syncMarkerOn = false;   
+        PTB_win                         %Pointer to PTB window
+        whiteIdx                        %white index for screen
+        blackIdx                        %black index for screen
+        visualFieldRect                 % the coordinates of the rectanle of visual field [pixel]
+        masktexOn                       %the mask texture for visual field with on rectangle on bottom left corner
+        masktexOff                      %the mask texture for visual field with off rectangle on bottom left corner
+        visualFieldBackgroundTex        %the background texture (circle) for visual field
+        errorMsg            = [];       %The message the object returns in case of an error
+        simulationMode      = false;    %a switch that is used to prepare visual stimulation without applying the stimulation itself
+        lastExcecutedTrial  = 0;        %parameter that keeps the number of the last excecuted trial
+        syncSquareSizePix   = 60;       % the size of the the corder square for syncing stims
+        syncSquareLuminosity= 255;      % The luminocity of the square used for syncing 
+        syncMarkerOn        = false;   
      end
     
     properties (Hidden)
