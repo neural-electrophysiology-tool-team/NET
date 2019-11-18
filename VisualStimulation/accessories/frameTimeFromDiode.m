@@ -20,7 +20,7 @@ tEnd=dataRecordingObj.recordingDuration_ms;
 chunckOverlap=1; %ms
 maxChunck=1000*60*20; %ms
 trialStartEndDigiTriggerNumbers=[3 4];
-analogChNum=1;
+analogChNum=[]; %this used to be 1, now Kwik's getAnalog finds on its own
 transition=[];
 delay2Shift=1.5/60*1000; %ms
 maxFrameDeviation=0.5/60*1000; %ms
@@ -58,7 +58,7 @@ for i=1:2:length(varargin)
 end
 
 %% Main function
-Fs=dataRecordingObj.samplingFrequency;
+Fs=dataRecordingObj.samplingFrequency(1);
 frameSamples=round(1/60*Fs);
 F=F.designLowPass;
 
@@ -119,7 +119,7 @@ hWB=waitbar(0,hWB,'Extracting analog diode data from recording...');
 upCross=cell(1,nChunks);
 downCross=cell(1,nChunks);
 for i=1:nChunks
-    [A,t_ms]=dataRecordingObj.getAnalogData(1,chunkStart(i),chunkEnd(i)-chunkStart(i));
+    [A,t_ms]=dataRecordingObj.getAnalogData(analogChNum,chunkStart(i),chunkEnd(i)-chunkStart(i));
     if ~noisyAnalog
         A=squeeze(A);
         medA = fastmedfilt1d(A,round(frameSamples*0.8));
