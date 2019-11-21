@@ -309,8 +309,13 @@ classdef (Abstract) dataRecording < handle
             if nargin<2
                 error('Pad size must be entered as an external parameter');
             end
-            fid=fopen(outputName,'w');
-            
+            if length(outputName) > 4 % temporary fix for outputname in multi file mode
+                outputName2 = strcat(outputName{1}, outputName{3}, outputName{4}, outputName{5});
+                fid=fopen(outputName2,'w');
+            else
+                fid=fopen(outputName,'w');
+            end
+                        
             nCh=size(obj.chLayoutPositions,2);
             fprintf(fid, 'channels = [1:%d];\n\n',nCh);
             fprintf(fid, 'geometry = [%.1f,%.1f',obj.chLayoutPositions(1,1),obj.chLayoutPositions(2,1));

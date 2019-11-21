@@ -234,14 +234,14 @@ classdef MEAAnalysis < recAnalysis
             par.saveFileName=obj.getFileName(dbstack,par.saveFileName); %extracts file save name
             
             %save/load data
-            if exist(par.saveFileName,'file') & ~par.overwrite & ~par.manual & ~par.exportGS
-                if nargout==1
-                    data=load(par.saveFileName);
-                else
-                    disp('JRClust sorting already exists, use overwrite=true');
-                end
-                return;
-            end
+%             if exist(par.saveFileName,'file') & ~par.overwrite & ~par.manual & ~par.exportGS
+%                 if nargout==1
+%                     data=load(par.saveFileName);
+%                 else
+%                     disp('JRClust sorting already exists, use overwrite=true');
+%                 end
+%                 return;
+%             end
             
             if ~strcmp(class(obj.currentDataObj),'binaryRecording')
                 disp('JRClust only works on binaryRecording data class!!!');
