@@ -238,7 +238,11 @@ classdef (Abstract) dataRecording < handle
         
         function []=convertLayoutKSort(obj,outputFile,badChannels)
             if nargin<2
+                if iscell(obj.recordingDir)
+                 outputFile=fullfile(obj.recordingDir{1}, 'chanMap.mat');
+                else
                 outputFile=fullfile(obj.recordingDir, 'chanMap.mat');
+                end
             end
             if nargin<3
                 badChannels=[];
