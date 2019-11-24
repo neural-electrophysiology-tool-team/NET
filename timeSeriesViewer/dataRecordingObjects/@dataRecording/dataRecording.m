@@ -309,9 +309,12 @@ classdef (Abstract) dataRecording < handle
             if nargin<2
                 error('Pad size must be entered as an external parameter');
             end
-            if length(outputName) > 4 % temporary fix for outputname in multi file mode
-                outputName2 = strcat(outputName{1}, outputName{3}, outputName{4}, outputName{5});
-                fid=fopen(outputName2,'w');
+            if iscell(outputName) % temporary fix for outputname in multi file mode
+                    Index = find(contains(outputName,'layout'));
+                    temp = strsplit(outputName{Index}, '.mat');
+                    new_outputname = strcat(temp{1},'_JRC.prb');
+                    obj.layoutName = new_outputname;
+                    fid=fopen(new_outputname,'w');
             else
                 fid=fopen(outputName,'w');
             end
