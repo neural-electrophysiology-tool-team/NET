@@ -1,18 +1,16 @@
-classdef VS_mrSpots < VStim
+classdef VS_mrDrug < VStim
     properties (SetAccess=public)
-        flashLuminosity         = 255; 
         screenTriggerDuration   = 0.1;  % sec
-        interval                = 3;    % secs
-        delay                   = 3;    % secs
-        preStimWait             = 5;    % secs
-        save_stimulus       = true;
+        baseline_time           = 15;    % sec
+        drug_time               = 10;    % sec
+        save_stimulus           = true;
     end
     
     properties (Constant)
-        flashLuminosityTxt  = 'The luminocity value for the spot (0-255)';
-        delayTxt            = 'The time of background luminance (sec) before presentation of the spot.';
-        intervalTxt         = 'The time of background luminance (sec) after presentation of the spot.';
-        remarks             = {'Categories in Flash stimuli are:','delay, interval, flashLuminosity'};
+%         flashLuminosityTxt  = 'The luminocity value for the spot (0-255)';
+        baseline_timeTxt  = 'The time of background luminance (sec) before  presentation of the spot.';
+        drug_timeTxt      = 'The time of background luminance (sec) after presentation of the spot.';
+        remarks           = {'Categories in Drug Stimulus are:','baseline time, drug time'};
     end
     
     properties (SetAccess=protected)
@@ -55,58 +53,37 @@ classdef VS_mrSpots < VStim
 
             % Update image buffer for the first time
             obj.syncMarkerOn = false; %reset sync marker
-            Screen('FillOval',obj.PTB_win,obj.flashLuminosity,obj.visualFieldRect);
+%             Screen('FillOval',obj.PTB_win,obj.flashLuminosity,obj.visualFieldRect);
+            Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
             obj.applyBackgound;  %set background mask and finalize drawing (drawing finished)
                         
             %main loop - start the session
           
+            WaitSecs(obj.baseline_time);
+
 %            Screen('FillRect', window, interlColor);
             Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
 
             %Start the code that sends the experiment to the screen
             obj.sendTTL(1,true); %channel 1 is for start/stop of experiment
+            obj.sendTTL(2,true); %channel 1 is for start/stop of experiment
+            obj.sendTTL(3,true); %channel 1 is for start/stop of experiment
+            WaitSecs(0.1); % wait 0.1 second before setting triggers back to false
+            obj.sendTTL(1,false); %channel 1 is for start/stop of experiment
+            obj.sendTTL(2,false); %channel 1 is for start/stop of experiment
+            obj.sendTTL(3,false); %channel 1 is for start/stop of experiment
             
-         	obj.sendTTL(3,true)
-          	Screen('Flip', obj.PTB_win);
-         	obj.sendTTL(3,false)
+  
+            WaitSecs(obj.drug_time);
 
-            
-            
-            WaitSecs(obj.preStimWait);
-            % A loop which runs for each frame of the experiment
-            for trial = 1 : obj.trialsPerCategory
-                obj.sendTTL(2,true); %send signal that this trial will begin
-                
-                WaitSecs(obj.delay);
-                
-                % switch to white screen:
-                Screen('FillOval',obj.PTB_win, obj.flashLuminosity, obj.visualFieldRect);
-                
-                obj.sendTTL(3,true)
-                Screen('Flip', obj.PTB_win);
-                obj.sendTTL(3,false)
-
-                WaitSecs(obj.stimDuration);
-
-                % switch back to black screen:
-                Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
-                
-                obj.sendTTL(3,true)
-                Screen('Flip', obj.PTB_win);
-                obj.sendTTL(3,false)
-                
-                WaitSecs(obj.interval);
-
-                obj.sendTTL(2,false); % Send signal on channel 2 of the LPT that this run is now complete
-            end
             
             obj.applyBackgound;
             Screen('DrawingFinished', obj.PTB_win); % Indicate to GUI that we are done
-            obj.sendTTL(1,false);                   %Send signal that experiment is finished
+
             if obj.save_stimulus
-                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrSpots_%s.mat',...
+                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDrug_%s.mat',...
                     datestr(now,'mm_dd_yyyy_HHMM'));
-                save(filename, 'obj', '-v7.3');save(filename, 'obj', '-v7.3')
+                save(filename, 'obj', '-v7.3');
             end
         
         
@@ -117,7 +94,7 @@ classdef VS_mrSpots < VStim
         end
             
         %class constractor
-        function obj=VS_mrSpots(w,h)
+        function obj=VS_mrDrug(w,h)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
         end

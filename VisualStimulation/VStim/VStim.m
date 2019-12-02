@@ -10,7 +10,7 @@ classdef (Abstract) VStim < handle
         
     end
     properties (SetObservable, AbortSet = true, SetAccess=public)
-        visualFieldBackgroundLuminance  = 0;
+        visualFieldBackgroundLuminance  = 139;
         visualFieldDiameter             = 0; %pixels
         inVivoSettings                  = false;
         DMDcorrectionIntensity          = 0;

@@ -1,10 +1,13 @@
-classdef VS_mrSpots < VStim
+classdef VS_mrCChirp < VStim
     properties (SetAccess=public)
-        flashLuminosity         = 255; 
+        brightLuminosity         = 255; 
+        darkLuminosity         = 0; 
         screenTriggerDuration   = 0.1;  % sec
-        interval                = 3;    % secs
-        delay                   = 3;    % secs
-        preStimWait             = 5;    % secs
+        interval                = 0.5;    % secs
+        delay                   = 0.5;    % secs
+        preStimWait             = 30;    % secs
+        duration             = 10;    % secs
+        frequency             = 5;    % Hx
         save_stimulus       = true;
     end
     
@@ -47,15 +50,26 @@ classdef VS_mrSpots < VStim
                 disp('Simulation mode finished running');
                 return;
             end
+            
+            intensity_duration = 1/obj.frequency; % duration of one intensity in seconds
+            nSteps = obj.duration / intensity_duration;
+            
+            positiveContrasts = round(linspace(obj.visualFieldBackgroundLuminance,...
+                obj.brightLuminosity, floor(nSteps/2))) ;
+            negativeContrasts = round(linspace(obj.visualFieldBackgroundLuminance,...
+                obj.darkLuminosity, floor(nSteps/2)));
+            
+            allContrasts = NaN(1,2*(floor(nSteps/2)));
+            allContrasts(1:2:end) = positiveContrasts;
+            allContrasts(2:2:end) = negativeContrasts;
             save tmpVSFile obj; %temporarily save object in case of a crash
             disp('Session starting');
-            
             %run test Flip (sometimes this first flip is slow and so it is not included in the anlysis
             obj.visualFieldBackgroundLuminance = obj.visualFieldBackgroundLuminance;
 
             % Update image buffer for the first time
             obj.syncMarkerOn = false; %reset sync marker
-            Screen('FillOval',obj.PTB_win,obj.flashLuminosity,obj.visualFieldRect);
+            Screen('FillOval',obj.PTB_win,obj.brightLuminosity,obj.visualFieldRect);
             obj.applyBackgound;  %set background mask and finalize drawing (drawing finished)
                         
             %main loop - start the session
@@ -80,21 +94,26 @@ classdef VS_mrSpots < VStim
                 WaitSecs(obj.delay);
                 
                 % switch to white screen:
-                Screen('FillOval',obj.PTB_win, obj.flashLuminosity, obj.visualFieldRect);
+                Screen('FillOval',obj.PTB_win, obj.brightLuminosity, obj.visualFieldRect);
                 
                 obj.sendTTL(3,true)
                 Screen('Flip', obj.PTB_win);
                 obj.sendTTL(3,false)
+                for ii = 1 : length(allContrasts)
 
-                WaitSecs(obj.stimDuration);
+                    % switch back to black screen:
+                    Screen('FillOval',obj.PTB_win,allContrasts(ii),obj.visualFieldRect);
 
-                % switch back to black screen:
+                    obj.sendTTL(3,true)
+                    Screen('Flip', obj.PTB_win);
+                    obj.sendTTL(3,false)
+                    WaitSecs(intensity_duration);
+                end
                 Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
-                
                 obj.sendTTL(3,true)
                 Screen('Flip', obj.PTB_win);
                 obj.sendTTL(3,false)
-                
+
                 WaitSecs(obj.interval);
 
                 obj.sendTTL(2,false); % Send signal on channel 2 of the LPT that this run is now complete
@@ -103,10 +122,11 @@ classdef VS_mrSpots < VStim
             obj.applyBackgound;
             Screen('DrawingFinished', obj.PTB_win); % Indicate to GUI that we are done
             obj.sendTTL(1,false);                   %Send signal that experiment is finished
+            
             if obj.save_stimulus
-                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrSpots_%s.mat',...
+                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrCChirp_%s.mat',...
                     datestr(now,'mm_dd_yyyy_HHMM'));
-                save(filename, 'obj', '-v7.3');save(filename, 'obj', '-v7.3')
+                save(filename, 'obj', '-v7.3');save(filename, 'obj', '-v7.3','allContrasts')
             end
         
         
@@ -117,7 +137,7 @@ classdef VS_mrSpots < VStim
         end
             
         %class constractor
-        function obj=VS_mrSpots(w,h)
+        function obj=VS_mrCChirp(w,h)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
         end
