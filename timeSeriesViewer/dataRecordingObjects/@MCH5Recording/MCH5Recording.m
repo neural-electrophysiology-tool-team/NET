@@ -155,6 +155,7 @@ classdef MCH5Recording < dataRecording
                             startend=[tmpStartTime;tmpEndTime]-cumStart(f);
                             startEndSample=startend/1000*obj.samplingFrequency;
                             tempWindowSamples=startEndSample(2)-startEndSample(1);
+                            display(obj.fullFilename{f-1});
                             V_uV(:, i, startSample:endSample) = h5read(obj.fullFilename{f-1}, [obj.pathToRawDataStreamGroup '/ChannelData'], ...
                             [startEndSample(1)+1 channels(1)], [tempWindowSamples length(channels)])';
                         else % some of the data is outside the recording range - add zeros
@@ -550,6 +551,10 @@ classdef MCH5Recording < dataRecording
               
               infoChannel=h5read(obj.fullFilename{i}, [obj.pathToRawDataStreamGroup '/InfoChannel']);
               obj.sample_ms_Local(i) = double(infoChannel.Tick(1))/1000;
+              if obj.sample_ms_Local(i) == 0
+                  obj.sample_ms_Local(i) = 50/1000;
+                  display('Tick value was zero, setting to 50uS');
+              end
               obj.samplingFrequency_Local(i) = 1e3/obj.sample_ms_Local(i); %Assuming all chanels are the same
               lengthInfo = h5info(obj.fullFilename{i}, [obj.pathToRawDataStreamGroup '/ChannelData']);
               obj.dataLength_Local(i) = lengthInfo.Dataspace.Size(1);
