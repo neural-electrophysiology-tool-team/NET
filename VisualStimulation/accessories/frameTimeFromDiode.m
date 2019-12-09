@@ -102,7 +102,7 @@ if ~noisyAnalog %if noisy, estimate for each chunk
         hWB=waitbar(0,hWB,'Classifying transition on sample data...');
         %take the analog data during the first 10 trials (if available) with length of double the trial size 
         avgTrialDuration=round(mean(T{trialStartEndDigiTriggerNumbers(2)}-T{trialStartEndDigiTriggerNumbers(1)})*2);
-        [Atmp]=dataRecordingObj.getAnalogData(analogChNum,T{trialStartEndDigiTriggerNumbers(1)}(1:min(10,numel(T{trialStartEndDigiTriggerNumbers(1)})))-100,avgTrialDuration);
+        [Atmp]=dataRecordingObj.getAnalogData(analogChNum,T{trialStartEndDigiTriggerNumbers(1)}(randi([2, max(11,numel(T{trialStartEndDigiTriggerNumbers(1)}))-1],[1 10]))-100,avgTrialDuration);
         Atmp=permute(Atmp,[3 1 2]);Atmp=Atmp(:);
         medAtmp = fastmedfilt1d(Atmp,round(frameSamples*0.8));
         eva = evalclusters(medAtmp,'kmeans','DaviesBouldin','KList',[2:4]);
