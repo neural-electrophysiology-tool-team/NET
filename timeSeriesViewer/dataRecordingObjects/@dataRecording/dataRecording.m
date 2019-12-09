@@ -544,7 +544,7 @@ classdef (Abstract) dataRecording < handle
                         obj.recordingDir=[cd filesep];
                     end
                 else
-                    if all(strcmp(pathstr,pathstr{1}))
+                    if iscell(pathstr) && all(strcmp(pathstr,pathstr{1}))
                         pathstr=pathstr{1};
                     end
                     obj.recordingDir=pathstr;
