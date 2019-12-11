@@ -132,7 +132,7 @@ classdef (Abstract) VStim < handle
                     obj.(fn{i})=configData.(fn{i});
                 end
             end
-            obj.initializeTTL;
+%             obj.initializeTTL;
 
             obj.whiteIdx=WhiteIndex(obj.PTB_win(1));
             obj.blackIdx=BlackIndex(obj.PTB_win(1));
@@ -153,7 +153,7 @@ classdef (Abstract) VStim < handle
             %set background luminance
             obj.initializeBackground;
             
-            obj.sendTTL(1:4,[false false false false])
+%             obj.sendTTL(1:4,[false false false false])
         end
         
         function estimatedTime=estimateProtocolDuration(obj)
