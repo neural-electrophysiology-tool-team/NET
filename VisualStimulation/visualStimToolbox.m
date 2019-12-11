@@ -44,8 +44,8 @@ subdirname = cell(1,1);
 c = 1;
 for K = 1 : length(dirinfo)
   thisdir = dirinfo(K).name;
-  if ~isempty(dir(fullfile(strcat(dirinfo(3).folder,'\',thisdir), 'VS_*.m')))
-    subdirinfo{c,1} = dir(fullfile(strcat(dirinfo(3).folder,'\',thisdir), 'VS_*.m'));
+  if ~isempty(dir(fullfile(strcat(dirinfo(3).folder,filesep,thisdir), 'VS_*.m')))
+    subdirinfo{c,1} = dir(fullfile(strcat(dirinfo(3).folder,filesep,thisdir), 'VS_*.m'));
     if ismember('.',thisdir)
         thisdir = 'main';
     end 
@@ -307,8 +307,7 @@ initializeVisualStim;
         set(VS.hand.visualStimMenu.([VS.par.VSMethods{VS.par.currentVSO}]),'Checked','off');
         set(VS.hand.visualStimMenu.([VS.par.VSMethods{selectedVSO}]),'Checked','on'); %select one of the stims
         VS.par.currentVSO=selectedVSO;
-        
-        initializeVisualStim;
+%         initializeVisualStim;
     end
 
     function CallbackFileMenuLoadParams(hObj,event)

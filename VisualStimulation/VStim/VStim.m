@@ -322,7 +322,11 @@ classdef (Abstract) VStim < handle
                 io64(obj.io.ioObj,obj.parallelPortNum,sum(obj.binaryMultiplicator.*obj.currentBinState));
                 %io64(obj.io.ioObj,obj.parallelPortNum,sum(obj.binaryMultiplicator.*obj.currentBinState));
             elseif obj.OSPlatform==2
-                pp(uint8(obj.trigChNames(TTLNum,:)),[TTLValue TTLValue],false,uint8(0),uint64(obj.parallelPortNum)); %session start trigger (also triggers the recording start)
+                if ismac
+                    disp('No triggers sent');
+                else
+                    pp(uint8(obj.trigChNames(TTLNum,:)),[TTLValue TTLValue],false,uint8(0),uint64(obj.parallelPortNum)); %session start trigger (also triggers the recording start)
+                end
             else
                 disp(['Simulation mode trigger/value - ' num2str([TTLNum TTLValue])]);
             end
