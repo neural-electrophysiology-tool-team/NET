@@ -486,9 +486,11 @@ classdef (Abstract) recAnalysis < handle
             else
                 str = [num2str(electrode_spacing),'_',num2str(nElectrodes_x),'x',num2str(nElectrodes_y),'_newSetup'];
                 temp = obj.currentDataFiles{1}; 
-                temp2 = strsplit(temp,filesep);
-                exp_folder = strjoin({temp2{1:end-1}},filesep);
-                fileID = fopen([exp_folder,filesep,'layout.chMap'],'w');
+                temp2 = strsplit(temp,filesep,'DelimiterType','RegularExpression');
+                find(temp,filesep)
+                Output = sprintfc(('%s'),temp2{1:end-1})
+                exp_folder = [temp2{1:end-1}]
+                fileID = fopen([obj.currentExpFolder,filesep,'layout.chMap'],'w');
                 fprintf(fileID,str);
                 fclose(fileID);
                 disp('Created layout.chMap in experiment folder based on MEA lookup table.')
