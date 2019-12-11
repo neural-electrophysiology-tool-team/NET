@@ -109,10 +109,8 @@ classdef VS_mrAlignMEA < VStim
                     Screen('Flip',obj.PTB_win);
                     return;
                 end
-            end
-            
+            end  
         end
-        
         function outStats=getLastStimStatistics(obj,hFigure)
             outStats=[];
         end
