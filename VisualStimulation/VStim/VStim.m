@@ -132,7 +132,7 @@ classdef (Abstract) VStim < handle
                     obj.(fn{i})=configData.(fn{i});
                 end
             end
-%             obj.initializeTTL;
+            obj.initializeTTL;
 
             obj.whiteIdx=WhiteIndex(obj.PTB_win(1));
             obj.blackIdx=BlackIndex(obj.PTB_win(1));
@@ -153,7 +153,7 @@ classdef (Abstract) VStim < handle
             %set background luminance
             obj.initializeBackground;
             
-%             obj.sendTTL(1:4,[false false false false])
+            obj.sendTTL(1:4,[false false false false]) %leaving this to make sure ttl's are at zero when stim starts
         end
         
         function estimatedTime=estimateProtocolDuration(obj)
@@ -305,14 +305,14 @@ classdef (Abstract) VStim < handle
                 
             end
             
-            sig=false(1,size(obj.trigChNames,1)); %sig=false(1,4);
-            for i=1:size(obj.trigChNames,1) %i=1:4
-                sig(i)=true;
-                sendTTL(obj,1:size(obj.trigChNames,1),sig); % sendTTL(obj,1:4,sig);
-                WaitSecs(0.2);
-                sig(i)=false;
-            end
-            sendTTL(obj,1:size(obj.trigChNames,1),sig);
+%             sig=false(1,size(obj.trigChNames,1)); %sig=false(1,4);
+%             for i=1:size(obj.trigChNames,1) %i=1:4
+%                 sig(i)=true;
+%                 sendTTL(obj,1:size(obj.trigChNames,1),sig); % sendTTL(obj,1:4,sig);
+%                 WaitSecs(0.2);
+%                 sig(i)=false;
+%             end
+%             sendTTL(obj,1:size(obj.trigChNames,1),sig);
             
         end %function initializeTTL
         
@@ -320,6 +320,7 @@ classdef (Abstract) VStim < handle
             if obj.OSPlatform==1
                 obj.currentBinState(obj.trigChNames(TTLNum,:)-1)=[TTLValue;TTLValue]';
                 io64(obj.io.ioObj,obj.parallelPortNum,sum(obj.binaryMultiplicator.*obj.currentBinState));
+%                 disp('TTL Sent');
                 %io64(obj.io.ioObj,obj.parallelPortNum,sum(obj.binaryMultiplicator.*obj.currentBinState));
             elseif obj.OSPlatform==2
                 if ismac

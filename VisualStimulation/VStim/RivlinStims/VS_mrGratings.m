@@ -208,6 +208,17 @@ classdef VS_mrGratings < VStim
                 filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrGratings_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
                 save(filename, 'directions', 'obj', '-v7.3');
             end
+            %to let the esc work
+     while 1
+                %check if stimulation session was stopped by the user
+                [keyIsDown, ~, keyCode] = KbCheck;
+                if keyCode(obj.escapeKeyCode)
+                    obj.visualFieldBackgroundLuminance=obj.visualFieldBackgroundLuminance; %rest the stimulation screen
+                    obj.applyBackgound;
+                    Screen('Flip',obj.PTB_win);
+                    return;
+                end
+            end
         end
         
         function outStats=getLastStimStatistics(obj,hFigure)
