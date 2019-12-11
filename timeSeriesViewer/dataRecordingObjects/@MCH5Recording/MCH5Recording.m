@@ -576,7 +576,7 @@ classdef MCH5Recording < dataRecording
                   startDate=datenum(datetime(unixTime,'ConvertFrom','posixtime'));
               catch
                   try %get only date, but works on both window+mac
-                      startDate = datenum(datetime(h5readatt(obj.fullFilename{i},pathToAllRecordings,'Date'), 'InputFormat','eeee, d MMMMM yyyy'));
+                      startDate = datenum(datetime(h5readatt(obj.fullFilename{i},obj.pathToAllRecordings,'Date'), 'InputFormat','eeee, MMMMM d,  yyyy'));
                   catch
                       %Fix that will only works windows.
                       dateInTicks=h5readatt(obj.fullFilename{i},obj.pathToAllRecordings,'DateInTicks'); %This is in .NET date
