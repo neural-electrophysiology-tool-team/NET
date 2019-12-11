@@ -307,8 +307,7 @@ initializeVisualStim;
         set(VS.hand.visualStimMenu.([VS.par.VSMethods{VS.par.currentVSO}]),'Checked','off');
         set(VS.hand.visualStimMenu.([VS.par.VSMethods{selectedVSO}]),'Checked','on'); %select one of the stims
         VS.par.currentVSO=selectedVSO;
-        
-        initializeVisualStim;
+%         initializeVisualStim;
     end
 
     function CallbackFileMenuLoadParams(hObj,event)
