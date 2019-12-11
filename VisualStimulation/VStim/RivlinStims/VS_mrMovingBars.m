@@ -7,13 +7,13 @@ classdef VS_mrMovingBars < VStim
         barLength   = 120;%180;
         barSpeed       = 80;%324;
         maskRadius  = 500;% 225;
-        barIntensity= 255;
+        barIntensity= 255; %white bar
         popBbarColor    = [1 1 1]; %white
         prestimWait = 5;
         delay       = 0.5; %2
         interTrialWait = 0.5; %2
         save_stimulus   = 0;
-        screenIntensity = 0;%0
+        screenIntensity = 0;%intensity when you project the bar, change to mean grey if you want white bar on grey screen
         popBscrColor    =[1 1 1]; %white
         chkBshowFlashesForGUI = 0;
         txtBflashPeriod = 1;

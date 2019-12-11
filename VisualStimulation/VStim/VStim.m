@@ -10,7 +10,7 @@ classdef (Abstract) VStim < handle
         user = 'Undefined';
     end
     properties (SetObservable, AbortSet = true, SetAccess=public)
-        visualFieldBackgroundLuminance  = 139;
+        visualFieldBackgroundLuminance  = 136; %mean grey value measured by SR and AH the 04-12-19
         visualFieldDiameter             = 0; %pixels
         inVivoSettings                  = false;
         DMDcorrectionIntensity          = 0;
