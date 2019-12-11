@@ -10,7 +10,7 @@ classdef VS_mrAlignMEA < VStim
         %trialsPerCategory = 10;
         %preSessionDelay = 10;
         luminosity = 255; %(L_high-L_low)/L_low
-        pixelpersq = 10;
+        pixelpersq = 13; %MEA 100/30 100um electrode spacing,30um electrode diameter
         numrows = 8;
         numcols = 8;
         lineWidth = 10;
@@ -41,7 +41,8 @@ classdef VS_mrAlignMEA < VStim
 %                 round(obj.centerX-100):round(obj.centerX-100+obj.squareEdge))=obj.luminosity;
             
             board = checkerboard(obj.pixelpersq,obj.numrows,obj.numcols);
-           
+            x = find(board(:,1)==1,1,'First');
+            board = board(1:end-x,1:end-x);
             board = padarray(board,[obj.lineWidth, obj.lineWidth],obj.luminosity,'both');
             
             if size(board,1)>size(T,1)
