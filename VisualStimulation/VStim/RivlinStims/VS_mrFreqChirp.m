@@ -123,10 +123,14 @@ classdef VS_mrFreqChirp < VStim
             obj.applyBackgound;
             Screen('DrawingFinished', obj.PTB_win);
             obj.sendTTL(1,false);
+            
             if obj.save_stimulus
-                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrFreqChirp_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
-                save(filename, 'obj', '-v7.3');
+                SaveStimuli(obj,mfilename)
             end
+%             if obj.save_stimulus
+%                 filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrFreqChirp_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
+%                 save(filename, 'obj', '-v7.3');
+%             end
         end
        
 

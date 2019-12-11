@@ -136,11 +136,18 @@ classdef VS_mrCChirp < VStim
             Screen('DrawingFinished', obj.PTB_win); % Indicate to GUI that we are done
             obj.sendTTL(1,false);                   %Send signal that experiment is finished
             
-            if obj.save_stimulus
-                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrCChirp_%s.mat',...
-                    datestr(now,'mm_dd_yyyy_HHMM'));
-                save(filename, 'obj', '-v7.3');save(filename, 'obj', '-v7.3','allContrasts')
-            end        
+%             if obj.save_stimulus
+%                 filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrCChirp_%s.mat',...
+%                     datestr(now,'mm_dd_yyyy_HHMM'));
+%                 save(filename, 'obj', '-v7.3');save(filename, 'obj', '-v7.3','allContrasts')
+%             end        
+
+        %to save the stimuli_it calls the function SaveStimuli
+        
+        if obj.save_stimulus
+            SaveStimuli(obj,mfilename,'allContrasts',allContrasts)
+        end
+
         end
         
         function outStats=getLastStimStatistics(obj,hFigure)

@@ -137,8 +137,10 @@ classdef VS_mrStaticNVS < VStim
             Screen('FillRect', obj.PTB_win, screen_full_color, []);
             Screen('Flip', obj.PTB_win);
             obj.sendTTL(1,false);
-            filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrStaticNVS_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
-            save(filename, 'directions', 'obj', '-v7.3');
+            SaveStimuli(obj,mfilename,'directions',directions)
+            
+%             filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrStaticNVS_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
+%             save(filename, 'directions', 'obj', '-v7.3');
         end
 
         function outStats=getLastStimStatistics(obj,hFigure)

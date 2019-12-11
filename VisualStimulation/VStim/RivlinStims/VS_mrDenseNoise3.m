@@ -237,8 +237,11 @@ classdef VS_mrDenseNoise3 < VStim
             Screen('Flip', obj.PTB_win);
             obj.sendTTL(1,false);
             disp('Session ended');
-            filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDenseNoise_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
-            save(filename, 'noiseArray', 'obj', '-v7.3');
+            SaveStimuli(obj,mfilename,'noiseArray',noiseArray)
+
+        
+%             filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDenseNoise_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
+%             save(filename, 'noiseArray', 'obj', '-v7.3');
         end
         
         %class constractor

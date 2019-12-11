@@ -84,11 +84,15 @@ classdef VS_mrDrug < VStim
             obj.applyBackgound;
             Screen('DrawingFinished', obj.PTB_win); % Indicate to GUI that we are done
 
+%             if obj.save_stimulus
+%                 filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDrug_%s.mat',...
+%                     datestr(now,'mm_dd_yyyy_HHMM'));
+%                 save(filename, 'obj', '-v7.3');
+%             end
             if obj.save_stimulus
-                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDrug_%s.mat',...
-                    datestr(now,'mm_dd_yyyy_HHMM'));
-                save(filename, 'obj', '-v7.3');
+                SaveStimuli(obj,mfilename)
             end
+
         
         
         end

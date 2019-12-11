@@ -216,9 +216,10 @@ classdef VS_mrGratings < VStim
             obj.applyBackgound;
             Screen('Flip', obj.PTB_win);
             obj.sendTTL(1,false);
+            
+            %to save the stimuli_it calls the function SaveStimuli
             if obj.save_stimulus
-                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrGratings_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
-                save(filename, 'directions', 'obj', '-v7.3');
+                SaveStimuli(obj,mfilename,'directions',directions)
             end
            
         end
