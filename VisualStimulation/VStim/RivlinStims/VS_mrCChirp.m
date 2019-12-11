@@ -108,6 +108,17 @@ classdef VS_mrCChirp < VStim
                     Screen('Flip', obj.PTB_win);
                     obj.sendTTL(3,false)
                     WaitSecs(intensity_duration);
+                    
+                    [keyIsDown, ~, keyCode] = KbCheck;
+                    if keyCode(obj.escapeKeyCode)
+%                         obj.trialsPerCategory=trial;
+                        Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                        Screen('Flip',obj.PTB_win);
+                        obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                        %                         WaitSecs(obj.interTrialDelay);
+                        disp('Trial ended early');
+                        return
+                    end
                 end
                 Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
                 obj.sendTTL(3,true)
@@ -117,6 +128,8 @@ classdef VS_mrCChirp < VStim
                 WaitSecs(obj.interval);
 
                 obj.sendTTL(2,false); % Send signal on channel 2 of the LPT that this run is now complete
+                
+                
             end
             
             obj.applyBackgound;
@@ -127,9 +140,7 @@ classdef VS_mrCChirp < VStim
                 filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrCChirp_%s.mat',...
                     datestr(now,'mm_dd_yyyy_HHMM'));
                 save(filename, 'obj', '-v7.3');save(filename, 'obj', '-v7.3','allContrasts')
-            end
-        
-        
+            end        
         end
         
         function outStats=getLastStimStatistics(obj,hFigure)

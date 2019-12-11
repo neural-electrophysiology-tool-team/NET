@@ -218,6 +218,17 @@ classdef VS_mrDenseNoise3 < VStim
                     else
                         Screen('Flip',obj.PTB_win);
                     end
+                    
+                    [keyIsDown, ~, keyCode] = KbCheck;
+                    if keyCode(obj.escapeKeyCode)
+                        % obj.trialsPerCategory=i;
+                        Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                        Screen('Flip',obj.PTB_win);
+                        obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                        % WaitSecs(obj.interTrialDelay);
+                        disp('Trial ended early');
+                        return
+                    end
                 end
             end
             

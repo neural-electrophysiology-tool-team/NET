@@ -109,6 +109,16 @@ classdef VS_mrMovingBars < VStim
                     dstRect     = CenterRectOnPoint(dstRect, startPos(1), startPos(2));
                     Screen('DrawTexture',obj.PTB_win,tex,[],dstRect,direction,1);
                     obj.sendTTL(3,true);
+                    [keyIsDown, ~, keyCode] = KbCheck;
+                    if keyCode(obj.escapeKeyCode)
+                        % obj.trialsPerCategory=i;
+                        Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                        Screen('Flip',obj.PTB_win);
+                        obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                        % WaitSecs(obj.interTrialDelay);
+                        disp('Trial ended early');
+                        return
+                    end
                     Screen('Flip', obj.PTB_win);
                     obj.sendTTL(3,false);
                     maskradius = maskradius-(obj.barSpeed/frame_rate);

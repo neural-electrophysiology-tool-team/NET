@@ -74,41 +74,102 @@ classdef VS_mrSteps < VStim
                 obj.sendTTL(3,true) % start scren flip
                 Screen('Flip', obj.PTB_win); % flip screen to background
                 obj.sendTTL(3,false) % end screen flip
+                [keyIsDown, ~, keyCode] = KbCheck;
+                if keyCode(obj.escapeKeyCode)
+                    %                     obj.trialsPerCategory=trial;
+                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                    Screen('Flip',obj.PTB_win);
+                    obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                    % WaitSecs(obj.interTrialDelay);
+                    disp('Trial ended early');
+                    return
+                end
                 WaitSecs(obj.duration); % duration of background (default: 2 sec)
 
                 % flip to white
                 Screen('FillOval',obj.PTB_win,obj.brightLuminosity,obj.visualFieldRect);
-                obj.sendTTL(3,true)
+                obj.sendTTL(3,true);
                 Screen('Flip', obj.PTB_win); % white for 2 seconds
-                obj.sendTTL(3,false)
+                obj.sendTTL(3,false);
+                [keyIsDown, ~, keyCode] = KbCheck;
+                if keyCode(obj.escapeKeyCode)
+                    %                     obj.trialsPerCategory=trial;
+                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                    Screen('Flip',obj.PTB_win);
+                    obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                    % WaitSecs(obj.interTrialDelay);
+                    disp('Trial ended early');
+                    return
+                end
                 WaitSecs(obj.duration);
 
                 % flip to black
                 Screen('FillOval',obj.PTB_win,obj.darkLuminosity,obj.visualFieldRect);
-                obj.sendTTL(3,true)
+                obj.sendTTL(3,true);
+                
                 Screen('Flip', obj.PTB_win);
-                obj.sendTTL(3,false)
+                obj.sendTTL(3,false);
+                [keyIsDown, ~, keyCode] = KbCheck;
+                if keyCode(obj.escapeKeyCode)
+                    %                     obj.trialsPerCategory=trial;
+                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                    Screen('Flip',obj.PTB_win);
+                    obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                    % WaitSecs(obj.interTrialDelay);
+                    disp('Trial ended early');
+                    return
+                end
                 WaitSecs(obj.duration);
                 
                 % flip to grey
                 Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
-                obj.sendTTL(3,true)
+                obj.sendTTL(3,true);
                 Screen('Flip', obj.PTB_win); % grey background for 2 seconds
-                obj.sendTTL(3,false)
+                obj.sendTTL(3,false);
+                [keyIsDown, ~, keyCode] = KbCheck;
+                if keyCode(obj.escapeKeyCode)
+                    %                     obj.trialsPerCategory=trial;
+                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                    Screen('Flip',obj.PTB_win);
+                    obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                    % WaitSecs(obj.interTrialDelay);
+                    disp('Trial ended early');
+                    return
+                end
                 WaitSecs(obj.duration);
 
                 % flip to black
                 Screen('FillOval',obj.PTB_win,obj.darkLuminosity,obj.visualFieldRect);
-                obj.sendTTL(3,true)
+                obj.sendTTL(3,true);
                 Screen('Flip', obj.PTB_win); % white for 2 seconds
-                obj.sendTTL(3,false)
+                obj.sendTTL(3,false);
+                [keyIsDown, ~, keyCode] = KbCheck;
+                if keyCode(obj.escapeKeyCode)
+                    %                     obj.trialsPerCategory=trial;
+                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                    Screen('Flip',obj.PTB_win);
+                    obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                    % WaitSecs(obj.interTrialDelay);
+                    disp('Trial ended early');
+                    return
+                end
                 WaitSecs(obj.duration);
                 
                 % flip to white
                 Screen('FillOval',obj.PTB_win,obj.brightLuminosity,obj.visualFieldRect);
-                obj.sendTTL(3,true)
+                obj.sendTTL(3,true);
                 Screen('Flip', obj.PTB_win); % white for 2 seconds
-                obj.sendTTL(3,false)
+                obj.sendTTL(3,false);
+                [keyIsDown, ~, keyCode] = KbCheck;
+                if keyCode(obj.escapeKeyCode)
+                    %                     obj.trialsPerCategory=trial;
+                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                    Screen('Flip',obj.PTB_win);
+                    obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                    % WaitSecs(obj.interTrialDelay);
+                    disp('Trial ended early');
+                    return
+                end
                 WaitSecs(obj.duration);
                 % end; don't go back to grey because the next trial will
                 % start with grey

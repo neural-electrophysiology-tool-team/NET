@@ -194,7 +194,19 @@ classdef VS_mrGratings < VStim
                                 '_time',num2str(obj.txtSsaveImageTime),'.bmp'],'bmp');
                         end
                     end
-                    
+                %check if stimulation session was stopped by the user
+                
+                    [keyIsDown, ~, keyCode] = KbCheck;
+                    if keyCode(obj.escapeKeyCode)
+%                         obj.trialsPerCategory=i;
+                        Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                        Screen('Flip',obj.PTB_win);
+                        obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+%                         WaitSecs(obj.interTrialDelay);
+                        disp('Trial ended early');
+                        return
+                    end
+
                 end
                 Screen('Flip', obj.PTB_win);
                 WaitSecs(obj.txtSinterTrialWait);%pause to allow recording device to prepare for new trial
@@ -208,17 +220,7 @@ classdef VS_mrGratings < VStim
                 filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrGratings_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
                 save(filename, 'directions', 'obj', '-v7.3');
             end
-            %to let the esc work
-     while 1
-                %check if stimulation session was stopped by the user
-                [keyIsDown, ~, keyCode] = KbCheck;
-                if keyCode(obj.escapeKeyCode)
-                    obj.visualFieldBackgroundLuminance=obj.visualFieldBackgroundLuminance; %rest the stimulation screen
-                    obj.applyBackgound;
-                    Screen('Flip',obj.PTB_win);
-                    return;
-                end
-            end
+           
         end
         
         function outStats=getLastStimStatistics(obj,hFigure)
