@@ -44,8 +44,8 @@ subdirname = cell(1,1);
 c = 1;
 for K = 1 : length(dirinfo)
   thisdir = dirinfo(K).name;
-  if ~isempty(dir(fullfile(strcat(dirinfo(3).folder,'\',thisdir), 'VS_*.m')))
-    subdirinfo{c,1} = dir(fullfile(strcat(dirinfo(3).folder,'\',thisdir), 'VS_*.m'));
+  if ~isempty(dir(fullfile(strcat(dirinfo(3).folder,filesep,thisdir), 'VS_*.m')))
+    subdirinfo{c,1} = dir(fullfile(strcat(dirinfo(3).folder,filesep,thisdir), 'VS_*.m'));
     if ismember('.',thisdir)
         thisdir = 'main';
     end 
