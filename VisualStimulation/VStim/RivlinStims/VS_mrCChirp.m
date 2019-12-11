@@ -1,7 +1,7 @@
 classdef VS_mrCChirp < VStim
     properties (SetAccess=public)
-        brightLuminosity         = 255; 
-        darkLuminosity         = 0; 
+        brightLuminosity         = 255;
+        darkLuminosity         = 0;
         screenTriggerDuration   = 0.1;  % sec
         interval                = 0.5;    % secs
         delay                   = 0.5;    % secs
@@ -12,7 +12,8 @@ classdef VS_mrCChirp < VStim
     end
     
     properties (Constant)
-        flashLuminosityTxt  = 'The luminocity value for the spot (0-255)';
+        brightLuminosityTxt  = 'The brighest luminosity value for the spot';
+        darkLuminosityTxt  = 'The darkest luminosity value for the spot (0-255)'
         delayTxt            = 'The time of background luminance (sec) before presentation of the spot.';
         intervalTxt         = 'The time of background luminance (sec) after presentation of the spot.';
         remarks             = {'Categories in Flash stimuli are:','delay, interval, flashLuminosity'};
