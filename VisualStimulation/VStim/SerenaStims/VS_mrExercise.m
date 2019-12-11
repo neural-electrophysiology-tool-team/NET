@@ -30,7 +30,7 @@ classdef VS_mrGratings < VStim
     end
     properties (Hidden,Constant)
         defaultTrialsPerCategory=50; %number of gratings to present
-        defaultBackground=139;
+        defaultBackground=0;
         grating_widthTxt        = "scalar,width of black+white grating, pixels/cycle";
         txtStmpFrqTxt           = "scalar,cycles/sec";
         txtSmaskRadiusTxt       = "scalar,half size of square texture";
@@ -108,13 +108,12 @@ classdef VS_mrGratings < VStim
             
             if ~obj.chkSmaskRect
                 mask = makeCircularMaskForGUI(obj.txtSmaskRadius,width, height,'color',screen_full_color);
-                mask = mask(:,:,[2,4]);
             else
                 obj.txtSmaskRadius = max(ceil(obj.txtSrectWidth/2),ceil(obj.txtSrectHeight/2));
                 mask = makeRectangularMaskForGUI(obj.txtSrectWidth,obj.txtSrectHeight);
             end
             
-            
+            mask = mask(:,:,[2,4]);
             masktex=Screen('MakeTexture', obj.PTB_win, mask);
             
             % Calculate parameters of the Sinusoid
@@ -146,11 +145,6 @@ classdef VS_mrGratings < VStim
                 color_sinusoid = sinusoid;
             end
             
-            %add code to make edges of bars the same color as the edges of
-            %circular mask
-%             color_sinusoid(1:find(mask(:,1,2)==0,1,'First'),color_sinusoid(1,:)>0)=mask(find(mask(:,1,2)~=0,1,'First'),1,2);
-%             color_sinusoid(find(mask(:,1,2)==0,1,'Last'):end,color_sinusoid(1,:)>0)=mask(find(mask(:,1,2)~=0,1,'First'),1,2);
-            
             sinusoidtex=Screen('MakeTexture', obj.PTB_win, color_sinusoid);
             
             % configure display window
@@ -181,7 +175,7 @@ classdef VS_mrGratings < VStim
                     srcRect=[xoffset 0 xoffset + visiblesize visiblesize];
                     Screen('DrawTexture', obj.PTB_win, sinusoidtex, srcRect, dstRect, direction);
                     Screen('DrawTexture',  obj.PTB_win, masktex, [0 0 visiblesize visiblesize], dstRect, direction);
-%                     obj.applyBackgound;
+                    obj.applyBackgound;
                     obj.sendTTL(3,true);
                     vbl=Screen('Flip',  obj.PTB_win);
                     obj.sendTTL(3,false);
