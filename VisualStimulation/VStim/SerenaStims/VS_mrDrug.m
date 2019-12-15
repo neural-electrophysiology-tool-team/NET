@@ -4,6 +4,8 @@ classdef VS_mrDrug < VStim
         baseline_time           = 15;    % sec
         drug_time               = 10;    % sec
         save_stimulus           = true;
+        drug                    = 'histamine';
+        drug_concentration = 0;
     end
     
     properties (Constant)
@@ -11,6 +13,8 @@ classdef VS_mrDrug < VStim
         baseline_timeTxt  = 'The time of background luminance (sec) before  presentation of the spot.';
         drug_timeTxt      = 'The time of background luminance (sec) after presentation of the spot.';
         remarks           = {'Categories in Drug Stimulus are:','baseline time, drug time'};
+        drugTxt                 = 'Enter the name of the drug here.';
+        drug_concentrationTxt   = 'Enter the concentration of the drug here (in milliMolar).';
     end
     
     properties (SetAccess=protected)
@@ -80,11 +84,15 @@ classdef VS_mrDrug < VStim
             obj.applyBackgound;
             Screen('DrawingFinished', obj.PTB_win); % Indicate to GUI that we are done
 
+%             if obj.save_stimulus
+%                 filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDrug_%s.mat',...
+%                     datestr(now,'mm_dd_yyyy_HHMM'));
+%                 save(filename, 'obj', '-v7.3');
+%             end
             if obj.save_stimulus
-                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrDrug_%s.mat',...
-                    datestr(now,'mm_dd_yyyy_HHMM'));
-                save(filename, 'obj', '-v7.3');
+                SaveStimuli(obj,mfilename)
             end
+
         
         
         end

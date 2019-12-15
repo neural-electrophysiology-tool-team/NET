@@ -2,56 +2,56 @@ classdef VS_mrGratings < VStim
     properties (SetAccess=public)
         
         grating_width       = 53;       %pixel/cycle, choose sp=225, tp=5 for 30deg/s at 60x
-        tmporalFreq         = 2;
-        txtStmpFrq          = 2;        %cycles/sec
-        txtSmaskRadius      = 500;      %radius of circular mask
-        txtSnumDirs         = 8;
-        txtSnumTrials       = 5;
-        txtSduration        = 4;        %txtSduration in secs
-        txtSpreStimWait     = 5;
-        txtSdelay           = 2;
-        txtSinterTrialWait  = 2;
+%         tmporalFreq         = 2;
+        temporalFreq          = 2;        %cycles/sec
+        maskRadius      = 500;      %radius of circular mask
+        nDirections         = 8;
+        nTrials       = 5;
+        duration        = 4;        %duration in secs
+        prestimWait     = 5;
+        delay           = 2;
+        interTrialWait  = 2;
         save_stimulus       = true;
-        chkSmakeGrating     = true;
-        txtSdirList         = nan;
-        txtSbrtIntensity    = 255;
+        chkMakeGrating     = true;
+        directionList         = nan;
+        brightIntensity    = 255;
         popSgrtColor        = [1 1 1];
-        txtSdrkIntensity    = 0;
+        darkIntensity    = 0;
         chkScorrectGrating  = true;
         x_shift             = 0;
         y_shift             = 0;
-        chkSmaskRect        = false;
-        txtSrectWidth       = 100;
-        txtSrectHeight      = 400;
-        txtSscrIntensity    = 139;
+        chkMaskRectangle        = false;
+        rectangleWidth       = 100;
+        rectangleHeight      = 400;
+        screenIntensity    = 139;
         popSscrColor        = [1 1 1];
         chkSsaveImage       = false;
         txtSsaveImageTime   = 2;
     end
     properties (Hidden,Constant)
         defaultTrialsPerCategory=50; %number of gratings to present
-        defaultBackground=0;
+        defaultBackground=139;
         grating_widthTxt        = "scalar,width of black+white grating, pixels/cycle";
-        txtStmpFrqTxt           = "scalar,cycles/sec";
-        txtSmaskRadiusTxt       = "scalar,half size of square texture";
-        txtSnumDirsTxt          = "scalar,number of directions";
-        txtSnumTrialsTxt        = "scalar,number of repetitions";
-        txtSdurationTxt         = "scalar,txtSduration of each repetition in secs";
-        txtSpreStimWaitTxt      = "scalar,seconds of black screen before stimulus start";
-        txtSdelayTxt            = "scalar,seconds of black screen before each trial start";
-        txtSinterTrialWaitTxt   ="scalar,seconds of waiting between trials";
+        temporalFreqTxt           = "scalar,cycles/sec";
+        maskRadiusTxt       = "scalar,half size of square texture";
+        nDirectionsTxt          = "scalar,number of directions";
+        nTrialsTxt        = "scalar,number of repetitions";
+        durationTxt         = "scalar,duration of each repetition in secs";
+        prestimWaitTxt      = "scalar,seconds of black screen before stimulus start";
+        delayTxt            = "scalar,seconds of black screen before each trial start";
+        interTrialWaitTxt   ="scalar,seconds of waiting between trials";
         save_stimulusTxt        = "0 or 1,save stimuli?";
-        chkSmakeGratingTxt      = "0 or 1,1 creates grating instead of sinusoid";
-        txtSdirListTxt          = "vector, list of stimulus directions in degrees if nan (default), generates evenly spaced directions based on txtSnumDirs argument.";
-        txtSbrtIntensityTxt     = "scalar, 0 to 255. Maximum intensity of grating or sinusoid";
-        txtSdrkIntensityTxt     = "scalar, 0 to 255. minimum intensity of grating or sinusoid";
+        chkMakeGratingTxt      = "0 or 1,1 creates grating instead of sinusoid";
+        directionListTxt          = "vector, list of stimulus directions in degrees if nan (default), generates evenly spaced directions based on nDirections argument.";
+        brightIntensityTxt     = "scalar, 0 to 255. Maximum intensity of grating or sinusoid";
+        darkIntensityTxt     = "scalar, 0 to 255. minimum intensity of grating or sinusoid";
         chkScorrectGratingTxt   = "0 or 1, if 0, makes half rectified sinusoids instead of squarewaves like old method.";
         shift_xTxt              = "scalar, shifts the center of stimuli in the x axis";
         shift_yTxt              = "scalar, shifts the center of stimuli in the y axis";
-        chkSmaskRectTxt         = "0 or 1. if 1, the masking of the grating is rectangular";
-        txtSrectWidthTxt        = "in case of a rectangular mask";
-        txtSrectHeightTxt       = "in case of a rectangular mask";
-        txtSscrIntensityTxt     = "color of baground. default is gray";
+        chkMaskRectangleTxt         = "0 or 1. if 1, the masking of the grating is rectangular";
+        rectangleWidthTxt        = "in case of a rectangular mask";
+        rectangleHeightTxt       = "in case of a rectangular mask";
+        screenIntensityTxt     = "color of baground. default is gray";
         remarks                 = {'Categories in stimuli are: speed, offset'};
     end
     properties (SetAccess=protected)
@@ -73,14 +73,14 @@ classdef VS_mrGratings < VStim
     methods
         
         function obj=run(obj)
-            screen_full_color = obj.txtSscrIntensity*obj.popSscrColor;
+            screen_full_color = obj.screenIntensity*obj.popSscrColor;
             
             % configure directions
             
-            if isnan(obj.txtSdirList) || isempty(obj.txtSdirList)
-                dirs = 0:(360/obj.txtSnumDirs):(360-(360/obj.txtSnumDirs));
+            if isnan(obj.directionList) || isempty(obj.directionList)
+                dirs = 0:(360/obj.nDirections):(360-(360/obj.nDirections));
             else
-                dirs = obj.txtSdirList;
+                dirs = obj.directionList;
                 dims = size(dirs);
                 if dims(1)>dims(2)
                     dirs = dirs';
@@ -88,7 +88,7 @@ classdef VS_mrGratings < VStim
             end
             
             directions = [];
-            for r=1:obj.txtSnumTrials
+            for r=1:obj.nTrials
                 dirs_shuffled = Shuffle(dirs);
                 directions=cat(2,directions,dirs_shuffled);
             end
@@ -96,8 +96,8 @@ classdef VS_mrGratings < VStim
             
             % configure correct mask
             
-            if obj.chkSmaskRect
-                obj.txtSmaskRadius = 0;
+            if obj.chkMaskRectangle
+                obj.maskRadius = 0;
             end
             
             Screen('BlendFunction', obj.PTB_win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -106,33 +106,34 @@ classdef VS_mrGratings < VStim
             
             [width, height]=Screen('WindowSize', obj.PTB_win);
             
-            if ~obj.chkSmaskRect
-                mask = makeCircularMaskForGUI(obj.txtSmaskRadius,width, height,'color',screen_full_color);
+            if ~obj.chkMaskRectangle
+                mask = makeCircularMaskForGUI(obj.maskRadius,width, height,'color',screen_full_color);
+                mask = mask(:,:,[2,4]);
             else
-                obj.txtSmaskRadius = max(ceil(obj.txtSrectWidth/2),ceil(obj.txtSrectHeight/2));
-                mask = makeRectangularMaskForGUI(obj.txtSrectWidth,obj.txtSrectHeight);
+                obj.maskRadius = max(ceil(obj.rectangleWidth/2),ceil(obj.rectangleHeight/2));
+                mask = makeRectangularMaskForGUI(obj.rectangleWidth,obj.rectangleHeight);
             end
             
-            mask = mask(:,:,[2,4]);
+            
             masktex=Screen('MakeTexture', obj.PTB_win, mask);
             
             % Calculate parameters of the Sinusoid
             
-            gray=round((obj.txtSbrtIntensity+obj.txtSdrkIntensity)/2);
-            inc=obj.txtSbrtIntensity-gray;
+            gray=round((obj.brightIntensity+obj.darkIntensity)/2);
+            inc=obj.brightIntensity-gray;
             
             p=ceil(obj.grating_width);  % pixels/cycle
             fr=(1/obj.grating_width)*2*pi;
-            visiblesize=2*obj.txtSmaskRadius+1;
+            visiblesize=2*obj.maskRadius+1;
             
-            [x,~]=meshgrid(-obj.txtSmaskRadius:obj.txtSmaskRadius + abs(p), -obj.txtSmaskRadius:obj.txtSmaskRadius);
+            [x,~]=meshgrid(-obj.maskRadius:obj.maskRadius + abs(p), -obj.maskRadius:obj.maskRadius);
             sinusoid = gray + inc*cos(fr*x); %change x to fix mightex polygon
             
-            if obj.chkSmakeGrating
+            if obj.chkMakeGrating
                 grating_mask = sinusoid>gray; %returns a 0 and 1 mask
                 if obj.chkScorrectGrating
-                    sinusoid(grating_mask) = obj.txtSbrtIntensity; %makes actual squarewave
-                    sinusoid(~grating_mask) = obj.txtSdrkIntensity;
+                    sinusoid(grating_mask) = obj.brightIntensity; %makes actual squarewave
+                    sinusoid(~grating_mask) = obj.darkIntensity;
                 else
                     sinusoid = sinusoid.*grating_mask; %old method generates half rectified sinusoids
                 end
@@ -145,6 +146,11 @@ classdef VS_mrGratings < VStim
                 color_sinusoid = sinusoid;
             end
             
+            %add code to make edges of bars the same color as the edges of
+            %circular mask
+%             color_sinusoid(1:find(mask(:,1,2)==0,1,'First'),color_sinusoid(1,:)>0)=mask(find(mask(:,1,2)~=0,1,'First'),1,2);
+%             color_sinusoid(find(mask(:,1,2)==0,1,'Last'):end,color_sinusoid(1,:)>0)=mask(find(mask(:,1,2)~=0,1,'First'),1,2);
+            
             sinusoidtex=Screen('MakeTexture', obj.PTB_win, color_sinusoid);
             
             % configure display window
@@ -153,10 +159,10 @@ classdef VS_mrGratings < VStim
             dstRect=CenterRect(dstRect, obj.rect);
             [x_center, y_center] = RectCenterd(dstRect);
             dstRect = CenterRectOnPointd(dstRect,x_center+obj.x_shift,y_center+obj.y_shift);
-            shiftperframe= obj.txtStmpFrq * p * obj.ifi;
+            shiftperframe= obj.temporalFreq * p * obj.ifi;
             
             obj.sendTTL(1,true);
-            WaitSecs(obj.txtSpreStimWait);
+            WaitSecs(obj.prestimWait);
             
             % stimulation start
             for trial=1:length(directions)
@@ -164,9 +170,9 @@ classdef VS_mrGratings < VStim
                 direction=mod((direction+180),360);               
                 
                 i=0;
-                WaitSecs(obj.txtSdelay);
+                WaitSecs(obj.delay);
                 vbl=Screen('Flip', obj.PTB_win);
-                vblendtime = vbl + obj.txtSduration;
+                vblendtime = vbl + obj.duration;
                 saveImageTime=obj.txtSsaveImageTime+vbl;
                 %%%%%%
                 while (vbl < vblendtime)
@@ -175,7 +181,7 @@ classdef VS_mrGratings < VStim
                     srcRect=[xoffset 0 xoffset + visiblesize visiblesize];
                     Screen('DrawTexture', obj.PTB_win, sinusoidtex, srcRect, dstRect, direction);
                     Screen('DrawTexture',  obj.PTB_win, masktex, [0 0 visiblesize visiblesize], dstRect, direction);
-                    obj.applyBackgound;
+%                     obj.applyBackgound;
                     obj.sendTTL(3,true);
                     vbl=Screen('Flip',  obj.PTB_win);
                     obj.sendTTL(3,false);
@@ -188,20 +194,34 @@ classdef VS_mrGratings < VStim
                                 '_time',num2str(obj.txtSsaveImageTime),'.bmp'],'bmp');
                         end
                     end
-                    
+                %check if stimulation session was stopped by the user
+                
+                    [keyIsDown, ~, keyCode] = KbCheck;
+                    if keyCode(obj.escapeKeyCode)
+%                         obj.trialsPerCategory=i;
+                        Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                        Screen('Flip',obj.PTB_win);
+                        obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+%                         WaitSecs(obj.interTrialDelay);
+                        disp('Trial ended early');
+                        return
+                    end
+
                 end
                 Screen('Flip', obj.PTB_win);
-                WaitSecs(obj.txtSinterTrialWait);%pause to allow recording device to prepare for new trial
+                WaitSecs(obj.interTrialWait);%pause to allow recording device to prepare for new trial
                 obj.sendTTL(2,false);
-                disp(['Direction ' num2str(trial) '/' num2str(obj.txtSnumTrials*obj.txtSnumDirs)]);
+                disp(['Direction ' num2str(trial) '/' num2str(obj.nTrials*obj.nDirections)]);
             end
             obj.applyBackgound;
             Screen('Flip', obj.PTB_win);
             obj.sendTTL(1,false);
+            
+            %to save the stimuli_it calls the function SaveStimuli
             if obj.save_stimulus
-                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrGratings_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
-                save(filename, 'directions', 'obj', '-v7.3');
+                SaveStimuli(obj,mfilename,'directions',directions)
             end
+           
         end
         
         function outStats=getLastStimStatistics(obj,hFigure)

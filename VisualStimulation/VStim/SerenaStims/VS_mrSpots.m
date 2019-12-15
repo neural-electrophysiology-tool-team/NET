@@ -70,8 +70,6 @@ classdef VS_mrSpots < VStim
           	Screen('Flip', obj.PTB_win);
          	obj.sendTTL(3,false)
 
-            
-            
             WaitSecs(obj.preStimWait);
             % A loop which runs for each frame of the experiment
             for trial = 1 : obj.trialsPerCategory
@@ -82,18 +80,40 @@ classdef VS_mrSpots < VStim
                 % switch to white screen:
                 Screen('FillOval',obj.PTB_win, obj.flashLuminosity, obj.visualFieldRect);
                 
-                obj.sendTTL(3,true)
+                obj.sendTTL(3,true);
                 Screen('Flip', obj.PTB_win);
-                obj.sendTTL(3,false)
-
+                obj.sendTTL(3,false);
+                
+                [keyIsDown, ~, keyCode] = KbCheck;
+                if keyCode(obj.escapeKeyCode)
+%                     obj.trialsPerCategory=trial;
+                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                    Screen('Flip',obj.PTB_win);
+                    obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                    % WaitSecs(obj.interTrialDelay);
+                    disp('Trial ended early');
+                    return
+                end
+                
                 WaitSecs(obj.stimDuration);
 
                 % switch back to black screen:
                 Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
                 
-                obj.sendTTL(3,true)
+                obj.sendTTL(3,true);
                 Screen('Flip', obj.PTB_win);
-                obj.sendTTL(3,false)
+                obj.sendTTL(3,false);
+                
+                [keyIsDown, ~, keyCode] = KbCheck;
+                if keyCode(obj.escapeKeyCode)
+%                     obj.trialsPerCategory=trial;
+                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                    Screen('Flip',obj.PTB_win);
+                    obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                    % WaitSecs(obj.interTrialDelay);
+                    disp('Trial ended early');
+                    return
+                end
                 
                 WaitSecs(obj.interval);
 
@@ -103,12 +123,15 @@ classdef VS_mrSpots < VStim
             obj.applyBackgound;
             Screen('DrawingFinished', obj.PTB_win); % Indicate to GUI that we are done
             obj.sendTTL(1,false);                   %Send signal that experiment is finished
+%             if obj.save_stimulus
+%                 filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrSpots_%s.mat',...
+%                     datestr(now,'mm_dd_yyyy_HHMM'));
+%                 save(filename, 'obj', '-v7.3');save(filename, 'obj', '-v7.3')
+%             end
+            %to save the stimuli_it calls the function SaveStimuli
             if obj.save_stimulus
-                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrSpots_%s.mat',...
-                    datestr(now,'mm_dd_yyyy_HHMM'));
-                save(filename, 'obj', '-v7.3');save(filename, 'obj', '-v7.3')
+                SaveStimuli(obj,mfilename)
             end
-        
         
         end
         
