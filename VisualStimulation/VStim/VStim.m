@@ -10,7 +10,7 @@ classdef (Abstract) VStim < handle
         user = 'Undefined';
     end
     properties (SetObservable, AbortSet = true, SetAccess=public)
-        visualFieldBackgroundLuminance  = 136; %mean grey value measured by SR and AH the 04-12-19
+        visualFieldBackgroundLuminance  = 0; %mean grey value measured by SR and AH the 04-12-19 136
         visualFieldDiameter             = 0; %pixels
         inVivoSettings                  = false;
         DMDcorrectionIntensity          = 0;
@@ -202,7 +202,7 @@ classdef (Abstract) VStim < handle
             %maskblob(:,:,2)=sig(x,y)*obj.whiteIdx;
             
             maskblobOff=ones(obj.rect(4)-obj.rect(2),obj.rect(3)-obj.rect(1),2) * obj.whiteIdx;
-            maskblobOff(:,:,1)=obj.blackIdx;
+            maskblobOff(:,:,1)=obj.visualFieldBackgroundLuminance; %obj.blackIdx
             if ~noMask 
                 maskblobOff((obj.visualFieldRect(2)+1):obj.visualFieldRect(4),(obj.visualFieldRect(1)+1):obj.visualFieldRect(3),2)=sig(x,y)*obj.whiteIdx;
             else

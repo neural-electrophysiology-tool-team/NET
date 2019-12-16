@@ -3,10 +3,10 @@ classdef VS_mrMovingBars < VStim
 
         nTrials   = 5;%5
         nDirections     = 8;%8
-        barWidth    = 333;%36;
-        barLength   = 120;%180;
-        barSpeed       = 80;%324;
-        maskRadius  = 500;% 225;
+        barWidth    = 333; %2497.5um
+        barLength   = 120; %900 um
+        barSpeed       = 80; %600um/sec
+        maskRadius  = 500; %for the mea 400pix(3000px)should be fine
         barIntensity= 255; %white bar
         popBbarColor    = [1 1 1]; %white
         prestimWait = 5;
