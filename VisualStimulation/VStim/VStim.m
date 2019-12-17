@@ -62,7 +62,7 @@ classdef (Abstract) VStim < handle
         displaySyncSignal   = true;
         pixelConversionFactor = 100/13; %microns per pixel
         sendMailTo %mail adresses to which a notificaion will be sent at the end of the stimulation (if sendMail=true)
-        
+        stimSavePath = "C:\Stimulations\"
         PTB_win                         %Pointer to PTB window
         whiteIdx                        %white index for screen
         blackIdx                        %black index for screen

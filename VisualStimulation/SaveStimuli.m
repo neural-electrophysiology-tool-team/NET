@@ -4,8 +4,8 @@ function SaveStimuli(obj,stimname,varargin)
 NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
 NSKToolBoxMainDir=regexp(NSKToolBoxMainDir,filesep,'split');
 NSKToolBoxMainDir=fullfile(NSKToolBoxMainDir{1:end-1});
-savepath=fscanf(fopen([NSKToolBoxMainDir filesep 'NET' filesep 'PCspecificFiles' filesep 'stimSavePath.txt']),'%c');
-savepath = strcat(savepath,filesep,obj.user,filesep);
+% savepath=fscanf(fopen([NSKToolBoxMainDir filesep 'NET' filesep 'PCspecificFiles' filesep 'stimSavePath.txt']),'%c');
+savepath = strcat(obj.stimSavePath,filesep,obj.user,filesep);
 if IsWin
     savepath= strrep(savepath,'\', '\\');
 else

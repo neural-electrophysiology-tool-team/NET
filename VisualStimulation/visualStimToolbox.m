@@ -545,52 +545,52 @@ initializeVisualStim;
 
         else %use uiextras and not uix
             
-%             VS.hand.PropertyBox.hPropertyBoxPanel = uiextras.Panel('Parent',VS.hand.hPropertyBox, 'Title','Visual stimulation object');
-%             VS.hand.PropertyBox.hPropertyVBox = uiextras.VBox('Parent', VS.hand.PropertyBox.hPropertyBoxPanel, 'Padding', 2, 'Spacing', 5);
-%             
-%             %set VS methods box
-%             VS.hand.PropertyBox.hMethodsGrid=uiextras.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
-%             
-%             VSOcopy=VS.par.VSO; %For some reason, it is not possible to send a object that is part of a structure as callback
-%             
-%             if VS.par.nVSOMethods>0
-%                 for i=1:VS.par.nVSOMethods
-%                     VS.hand.PropertyBox.(['h' VS.par.VSOMethod{i} 'Push'])=uicontrol('Parent', VS.hand.PropertyBox.hMethodsGrid, 'Style','push',...
-%                         'String',VS.par.VSOMethod{i}(3:end),'TooltipString',VS.par.VSOMethodDescription{i},'HorizontalAlignment','Left');
-%                     eval(['set(VS.hand.PropertyBox.h' VS.par.VSOMethod{i} 'Push,''Callback'',@(src,event)' VS.par.VSOMethod{i} '(VSOcopy,src,event,VS.hand.GenealBox.hInteractiveGUIparent));']);
-%                 end
-%                 set(VS.hand.PropertyBox.hMethodsGrid,'ColumnSizes',[-1 -1],'RowSizes',25*ones(1,ceil(VS.par.nVSOMethods/2)));
-%             end
-%             
-%             %set VS property box
-%             VS.hand.PropertyBox.hPropertyGrid=uiextras.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
-%             
-%             for i=1:VS.par.nProps
-%                 VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Txt'])=uicontrol('Parent', VS.hand.PropertyBox.hPropertyGrid, 'Style','text',...
-%                     'String',VS.par.VSOProp{i},'TooltipString',VS.par.VSOPropDescription{i},'HorizontalAlignment','Left');
-%             end
-%             VS.hand.PropertyBox.remarksEdit=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
-%                 'Style','text','String',VS.par.VSO.remarks); %add the remarks text
-%             
-%             VS.par.VSOPropVal=cell(VS.par.nProps,1);
-%             for i=1:VS.par.nProps
-%                 VS.par.VSOPropVal{i}=VS.par.VSO.(VS.par.VSOProp{i});
-%                 if isa(VS.par.VSOPropVal{i},'logical')
-%                     VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Check'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
-%                         'Style','checkbox','value',VS.par.VSOPropVal{i},'Callback',{@CallbackChangePropertyValue,1,i});
-%                 elseif isa(VS.par.VSOPropVal{i},'numeric')
-%                     VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Edit'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
-%                         'Style','edit','String',num2str(VS.par.VSOPropVal{i}),'Callback',{@CallbackChangePropertyValue,2,i});
-%                 elseif ischar(VS.par.VSOPropVal{i})
-%                     VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Edit'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
-%                         'Style','edit','String',VS.par.VSOPropVal{i},'Callback',{@CallbackChangePropertyValue,3,i});
-%                 else
-%                     error('One of the fields in the visual stimulation object is not a numeric, logical or string');
-%                 end
-%             end
-%             set(VS.hand.PropertyBox.hPropertyGrid,'ColumnSizes',[-2 -1],'RowSizes',[25*ones(1,VS.par.nProps) 50]);
-%             
-%             set(VS.hand.PropertyBox.hPropertyVBox,'Sizes',[-ceil(VS.par.nVSOMethods/2) -VS.par.nProps]);
+            VS.hand.PropertyBox.hPropertyBoxPanel = uiextras.Panel('Parent',VS.hand.hPropertyBox, 'Title','Visual stimulation object');
+            VS.hand.PropertyBox.hPropertyVBox = uiextras.VBox('Parent', VS.hand.PropertyBox.hPropertyBoxPanel, 'Padding', 2, 'Spacing', 5);
+            
+            %set VS methods box
+            VS.hand.PropertyBox.hMethodsGrid=uiextras.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
+            
+            VSOcopy=VS.par.VSO; %For some reason, it is not possible to send a object that is part of a structure as callback
+            
+            if VS.par.nVSOMethods>0
+                for i=1:VS.par.nVSOMethods
+                    VS.hand.PropertyBox.(['h' VS.par.VSOMethod{i} 'Push'])=uicontrol('Parent', VS.hand.PropertyBox.hMethodsGrid, 'Style','push',...
+                        'String',VS.par.VSOMethod{i}(3:end),'TooltipString',VS.par.VSOMethodDescription{i},'HorizontalAlignment','Left');
+                    eval(['set(VS.hand.PropertyBox.h' VS.par.VSOMethod{i} 'Push,''Callback'',@(src,event)' VS.par.VSOMethod{i} '(VSOcopy,src,event,VS.hand.GenealBox.hInteractiveGUIparent));']);
+                end
+                set(VS.hand.PropertyBox.hMethodsGrid,'ColumnSizes',[-1 -1],'RowSizes',25*ones(1,ceil(VS.par.nVSOMethods/2)));
+            end
+            
+            %set VS property box
+            VS.hand.PropertyBox.hPropertyGrid=uiextras.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
+            
+            for i=1:VS.par.nProps
+                VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Txt'])=uicontrol('Parent', VS.hand.PropertyBox.hPropertyGrid, 'Style','text',...
+                    'String',VS.par.VSOProp{i},'TooltipString',VS.par.VSOPropDescription{i},'HorizontalAlignment','Left');
+            end
+            VS.hand.PropertyBox.remarksEdit=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
+                'Style','text','String',VS.par.VSO.remarks); %add the remarks text
+            
+            VS.par.VSOPropVal=cell(VS.par.nProps,1);
+            for i=1:VS.par.nProps
+                VS.par.VSOPropVal{i}=VS.par.VSO.(VS.par.VSOProp{i});
+                if isa(VS.par.VSOPropVal{i},'logical')
+                    VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Check'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
+                        'Style','checkbox','value',VS.par.VSOPropVal{i},'Callback',{@CallbackChangePropertyValue,1,i});
+                elseif isa(VS.par.VSOPropVal{i},'numeric')
+                    VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Edit'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
+                        'Style','edit','String',num2str(VS.par.VSOPropVal{i}),'Callback',{@CallbackChangePropertyValue,2,i});
+                elseif ischar(VS.par.VSOPropVal{i})
+                    VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Edit'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
+                        'Style','edit','String',VS.par.VSOPropVal{i},'Callback',{@CallbackChangePropertyValue,3,i});
+                else
+                    error('One of the fields in the visual stimulation object is not a numeric, logical or string');
+                end
+            end
+            set(VS.hand.PropertyBox.hPropertyGrid,'ColumnSizes',[-2 -1],'RowSizes',[25*ones(1,VS.par.nProps) 50]);
+            
+            set(VS.hand.PropertyBox.hPropertyVBox,'Sizes',[-ceil(VS.par.nVSOMethods/2) -VS.par.nProps]);
         end
     end
 
