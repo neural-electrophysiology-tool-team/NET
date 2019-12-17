@@ -481,7 +481,7 @@ initializeVisualStim;
         if VS.par.useNewUIX %use uix for GUI layouts
             
             VS.hand.PropertyBox.hPropertyBoxPanel = uix.ScrollingPanel('Parent',VS.hand.hPropertyBox); %, 'Title','Visual stimlation object'
-            VS.hand.PropertyBox.hMethodsVBox = uix.VBox('Parent', VS.hand.PropertyBox.hPropertyBoxPanel, 'Padding', 2, 'Spacing', 5);
+            VS.hand.PropertyBox.hMethodsVBox = uix.VBox('Parent', VS.hand.PropertyBox.hPropertyBoxPanel, 'Padding', 5, 'Spacing', 5);
 
             h = 20;
             %set VS methods box
@@ -501,10 +501,10 @@ initializeVisualStim;
                 VS.hand.PropertyBox.hMethodsGrid.Widths = [-2,-1];
                 VS.hand.PropertyBox.hMethodsGrid.Heights(:) = h;
             end
-            VS.hand.PropertyBox.hMethodsVBox.Heights = VS.par.nVSOMethods*h + (VS.par.nVSOMethods+1)*2;
+            VS.hand.PropertyBox.hMethodsVBox.Heights = VS.par.nVSOMethods*h + (VS.par.nVSOMethods+1)*5;
             
             %set VS property box
-            VS.hand.PropertyBox.hPropertyVBox = uix.VBox('Parent', VS.hand.PropertyBox.hMethodsVBox, 'Padding', 2, 'Spacing', 5);
+            VS.hand.PropertyBox.hPropertyVBox = uix.VBox('Parent', VS.hand.PropertyBox.hMethodsVBox, 'Padding', 5, 'Spacing', 5);
             VS.hand.PropertyBox.hPropertyGrid = uix.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
             
             for i=1:VS.par.nProps
@@ -532,7 +532,7 @@ initializeVisualStim;
             end
             VS.hand.PropertyBox.hPropertyGrid.Widths = [-2,-1];
             VS.hand.PropertyBox.hPropertyGrid.Heights(:) = h;
-            VS.hand.PropertyBox.hPropertyVBox.Heights = VS.par.nProps*h + (VS.par.nProps+1)*2;
+            VS.hand.PropertyBox.hPropertyVBox.Heights = VS.par.nProps*h + (VS.par.nProps+1)*5;
             
             VS.hand.PropertyBox.hPropertyBoxPanel.Heights =  (VS.par.nVSOMethods+VS.par.nProps)*h + (VS.par.nVSOMethods+VS.par.nProps+1)*5;
 
