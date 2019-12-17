@@ -110,7 +110,7 @@ initializeVisualStim;
         if isunix %for visual stimulation setup
             %for working with two graphic cards on linux
             Screen('Preference', 'ScreenToHead', 0,0,0);
-            Screen('Preference', 'ScreenToHead', 1,0,0);
+%             Screen('Preference', 'ScreenToHead', 1,0,0);
             PsychTweak('UseGPUIndex',1);
         elseif ispc % this option is actually generic to situations of dual monitors on one graphics card
             if numel(VS.par.screens)>size(VS.par.screenPositionsMatlab,1)
@@ -256,6 +256,14 @@ initializeVisualStim;
     end
     function CallbackInitializeTriggersPush(hObj,event)
         VS.par.VSO.initializeTTL;
+        VS.par.VSO.sendTTL(1,true);
+        VS.par.VSO.sendTTL(2,true);
+        VS.par.VSO.sendTTL(3,true);
+        VS.par.VSO.sendTTL(4,true);
+        VS.par.VSO.sendTTL(1,false);
+        VS.par.VSO.sendTTL(2,false);
+        VS.par.VSO.sendTTL(3,false);
+        VS.par.VSO.sendTTL(4,false);
         disp('Triggers initialized');
     end
 
@@ -414,9 +422,8 @@ initializeVisualStim;
             set(VS.hand.GenealBox.ScreenbuttonGUI(VS.par.currentGUIScreen),'value',1);
             
             VS.hand.GenealBox.hInteractiveGUIparent = uipanel('Parent', VS.hand.GenealBox.hScreenVBox,'Title','VS interactive panel');
-            
-            set(VS.hand.GenealBox.hScreenVBox, 'Heights',[30 40 40 -1]);
-            
+        
+            set(VS.hand.GenealBox.hScreenVBox, 'Heights',[30 40 40 -1]);            
             set(VS.hand.GenealBox.hMainVBox, 'Heights',[50 30 30 30 30 -1]);
             
         else %use uiextras and not uix
