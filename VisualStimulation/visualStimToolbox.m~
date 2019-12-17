@@ -110,7 +110,7 @@ initializeVisualStim;
         if isunix %for visual stimulation setup
             %for working with two graphic cards on linux
             Screen('Preference', 'ScreenToHead', 0,0,0);
-            Screen('Preference', 'ScreenToHead', 1,0,0);
+%             Screen('Preference', 'ScreenToHead', 1,0,0);
             PsychTweak('UseGPUIndex',1);
         elseif ispc % this option is actually generic to situations of dual monitors on one graphics card
             if numel(VS.par.screens)>size(VS.par.screenPositionsMatlab,1)
@@ -532,9 +532,7 @@ initializeVisualStim;
             end
             VS.hand.PropertyBox.hPropertyGrid.Widths = [-2,-1];
             VS.hand.PropertyBox.hPropertyGrid.Heights(:) = h;
-            VS.hand.PropertyBox.hPropertyVBox.Heights = VS.par.nProps*h + (VS.par.nProps+1)*2;
-            
-            VS.hand.PropertyBox.hPropertyBoxPanel.Heights =  (VS.par.nVSOMethods+VS.par.nProps)*h + (VS.par.nVSOMethods+VS.par.nProps+1)*5;
+            VS.hand.PropertyBox.hPropertyBoxPanel.Heights = VS.par.nProps*h + (VS.par.nProps+1)*2;
 
         else %use uiextras and not uix
             
