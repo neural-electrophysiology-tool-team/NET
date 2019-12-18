@@ -376,7 +376,7 @@ classdef (Abstract) recAnalysis < handle
                     %check which data acquisition system was used
                     pFormat=find(strcmp(obj.recTable.Properties.VariableNames,'recFormat'));
                     obj = getCurrentObjectMeta(obj);
-                    obj.currentDataObj.samplingFrequency = obj.currentDataMeta.fs;
+%                     obj.currentDataObj.samplingFrequency = obj.currentDataMeta.fs;
                     if ~isempty(pFormat) & iscell(obj.recTable{pRec(1),pFormat})
                         recFormat=obj.recTable{pRec(1),pFormat};
                         eval(['obj.currentDataObj=' recFormat{1} '(obj.currentDataFiles);']);
@@ -486,11 +486,9 @@ classdef (Abstract) recAnalysis < handle
             else
                 str = [num2str(electrode_spacing),'_',num2str(nElectrodes_x),'x',num2str(nElectrodes_y),'_newSetup'];
                 temp = obj.currentDataFiles{1}; 
-                temp2 = strsplit(temp,filesep,'DelimiterType','RegularExpression');
-                find(temp,filesep)
-                Output = sprintfc(('%s'),temp2{1:end-1})
-                exp_folder = [temp2{1:end-1}]
-                fileID = fopen([obj.currentExpFolder,filesep,'layout.chMap'],'w');
+                temp2 = strsplit(temp,filesep);
+                exp_folder = strjoin({temp2{1:end-1}},filesep);
+                fileID = fopen([exp_folder,filesep,'layout.chMap'],'w');
                 fprintf(fileID,str);
                 fclose(fileID);
                 disp('Created layout.chMap in experiment folder based on MEA lookup table.')
