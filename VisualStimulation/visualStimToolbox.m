@@ -1,5 +1,6 @@
 function []=visualStimToolbox(varargin)
 %% Default params
+usegui = 1;
 simulationModel=false;
 initialVStim='VS_testStim';
 % PsychImaging('PrepareConfiguration');
@@ -85,14 +86,53 @@ VS.par.PTB_win=[];
 initializeScreens(simulationModel);
 
 % Create the main GUI of the visual stimulation toolbox
-createVSGUI;
+if usegui == 1
+    createVSGUI;
+    % Switch to realtime:
+    priorityLevel=MaxPriority(VS.par.PTB_win);
+    Priority(priorityLevel); %%priority is set back to regular after GUI closes
+    %initialize current visual stimulation object
+    initializeVisualStim;
+else
+    nummethods = length(VS.par.VSMethods);
+    display(strcat(['Batch Mode: ',num2str(nummethods), ' stimulations found']));
+    f = figure;
+    
+    % put the figure on top of matlab
+    set(0,'Units','Pixels');
+    desktop = com.mathworks.mde.desk.MLDesktop.getInstance;
+    desktopMainFrame = desktop.getMainFrame;
+    desktopDims = desktopMainFrame.getSize;
+    desktopW = desktopDims.getWidth;
+    desktopH = desktopDims.getHeight;
+    guipos = [0,0,desktopW,desktopH];
+    set(f,'position',guipos);
+    %%%%%
+    
+    StimBoxPanel = uix.ScrollingPanel('Parent',f);
+    ButtonBox = uix.VBox('Parent', StimBoxPanel, 'Padding', 5, 'Spacing', 5);
+    SubmitBox = uix.VBox('Parent', ButtonBox, 'Padding', 5, 'Spacing', 5);
+    
+    ButtonGrid=uix.Grid('Parent', ButtonBox, 'Padding', 5, 'Spacing', 5);
+    buts = {};
+    for j = 1:nummethods
+        buts{j} = uicontrol('Parent',ButtonGrid, ...
+                'Style','togglebutton','String',char(strcat([num2str(j),' - ',VS.par.VSMethods{j}])));
+    end
+    height  = 20; %pixels
+    numchars = max(cellfun(@length,VS.par.VSMethods))+4;   
+    set(ButtonGrid,'Widths', 5*numchars*ones(size(VS.par.VSMethods)),"Heights",height*ones(size(VS.par.VSMethods)) );
+    ButtonGrid.Heights(:) = height;
+    ButtonBox.Heights = [25,(nummethods)*height + (nummethods+1)*5];
+    waitbetween = 3;
+    uicontrol('Parent',SubmitBox, 'Style','pushbutton','String','Submit','Callback', {@CallbackLaunchBatch,buts,waitbetween});
+    set(SubmitBox, 'Heights',height);
+    StimBoxPanel.Heights =  (nummethods+1)*height + (nummethods+2)*5;
+    
+    
+    
+end
 
-% Switch to realtime:
-priorityLevel=MaxPriority(VS.par.PTB_win);
-Priority(priorityLevel); %%priority is set back to regular after GUI closes
-
-%initialize current visual stimulation object
-initializeVisualStim;
 %% %%%%%%%%%%%%%%%% Nested functions (only header) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%%%%%%%%% Initialize PTB Screen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -189,6 +229,7 @@ initializeVisualStim;
         updateVisualStimBoxGUI;
 
     end
+
 %% %%%%%%%%%%%%%%%%%%%%%%%%%% Callbacks %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function changeSaveDirectory(hObj,event)
@@ -239,6 +280,37 @@ initializeVisualStim;
         
         
     end
+    
+    function CallbackLaunchBatch(hObj,event,buts,waitbetween);
+        selectedstims = VS.par.VSMethods(arrayfun(@(x) buts{x}.Value == 1, 1:numel(buts)));
+        numselected = length(selectedstims);
+        for i = 1:numselected
+            
+            stimname = selectedstims{i};
+            
+            if isfield(VS.par,'VSO')
+                VS.par.VSO.cleanUp; %clean old Vstim object
+            end
+            
+            VS.par.VSO=eval([stimname,'(VS.par.PTB_win)']);
+            
+            %get properties of visual stimulation object
+            VSControlMethods=VS.par.VSO.getVSControlMethods;
+            VS.par.VSOMethod=VSControlMethods.methodName;
+            VS.par.VSOMethodDescription=VSControlMethods.methodDescription;
+            VS.par.nVSOMethods=numel(VS.par.VSOMethod);
+            
+            %get methods of visual stimulation object
+            props=VS.par.VSO.getProperties;
+            VS.par.VSOProp=props.publicPropName;
+            VS.par.VSOPropDescription=props.publicPropDescription;
+            VS.par.nProps=numel(VS.par.VSOProp);
+            
+            pause(waitbetween)
+            VS.par.VSO=VS.par.VSO.run;
+        end
+    end
+
 
     function CallbackEstimateStimDurationPush(hObj,event)
         estimatedTime=VS.par.VSO.estimateProtocolDuration;

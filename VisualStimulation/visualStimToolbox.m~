@@ -1,5 +1,6 @@
 function []=visualStimToolbox(varargin)
 %% Default params
+usegui = 1;
 simulationModel=false;
 initialVStim='VS_testStim';
 % PsychImaging('PrepareConfiguration');
@@ -85,14 +86,53 @@ VS.par.PTB_win=[];
 initializeScreens(simulationModel);
 
 % Create the main GUI of the visual stimulation toolbox
-createVSGUI;
+if usegui == 1
+    createVSGUI;
+    % Switch to realtime:
+    priorityLevel=MaxPriority(VS.par.PTB_win);
+    Priority(priorityLevel); %%priority is set back to regular after GUI closes
+    %initialize current visual stimulation object
+    initializeVisualStim;
+else
+    nummethods = length(VS.par.VSMethods);
+    display(strcat(['Batch Mode: ',num2str(nummethods), ' stimulations found']));
+    f = figure;
+    
+    % put the figure on top of matlab
+    set(0,'Units','Pixels');
+    desktop = com.mathworks.mde.desk.MLDesktop.getInstance;
+    desktopMainFrame = desktop.getMainFrame;
+    desktopDims = desktopMainFrame.getSize;
+    desktopW = desktopDims.getWidth;
+    desktopH = desktopDims.getHeight;
+    guipos = [0,0,desktopW,desktopH];
+    set(f,'position',guipos);
+    %%%%%
+    
+    StimBoxPanel = uix.ScrollingPanel('Parent',f);
+    ButtonBox = uix.VBox('Parent', StimBoxPanel, 'Padding', 5, 'Spacing', 5);
+    SubmitBox = uix.VBox('Parent', ButtonBox, 'Padding', 5, 'Spacing', 5);
+    
+    ButtonGrid=uix.Grid('Parent', ButtonBox, 'Padding', 5, 'Spacing', 5);
+    buts = {};
+    for j = 1:nummethods
+        buts{j} = uicontrol('Parent',ButtonGrid, ...
+                'Style','togglebutton','String',char(strcat([num2str(j),' - ',VS.par.VSMethods{j}])));
+    end
+    height  = 20; %pixels
+    numchars = max(cellfun(@length,VS.par.VSMethods))+4;   
+    set(ButtonGrid,'Widths', 5*numchars*ones(size(VS.par.VSMethods)),"Heights",height*ones(size(VS.par.VSMethods)) );
+    ButtonGrid.Heights(:) = height;
+    ButtonBox.Heights = [25,(nummethods)*height + (nummethods+1)*5];
+    waitbetween = 3;
+    uicontrol('Parent',SubmitBox, 'Style','pushbutton','String','Submit','Callback', {@CallbackLaunchBatch,buts,waitbetween});
+    set(SubmitBox, 'Heights',height);
+    StimBoxPanel.Heights =  (nummethods+1)*height + (nummethods+2)*5;
+    
+    
+    
+end
 
-% Switch to realtime:
-priorityLevel=MaxPriority(VS.par.PTB_win);
-Priority(priorityLevel); %%priority is set back to regular after GUI closes
-
-%initialize current visual stimulation object
-initializeVisualStim;
 %% %%%%%%%%%%%%%%%% Nested functions (only header) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%%%%%%%%% Initialize PTB Screen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -189,6 +229,7 @@ initializeVisualStim;
         updateVisualStimBoxGUI;
 
     end
+
 %% %%%%%%%%%%%%%%%%%%%%%%%%%% Callbacks %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function changeSaveDirectory(hObj,event)
@@ -239,6 +280,37 @@ initializeVisualStim;
         
         
     end
+    
+    function CallbackLaunchBatch(hObj,event,buts,waitbetween);
+        selectedstims = VS.par.VSMethods{find(arrayfun(@(x) buts{x}.Value == 1, 1:numel(buts)))};
+        numselected = length(selectedstims);
+        for i = 1:numselected
+            
+            stimname = selectedstims{i};
+            
+            if isfield(VS.par,'VSO')
+                VS.par.VSO.cleanUp; %clean old Vstim object
+            end
+            
+            VS.par.VSO=eval([stimname,'(VS.par.PTB_win)']);
+            
+            %get properties of visual stimulation object
+            VSControlMethods=VS.par.VSO.getVSControlMethods;
+            VS.par.VSOMethod=VSControlMethods.methodName;
+            VS.par.VSOMethodDescription=VSControlMethods.methodDescription;
+            VS.par.nVSOMethods=numel(VS.par.VSOMethod);
+            
+            %get methods of visual stimulation object
+            props=VS.par.VSO.getProperties;
+            VS.par.VSOProp=props.publicPropName;
+            VS.par.VSOPropDescription=props.publicPropDescription;
+            VS.par.nProps=numel(VS.par.VSOProp);
+            
+            pause(waitbetween)
+            VS.par.VSO=VS.par.VSO.run;
+        end
+    end
+
 
     function CallbackEstimateStimDurationPush(hObj,event)
         estimatedTime=VS.par.VSO.estimateProtocolDuration;
@@ -256,6 +328,14 @@ initializeVisualStim;
     end
     function CallbackInitializeTriggersPush(hObj,event)
         VS.par.VSO.initializeTTL;
+        VS.par.VSO.sendTTL(1,true);
+        VS.par.VSO.sendTTL(2,true);
+        VS.par.VSO.sendTTL(3,true);
+        VS.par.VSO.sendTTL(4,true);
+        VS.par.VSO.sendTTL(1,false);
+        VS.par.VSO.sendTTL(2,false);
+        VS.par.VSO.sendTTL(3,false);
+        VS.par.VSO.sendTTL(4,false);
         disp('Triggers initialized');
     end
 
@@ -414,9 +494,8 @@ initializeVisualStim;
             set(VS.hand.GenealBox.ScreenbuttonGUI(VS.par.currentGUIScreen),'value',1);
             
             VS.hand.GenealBox.hInteractiveGUIparent = uipanel('Parent', VS.hand.GenealBox.hScreenVBox,'Title','VS interactive panel');
-            
-            set(VS.hand.GenealBox.hScreenVBox, 'Heights',[30 40 40 -1]);
-            
+        
+            set(VS.hand.GenealBox.hScreenVBox, 'Heights',[30 40 40 -1]);            
             set(VS.hand.GenealBox.hMainVBox, 'Heights',[50 30 30 30 30 -1]);
             
         else %use uiextras and not uix
@@ -481,7 +560,7 @@ initializeVisualStim;
         if VS.par.useNewUIX %use uix for GUI layouts
             
             VS.hand.PropertyBox.hPropertyBoxPanel = uix.ScrollingPanel('Parent',VS.hand.hPropertyBox); %, 'Title','Visual stimlation object'
-            VS.hand.PropertyBox.hMethodsVBox = uix.VBox('Parent', VS.hand.PropertyBox.hPropertyBoxPanel, 'Padding', 2, 'Spacing', 5);
+            VS.hand.PropertyBox.hMethodsVBox = uix.VBox('Parent', VS.hand.PropertyBox.hPropertyBoxPanel, 'Padding', 5, 'Spacing', 5);
 
             h = 20;
             %set VS methods box
@@ -501,10 +580,10 @@ initializeVisualStim;
                 VS.hand.PropertyBox.hMethodsGrid.Widths = [-2,-1];
                 VS.hand.PropertyBox.hMethodsGrid.Heights(:) = h;
             end
-            VS.hand.PropertyBox.hMethodsVBox.Heights = VS.par.nVSOMethods*h + (VS.par.nVSOMethods+1)*2;
+            VS.hand.PropertyBox.hMethodsVBox.Heights = VS.par.nVSOMethods*h + (VS.par.nVSOMethods+1)*5;
             
             %set VS property box
-            VS.hand.PropertyBox.hPropertyVBox = uix.VBox('Parent', VS.hand.PropertyBox.hMethodsVBox, 'Padding', 2, 'Spacing', 5);
+            VS.hand.PropertyBox.hPropertyVBox = uix.VBox('Parent', VS.hand.PropertyBox.hMethodsVBox, 'Padding', 5, 'Spacing', 5);
             VS.hand.PropertyBox.hPropertyGrid = uix.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
             
             for i=1:VS.par.nProps
@@ -532,56 +611,58 @@ initializeVisualStim;
             end
             VS.hand.PropertyBox.hPropertyGrid.Widths = [-2,-1];
             VS.hand.PropertyBox.hPropertyGrid.Heights(:) = h;
-            VS.hand.PropertyBox.hPropertyBoxPanel.Heights = VS.par.nProps*h + (VS.par.nProps+1)*2;
+            VS.hand.PropertyBox.hPropertyVBox.Heights = VS.par.nProps*h + (VS.par.nProps+1)*5;
+            
+            VS.hand.PropertyBox.hPropertyBoxPanel.Heights =  (VS.par.nVSOMethods+VS.par.nProps)*h + (VS.par.nVSOMethods+VS.par.nProps+1)*5;
 
         else %use uiextras and not uix
             
-%             VS.hand.PropertyBox.hPropertyBoxPanel = uiextras.Panel('Parent',VS.hand.hPropertyBox, 'Title','Visual stimulation object');
-%             VS.hand.PropertyBox.hPropertyVBox = uiextras.VBox('Parent', VS.hand.PropertyBox.hPropertyBoxPanel, 'Padding', 2, 'Spacing', 5);
-%             
-%             %set VS methods box
-%             VS.hand.PropertyBox.hMethodsGrid=uiextras.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
-%             
-%             VSOcopy=VS.par.VSO; %For some reason, it is not possible to send a object that is part of a structure as callback
-%             
-%             if VS.par.nVSOMethods>0
-%                 for i=1:VS.par.nVSOMethods
-%                     VS.hand.PropertyBox.(['h' VS.par.VSOMethod{i} 'Push'])=uicontrol('Parent', VS.hand.PropertyBox.hMethodsGrid, 'Style','push',...
-%                         'String',VS.par.VSOMethod{i}(3:end),'TooltipString',VS.par.VSOMethodDescription{i},'HorizontalAlignment','Left');
-%                     eval(['set(VS.hand.PropertyBox.h' VS.par.VSOMethod{i} 'Push,''Callback'',@(src,event)' VS.par.VSOMethod{i} '(VSOcopy,src,event,VS.hand.GenealBox.hInteractiveGUIparent));']);
-%                 end
-%                 set(VS.hand.PropertyBox.hMethodsGrid,'ColumnSizes',[-1 -1],'RowSizes',25*ones(1,ceil(VS.par.nVSOMethods/2)));
-%             end
-%             
-%             %set VS property box
-%             VS.hand.PropertyBox.hPropertyGrid=uiextras.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
-%             
-%             for i=1:VS.par.nProps
-%                 VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Txt'])=uicontrol('Parent', VS.hand.PropertyBox.hPropertyGrid, 'Style','text',...
-%                     'String',VS.par.VSOProp{i},'TooltipString',VS.par.VSOPropDescription{i},'HorizontalAlignment','Left');
-%             end
-%             VS.hand.PropertyBox.remarksEdit=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
-%                 'Style','text','String',VS.par.VSO.remarks); %add the remarks text
-%             
-%             VS.par.VSOPropVal=cell(VS.par.nProps,1);
-%             for i=1:VS.par.nProps
-%                 VS.par.VSOPropVal{i}=VS.par.VSO.(VS.par.VSOProp{i});
-%                 if isa(VS.par.VSOPropVal{i},'logical')
-%                     VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Check'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
-%                         'Style','checkbox','value',VS.par.VSOPropVal{i},'Callback',{@CallbackChangePropertyValue,1,i});
-%                 elseif isa(VS.par.VSOPropVal{i},'numeric')
-%                     VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Edit'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
-%                         'Style','edit','String',num2str(VS.par.VSOPropVal{i}),'Callback',{@CallbackChangePropertyValue,2,i});
-%                 elseif ischar(VS.par.VSOPropVal{i})
-%                     VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Edit'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
-%                         'Style','edit','String',VS.par.VSOPropVal{i},'Callback',{@CallbackChangePropertyValue,3,i});
-%                 else
-%                     error('One of the fields in the visual stimulation object is not a numeric, logical or string');
-%                 end
-%             end
-%             set(VS.hand.PropertyBox.hPropertyGrid,'ColumnSizes',[-2 -1],'RowSizes',[25*ones(1,VS.par.nProps) 50]);
-%             
-%             set(VS.hand.PropertyBox.hPropertyVBox,'Sizes',[-ceil(VS.par.nVSOMethods/2) -VS.par.nProps]);
+            VS.hand.PropertyBox.hPropertyBoxPanel = uiextras.Panel('Parent',VS.hand.hPropertyBox, 'Title','Visual stimulation object');
+            VS.hand.PropertyBox.hPropertyVBox = uiextras.VBox('Parent', VS.hand.PropertyBox.hPropertyBoxPanel, 'Padding', 2, 'Spacing', 5);
+            
+            %set VS methods box
+            VS.hand.PropertyBox.hMethodsGrid=uiextras.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
+            
+            VSOcopy=VS.par.VSO; %For some reason, it is not possible to send a object that is part of a structure as callback
+            
+            if VS.par.nVSOMethods>0
+                for i=1:VS.par.nVSOMethods
+                    VS.hand.PropertyBox.(['h' VS.par.VSOMethod{i} 'Push'])=uicontrol('Parent', VS.hand.PropertyBox.hMethodsGrid, 'Style','push',...
+                        'String',VS.par.VSOMethod{i}(3:end),'TooltipString',VS.par.VSOMethodDescription{i},'HorizontalAlignment','Left');
+                    eval(['set(VS.hand.PropertyBox.h' VS.par.VSOMethod{i} 'Push,''Callback'',@(src,event)' VS.par.VSOMethod{i} '(VSOcopy,src,event,VS.hand.GenealBox.hInteractiveGUIparent));']);
+                end
+                set(VS.hand.PropertyBox.hMethodsGrid,'ColumnSizes',[-1 -1],'RowSizes',25*ones(1,ceil(VS.par.nVSOMethods/2)));
+            end
+            
+            %set VS property box
+            VS.hand.PropertyBox.hPropertyGrid=uiextras.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
+            
+            for i=1:VS.par.nProps
+                VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Txt'])=uicontrol('Parent', VS.hand.PropertyBox.hPropertyGrid, 'Style','text',...
+                    'String',VS.par.VSOProp{i},'TooltipString',VS.par.VSOPropDescription{i},'HorizontalAlignment','Left');
+            end
+            VS.hand.PropertyBox.remarksEdit=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
+                'Style','text','String',VS.par.VSO.remarks); %add the remarks text
+            
+            VS.par.VSOPropVal=cell(VS.par.nProps,1);
+            for i=1:VS.par.nProps
+                VS.par.VSOPropVal{i}=VS.par.VSO.(VS.par.VSOProp{i});
+                if isa(VS.par.VSOPropVal{i},'logical')
+                    VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Check'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
+                        'Style','checkbox','value',VS.par.VSOPropVal{i},'Callback',{@CallbackChangePropertyValue,1,i});
+                elseif isa(VS.par.VSOPropVal{i},'numeric')
+                    VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Edit'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
+                        'Style','edit','String',num2str(VS.par.VSOPropVal{i}),'Callback',{@CallbackChangePropertyValue,2,i});
+                elseif ischar(VS.par.VSOPropVal{i})
+                    VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Edit'])=uicontrol('Parent',VS.hand.PropertyBox.hPropertyGrid, ...
+                        'Style','edit','String',VS.par.VSOPropVal{i},'Callback',{@CallbackChangePropertyValue,3,i});
+                else
+                    error('One of the fields in the visual stimulation object is not a numeric, logical or string');
+                end
+            end
+            set(VS.hand.PropertyBox.hPropertyGrid,'ColumnSizes',[-2 -1],'RowSizes',[25*ones(1,VS.par.nProps) 50]);
+            
+            set(VS.hand.PropertyBox.hPropertyVBox,'Sizes',[-ceil(VS.par.nVSOMethods/2) -VS.par.nProps]);
         end
     end
 
