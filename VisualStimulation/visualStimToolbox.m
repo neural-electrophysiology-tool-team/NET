@@ -1,6 +1,6 @@
 function []=visualStimToolbox(varargin)
 %% Default params
-usegui = 1;
+batchmode = 0;
 simulationModel=false;
 initialVStim='VS_testStim';
 % PsychImaging('PrepareConfiguration');
@@ -84,9 +84,46 @@ VS.par.currentPTBScreen=2; %the default monitor to display the visual stimulatio
 %initialize Psychophysics toolbox screens
 VS.par.PTB_win=[];
 initializeScreens(simulationModel);
+function hlist = reorderlist(hfig, items)
+
+    hlist = uicontrol('Parent', hfig, 'style', 'listbox', 'string', items);
+
+    set(hlist, 'units', 'norm', 'position', [0 0 0.75 1])
+
+    promote = uicontrol('Parent', hfig, 'String', '^');
+    set(promote, 'units', 'norm', 'position', [0.8 0.75 0.15 0.15])
+
+    demote = uicontrol('Parent', hfig, 'String', 'v');
+    set(demote, 'units', 'norm', 'position', [0.8 0.55 0.15 0.15])
+
+    % Set button callbacks
+    set(promote, 'Callback', @(s,e)moveitem(1))
+    set(demote, 'Callback', @(s,e)moveitem(-1))
+
+    function moveitem(increment)
+        % Get the existing items and the current item
+        items = get(hlist, 'string');
+        current = get(hlist, 'value');
+
+        toswap = current - increment;
+
+        % Ensure that we aren't already at the top/bottom
+        if toswap < 1 || toswap > numel(items)
+            return
+        end
+
+        % Swap the two entries that need to be swapped
+        inds = [current, toswap];
+        items(inds) = flipud(items(inds));
+
+        % Update the order and the selected item
+        set(hlist, 'string', items);
+        set(hlist, 'value', toswap)
+    end
+end
 
 % Create the main GUI of the visual stimulation toolbox
-if usegui == 1
+if batchmode == 0
     createVSGUI;
     % Switch to realtime:
     priorityLevel=MaxPriority(VS.par.PTB_win);
@@ -112,7 +149,8 @@ else
     StimBoxPanel = uix.ScrollingPanel('Parent',f);
     ButtonBox = uix.VBox('Parent', StimBoxPanel, 'Padding', 5, 'Spacing', 5);
     SubmitBox = uix.VBox('Parent', ButtonBox, 'Padding', 5, 'Spacing', 5);
-    
+   
+
     ButtonGrid=uix.Grid('Parent', ButtonBox, 'Padding', 5, 'Spacing', 5);
     buts = {};
     for j = 1:nummethods
@@ -125,6 +163,9 @@ else
     ButtonGrid.Heights(:) = height;
     ButtonBox.Heights = [25,(nummethods)*height + (nummethods+1)*5];
     waitbetween = 3;
+    ListBoxPanel = uix.ScrollingPanel('Parent',f);
+    ListBox = uix.VBox('Parent', ListBoxPanel, 'Padding', 5, 'Spacing', 5);
+    hlist = reorderlist(ButtonBox, buts); %This is empty in the beginning. Problem.
     uicontrol('Parent',SubmitBox, 'Style','pushbutton','String','Submit','Callback', {@CallbackLaunchBatch,buts,waitbetween});
     set(SubmitBox, 'Heights',height);
     StimBoxPanel.Heights =  (nummethods+1)*height + (nummethods+2)*5;
