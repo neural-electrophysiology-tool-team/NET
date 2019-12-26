@@ -103,7 +103,7 @@ classdef VS_mrGratingsFullField < VStim
             
             [width, height]=Screen('WindowSize', obj.PTB_win);
             
-            mask = ones(width,height,2)*0;
+            mask = ones(width*3,height*3,2)*0;
             masktex=Screen('MakeTexture', obj.PTB_win, mask);
             
             % Calculate parameters of the Sinusoid
@@ -115,8 +115,8 @@ classdef VS_mrGratingsFullField < VStim
             fr=(1/obj.grating_width)*2*pi;
             
             if obj.visualFieldDiameter==0
-                visiblesize = height+1;
-                maskRadius = height/2;
+                visiblesize = height*3+1;
+                maskRadius = (height*3)/2;
             else
                 visiblesize=obj.visualFieldDiameter+1;
                 maskRadius = obj.visualFieldDiameter/2;

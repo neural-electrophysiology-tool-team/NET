@@ -55,12 +55,10 @@ classdef VS_mrSpotsFullField < VStim
 
             % Update image buffer for the first time
             obj.syncMarkerOn = false; %reset sync marker
-            Screen('FillRect',obj.PTB_win,obj.flashLuminosity,obj.visualFieldRect);
-%             obj.applyBackgound;  %set background mask and finalize drawing (drawing finished)
-                        
+            Screen('FillRect',obj.PTB_win,obj.flashLuminosity,obj.rect);                        
             %main loop - start the session
           
-            Screen('FillRect',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
+            Screen('FillRect',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.rect);
 
             %Start the code that sends the experiment to the screen
             obj.sendTTL(1,true); %channel 1 is for start/stop of experiment        
@@ -76,7 +74,7 @@ classdef VS_mrSpotsFullField < VStim
                 WaitSecs(obj.delay);
                 
                 % switch to white screen:
-                Screen('FillRect',obj.PTB_win, obj.flashLuminosity, obj.visualFieldRect);
+                Screen('FillRect',obj.PTB_win, obj.flashLuminosity, obj.rect);
                 
                 obj.sendTTL(3,true);
                 Screen('Flip', obj.PTB_win);
@@ -94,7 +92,7 @@ classdef VS_mrSpotsFullField < VStim
                 WaitSecs(obj.stimDuration);
 
                 % switch back to black screen:
-                Screen('FillRect',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
+                Screen('FillRect',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.rect);
                 
                 obj.sendTTL(3,true);
                 Screen('Flip', obj.PTB_win);

@@ -153,6 +153,8 @@ else
 
     ButtonGrid=uix.Grid('Parent', ButtonBox, 'Padding', 5, 'Spacing', 5);
     buts = {};
+    buts{1} = uicontrol('Parent',ButtonGrid, ...
+                'Style','togglebutton','String','No Stimulation Selected');
     for j = 1:nummethods
         buts{j} = uicontrol('Parent',ButtonGrid, ...
                 'Style','togglebutton','String',char(strcat([num2str(j),' - ',VS.par.VSMethods{j}])));
