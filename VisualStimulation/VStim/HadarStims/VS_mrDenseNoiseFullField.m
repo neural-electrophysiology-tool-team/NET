@@ -160,7 +160,7 @@ classdef VS_mrDenseNoiseFullField < VStim
             baseRect = [0 0 xSizeNoisePxls ySizeNoisePxls];
             
             if obj.reporter_square
-                repSq = [screenXpixels-obj.syncSquareSizePix screenYpixels-obj.syncSquareSizePix screenXpixels screenYpixels];
+                repSq = [0 screenYpixels-obj.syncSquareSizePix obj.syncSquareSizePix screenYpixels];
             end
             
             xPos = repelem(0:realXNoisePxls-1,realYNoisePxls);

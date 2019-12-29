@@ -87,28 +87,28 @@ initializeScreens(simulationModel);
 function hlist = reorderlist(hObj,event,hfig, buts)
     
     ListBoxPanel = uix.ScrollingPanel('Parent',hfig);
-%     ButtonBoxPanel = uix.Panel('Parent',hfig);
+    ButtonBoxPanel = uix.Panel('Parent',hfig);
     ListBox = uix.VBox('Parent', ListBoxPanel, 'Padding', 5, 'Spacing', 5);
-    ListButtonBox  = uix.VBox('Parent', ListBox, 'Padding', 5, 'Spacing', 5);
+    ButtonBox  = uix.VBox('Parent', ButtonBoxPanel, 'Padding', 5, 'Spacing', 5);
     set(ListBox, 'units', 'norm', 'position', [0 0 0.75 1])
-    set(ListButtonBox, 'units', 'norm', 'position', [0.8 0 1 1])
+    
     items = VS.par.VSMethods(arrayfun(@(x) buts{x}.Value == 1, 1:numel(buts)));
     
     hlist = uicontrol('Parent', ListBox, 'style', 'listbox', 'string', items);
 
-    set(hlist, 'units', 'norm', 'position', [0 0 0.75 1])
+%     set(hlist, 'units', 'norm', 'position', [0 0 0.75 1])
 
-    promote = uicontrol('Parent', ListButtonBox, 'String', '^');
-%     set(promote, 'units', 'norm', 'position', [0.8 1 0.1 0.10])
+    promote = uicontrol('Parent', ListBox, 'String', '^');
+    set(promote, 'units', 'norm', 'position', [0.8 0.75 0.15 0.15])
 
-    demote = uicontrol('Parent', ListButtonBox, 'String', 'v');
-%     set(demote, 'units', 'norm', 'position', [0.8 0.75 0.1 0.10])
+    demote = uicontrol('Parent', ListBox, 'String', 'v');
+    set(demote, 'units', 'norm', 'position', [0.8 0.55 0.15 0.15])
 
-    duplicate = uicontrol('Parent',ListButtonBox,'String','+'); 
-%     set(duplicate, 'units', 'norm', 'position', [0.8 0.50 0.1 0.10])
+    duplicate = uicontrol('Parent',ListBox,'String','+'); 
+    set(duplicate, 'units', 'norm', 'position', [0.8 0.35 0.15 0.15])
     
-    runbatch = uicontrol('Parent',ListButtonBox,'String','>');
-%     set(runbatch, 'units', 'norm', 'position', [0.8 0.25 0.1 0.10])
+    runbatch = uicontrol('Parent',ListBox,'String','>');
+    set(runbatch, 'units', 'norm', 'position', [0.8 0.15 0.15 0.15])
     
     % Set button callbacks
     set(promote, 'Callback', @(s,e)moveitem(1))
@@ -151,8 +151,9 @@ function hlist = reorderlist(hObj,event,hfig, buts)
     end
     
     function LaunchBatch()
-        waitbetween = 30; %Wait 30 seconds between stimulations
+        waitbetween = 3;
         selectedstims = get(hlist, 'string');
+        %         selectedstims = VS.par.VSMethods(arrayfun(@(x) buts{x}.Value == 1, 1:numel(buts)));
         numselected = length(selectedstims);
         for i = 1:numselected
             
@@ -213,32 +214,19 @@ else
     SubmitBox = uix.VBox('Parent', ButtonBox, 'Padding', 5, 'Spacing', 5);
     ButtonGrid=uix.Grid('Parent', ButtonBox, 'Padding', 5, 'Spacing', 5);
     
-    % Search for methods with Batch in the name
-    methods={};
-    c = 1;
-    for j = 1:nummethods
-        if contains(VS.par.VSMethods{j},'Batch')
-            methods{c} = VS.par.VSMethods{j};
-            c = c+1;
-        end
-    end
-    nummethods = length(methods);
-    display(strcat(['Batch Mode: ',num2str(nummethods), ' batch stimulations found']));
     buts = {};
-    if ~isempty(methods)
-        for j = 1:nummethods
-            buts{j} = uicontrol('Parent',ButtonGrid, ...
-                    'Style','togglebutton','String',strcat([num2str(j),' - ',methods{j}]));
-        end
-        height  = 20; %pixels
-        numchars = max(cellfun(@length,methods))+4;   
-        set(ButtonGrid,'Widths', 5*numchars*ones(size(methods)),"Heights",height*ones(size(methods)) );
-        ButtonGrid.Heights(:) = height;
-        ButtonBox.Heights = [25,(nummethods)*height + (nummethods+1)*5];
-        uicontrol('Parent',SubmitBox, 'Style','pushbutton','String','Submit','Callback', {@reorderlist,f,buts});
-        set(SubmitBox, 'Heights',height);
-        StimBoxPanel.Heights =  (nummethods+1)*height + (nummethods+2)*5;
+    for j = 1:nummethods
+        buts{j} = uicontrol('Parent',ButtonGrid, ...
+                'Style','togglebutton','String',char(strcat([num2str(j),' - ',VS.par.VSMethods{j}])));
     end
+    height  = 20; %pixels
+    numchars = max(cellfun(@length,VS.par.VSMethods))+4;   
+    set(ButtonGrid,'Widths', 5*numchars*ones(size(VS.par.VSMethods)),"Heights",height*ones(size(VS.par.VSMethods)) );
+    ButtonGrid.Heights(:) = height;
+    ButtonBox.Heights = [25,(nummethods)*height + (nummethods+1)*5];
+    uicontrol('Parent',SubmitBox, 'Style','pushbutton','String','Submit','Callback', {@reorderlist,f,buts});
+    set(SubmitBox, 'Heights',height);
+    StimBoxPanel.Heights =  (nummethods+1)*height + (nummethods+2)*5;
 end
 
 %% %%%%%%%%%%%%%%%% Nested functions (only header) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
