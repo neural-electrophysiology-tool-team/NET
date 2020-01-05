@@ -33,7 +33,7 @@ h1=axes('Parent',hVBox);
 h2=axes('Parent',hVBox);
 set( hVBox, 'Heights', [-1 -1] );
 
-[PCAFeatureSimMat,PCAspikeFeatures] = princomp(spikeFeatures); %run PCA for visualization purposes
+[PCAFeatureSimMat,PCAspikeFeatures] = pca(spikeFeatures); %run PCA for visualization purposes
 sPC1=median(abs(  PCAspikeFeatures(:,1)-median(PCAspikeFeatures(:,1))  )) / 0.6745;
 sPC2=median(abs(  PCAspikeFeatures(:,2)-median(PCAspikeFeatures(:,2))  )) / 0.6745;
 pOutliers=find( PCAspikeFeatures(:,1)>rejectPCAStd*sPC1 | PCAspikeFeatures(:,1)<-rejectPCAStd*sPC1 | PCAspikeFeatures(:,2)>rejectPCAStd*sPC2 | PCAspikeFeatures(:,2)<-rejectPCAStd*sPC2);
