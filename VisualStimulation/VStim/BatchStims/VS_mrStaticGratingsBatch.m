@@ -4,7 +4,7 @@ classdef VS_mrStaticGratingsBatch < VStim
         grating_width   = [7 13 20];     %pixel/cycle, choose sp=225, tp=5 for 30deg/s at 60x
         temporalFreq    = 2;       %cycles/sec
         txtSmaskRadius  = 500;	%radius of circular mask
-        txtSnumDirs     = nan;
+        txtSnumDirs     = 8;
         txtSnumTrials   = 4;
         txtSduration    = 4;       %txtSduration in secs
         txtSpreStimWait = 0.5;

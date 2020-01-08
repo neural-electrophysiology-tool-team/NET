@@ -168,7 +168,7 @@ classdef VS_mrGratingsMask < VStim
             for trial=1:length(directions)
                 direction=directions(trial);
                 direction=mod((direction+180),360);               
-                
+                obj.sendTTL(2,true)
                 i=0;
                 WaitSecs(obj.delay);
                 vbl=Screen('Flip', obj.PTB_win);
