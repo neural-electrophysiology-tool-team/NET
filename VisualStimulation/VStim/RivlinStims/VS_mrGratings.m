@@ -210,6 +210,7 @@ classdef VS_mrGratings < VStim
                         Screen('Flip',obj.PTB_win);
                         obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
 %                         WaitSecs(obj.interTrialDelay);
+                        obj.sendTTL(1,false);
                         disp('Trial ended early');
                         return
                     end
@@ -218,7 +219,8 @@ classdef VS_mrGratings < VStim
                 Screen('Flip', obj.PTB_win);
                 WaitSecs(obj.interTrialWait);%pause to allow recording device to prepare for new trial
                 obj.sendTTL(2,false);
-                disp(['Direction ' num2str(trial) '/' num2str(obj.nTrials*obj.nDirections)]);
+                disp(['Direction ' num2str(trial) '/' num2str(obj.nTrials*obj.nDirections),...
+                    ' (',num2str(direction),')']);
             end
             obj.applyBackgound;
             Screen('Flip', obj.PTB_win);
