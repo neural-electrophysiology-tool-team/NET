@@ -57,10 +57,10 @@ classdef (Abstract) VStim < handle
         binaryMultiplicator = [1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384 32768]; %512 1024 2048 4096 8192 16384 32768
         currentBinState     = [false false false false false false false false false false false false false false false false]; %false false false false false false false
         io %parallel port communication object for PC
-        pixelmicronratio    = 100 / 13 ; % microns / pixels
+        pixelmicronratio    = 7.5 ; % microns / pixels
         parallelPortNum     =  hex2dec('EFF8')%888; %Parallel port default number
-        displaySyncSignal   = true;
-        pixelConversionFactor = 100/13; %microns per pixel
+        displaySyncSignal   = false;
+        pixelConversionFactor = 7.5; %microns per pixel
         sendMailTo %mail adresses to which a notificaion will be sent at the end of the stimulation (if sendMail=true)
         stimSavePath = "C:\Stimulations\"
         PTB_win                         %Pointer to PTB window
