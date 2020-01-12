@@ -211,7 +211,8 @@ classdef VS_mrGratingsMask < VStim
                 Screen('Flip', obj.PTB_win);
                 WaitSecs(obj.interTrialWait);%pause to allow recording device to prepare for new trial
                 obj.sendTTL(2,false);
-                disp(['Direction ' num2str(trial) '/' num2str(obj.nTrials*obj.nDirections)]);
+                disp(['Direction ' num2str(trial) '/' num2str(obj.nTrials*obj.nDirections),...
+                    ' (',num2str(direction),')']);
             end
             obj.applyBackgound;
             Screen('Flip', obj.PTB_win);
