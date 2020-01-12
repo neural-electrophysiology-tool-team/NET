@@ -124,7 +124,8 @@ classdef VS_mrMovingBars < VStim
                     maskradius = maskradius-(obj.barSpeed/frame_rate);
                 end
                 obj.sendTTL(2,false);
-                disp(['Direction ' num2str(trial) '/' num2str(obj.nTrials*obj.nDirections)]);
+                disp(['Direction ' num2str(trial) '/' num2str(obj.nTrials*obj.nDirections),...
+                    ' (',num2str(direction),')']);
                 WaitSecs(obj.interTrialWait);%pause to allow recording device to prepare for new trial
             end
             Screen('FillRect', obj.PTB_win, screen_full_color, []);
