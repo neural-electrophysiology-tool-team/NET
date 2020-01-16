@@ -652,7 +652,13 @@ end
                         'String',VS.par.VSOMethod{i}(3:end),'TooltipString',VS.par.VSOMethodDescription{i},'HorizontalAlignment','Left');
                     eval(['set(VS.hand.PropertyBox.h' VS.par.VSOMethod{i} 'Push,''Callback'',@(src,event)' VS.par.VSOMethod{i} '(VSOcopy,src,event,VS.hand.GenealBox.hInteractiveGUIparent));']);
                 end
-                VS.hand.PropertyBox.hMethodsGrid.Widths = [-2,-1];
+                
+                if size(VS.hand.PropertyBox.hMethodsGrid.Widths,1)>1
+                    VS.hand.PropertyBox.hMethodsGrid.Widths = [-2,-1];
+                else
+                    VS.hand.PropertyBox.hMethodsGrid.Widths = [-1];
+                end
+                
                 VS.hand.PropertyBox.hMethodsGrid.Heights(:) = h;
             end
             VS.hand.PropertyBox.hMethodsVBox.Heights = VS.par.nVSOMethods*h + (VS.par.nVSOMethods+1)*5;
