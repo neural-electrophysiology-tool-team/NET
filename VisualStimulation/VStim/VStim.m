@@ -58,7 +58,7 @@ classdef (Abstract) VStim < handle
         currentBinState = [false false false false false false false false false false false false false false false false]; %false false false false false false false
         io %parallel port communication object for PC
         pixelmicronratio = 100 / 13 ; % microns / pixels
-        parallelPortNum =  hex2dec('EFF8')%888; %Parallel port default number
+        parallelPortNum =  hex2dec('037F')%888; %Parallel port default number
         displaySyncSignal=true;
         pixelConversionFactor = 100/13; %microns per pixel
         sendMailTo %mail adresses to which a notificaion will be sent at the end of the stimulation (if sendMail=true)
