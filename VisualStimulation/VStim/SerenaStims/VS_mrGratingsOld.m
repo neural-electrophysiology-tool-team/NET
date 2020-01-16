@@ -4,7 +4,7 @@ classdef VS_mrGratings < VStim
         grating_width       = 53;       %pixel/cycle, choose sp=225, tp=5 for 30deg/s at 60x
 %         tmporalFreq         = 2;
         temporalFreq          = 2;        %cycles/sec
-%         maskRadius      = 500;      %radius of circular mask
+        maskRadius      = 500;      %radius of circular mask
         nDirections         = 8;
         nTrials       = 5;
         duration        = 4;        %duration in secs
@@ -23,14 +23,14 @@ classdef VS_mrGratings < VStim
         chkMaskRectangle        = false;
         rectangleWidth       = 100;
         rectangleHeight      = 400;
-        screenIntensity    = 0; %136 to have a grey background
+        screenIntensity    = 139;
         popSscrColor        = [1 1 1];
         chkSsaveImage       = false;
         txtSsaveImageTime   = 2;
     end
     properties (Hidden,Constant)
         defaultTrialsPerCategory=50; %number of gratings to present
-        defaultBackground=0; %136 to have a grey background
+        defaultBackground=139;
         grating_widthTxt        = "scalar,width of black+white grating, pixels/cycle";
         temporalFreqTxt           = "scalar,cycles/sec";
         maskRadiusTxt       = "scalar,half size of square texture";
@@ -51,7 +51,7 @@ classdef VS_mrGratings < VStim
         chkMaskRectangleTxt         = "0 or 1. if 1, the masking of the grating is rectangular";
         rectangleWidthTxt        = "in case of a rectangular mask";
         rectangleHeightTxt       = "in case of a rectangular mask";
-        screenIntensityTxt     = "color of background. default is gray";
+        screenIntensityTxt     = "color of baground. default is gray";
         remarks                 = {'Categories in stimuli are: speed, offset'};
     end
     properties (SetAccess=protected)
@@ -105,16 +105,16 @@ classdef VS_mrGratings < VStim
             Screen('Flip',obj.PTB_win);
             
             [width, height]=Screen('WindowSize', obj.PTB_win);
-%             
-%             if ~obj.chkMaskRectangle
-%                 mask = makeCircularMaskForGUI(obj.maskRadius,width, height,'color',screen_full_color);
-%                 mask = mask(:,:,[2,4]);
-%             else
-%                 obj.maskRadius = max(ceil(obj.rectangleWidth/2),ceil(obj.rectangleHeight/2));
-%                 mask = makeRectangularMaskForGUI(obj.rectangleWidth,obj.rectangleHeight);
-%             end
             
-            mask = ones(width,height,2)*0;
+            if ~obj.chkMaskRectangle
+                mask = makeCircularMaskForGUI(obj.maskRadius,width, height,'color',screen_full_color);
+                mask = mask(:,:,[2,4]);
+            else
+                obj.maskRadius = max(ceil(obj.rectangleWidth/2),ceil(obj.rectangleHeight/2));
+                mask = makeRectangularMaskForGUI(obj.rectangleWidth,obj.rectangleHeight);
+            end
+            
+            
             masktex=Screen('MakeTexture', obj.PTB_win, mask);
             
             % Calculate parameters of the Sinusoid
@@ -124,16 +124,9 @@ classdef VS_mrGratings < VStim
             
             p=ceil(obj.grating_width);  % pixels/cycle
             fr=(1/obj.grating_width)*2*pi;
+            visiblesize=2*obj.maskRadius+1;
             
-            if obj.visualFieldDiameter==0
-                visiblesize = height+1;
-                maskRadius = height/2;
-            else
-                visiblesize=obj.visualFieldDiameter+1;
-                maskRadius = obj.visualFieldDiameter/2;
-            end
-            
-            [x,~]=meshgrid(-maskRadius:maskRadius + abs(p), -maskRadius:maskRadius);
+            [x,~]=meshgrid(-obj.maskRadius:obj.maskRadius + abs(p), -obj.maskRadius:obj.maskRadius);
             sinusoid = gray + inc*cos(fr*x); %change x to fix mightex polygon
             
             if obj.chkMakeGrating
@@ -175,7 +168,7 @@ classdef VS_mrGratings < VStim
             for trial=1:length(directions)
                 direction=directions(trial);
                 direction=mod((direction+180),360);               
-                obj.sendTTL(2,true)
+                
                 i=0;
                 WaitSecs(obj.delay);
                 vbl=Screen('Flip', obj.PTB_win);
@@ -188,7 +181,7 @@ classdef VS_mrGratings < VStim
                     srcRect=[xoffset 0 xoffset + visiblesize visiblesize];
                     Screen('DrawTexture', obj.PTB_win, sinusoidtex, srcRect, dstRect, direction);
                     Screen('DrawTexture',  obj.PTB_win, masktex, [0 0 visiblesize visiblesize], dstRect, direction);
-                    obj.applyBackgound;
+%                     obj.applyBackgound;
                     obj.sendTTL(3,true);
                     vbl=Screen('Flip',  obj.PTB_win);
                     obj.sendTTL(3,false);
@@ -210,7 +203,6 @@ classdef VS_mrGratings < VStim
                         Screen('Flip',obj.PTB_win);
                         obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
 %                         WaitSecs(obj.interTrialDelay);
-                        obj.sendTTL(1,false);
                         disp('Trial ended early');
                         return
                     end
@@ -219,8 +211,7 @@ classdef VS_mrGratings < VStim
                 Screen('Flip', obj.PTB_win);
                 WaitSecs(obj.interTrialWait);%pause to allow recording device to prepare for new trial
                 obj.sendTTL(2,false);
-                disp(['Direction ' num2str(trial) '/' num2str(obj.nTrials*obj.nDirections),...
-                    ' (',num2str(direction),')']);
+                disp(['Direction ' num2str(trial) '/' num2str(obj.nTrials*obj.nDirections)]);
             end
             obj.applyBackgound;
             Screen('Flip', obj.PTB_win);

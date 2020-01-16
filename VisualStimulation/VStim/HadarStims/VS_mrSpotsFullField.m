@@ -1,4 +1,4 @@
-classdef VS_mrSpots < VStim
+classdef VS_mrSpotsFullField < VStim
     properties (SetAccess=public)
         flashLuminosity         = 255; 
         screenTriggerDuration   = 0.1;  % sec
@@ -55,17 +55,13 @@ classdef VS_mrSpots < VStim
 
             % Update image buffer for the first time
             obj.syncMarkerOn = false; %reset sync marker
-            Screen('FillOval',obj.PTB_win,obj.flashLuminosity,obj.visualFieldRect);
-            obj.applyBackgound;  %set background mask and finalize drawing (drawing finished)
-                        
+            Screen('FillRect',obj.PTB_win,obj.flashLuminosity,obj.rect);                        
             %main loop - start the session
           
-%            Screen('FillRect', window, interlColor);
-            Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
+            Screen('FillRect',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.rect);
 
             %Start the code that sends the experiment to the screen
-            obj.sendTTL(1,true); %channel 1 is for start/stop of experiment
-            
+            obj.sendTTL(1,true); %channel 1 is for start/stop of experiment        
          	obj.sendTTL(3,true)
           	Screen('Flip', obj.PTB_win);
          	obj.sendTTL(3,false)
@@ -78,7 +74,7 @@ classdef VS_mrSpots < VStim
                 WaitSecs(obj.delay);
                 
                 % switch to white screen:
-                Screen('FillOval',obj.PTB_win, obj.flashLuminosity, obj.visualFieldRect);
+                Screen('FillRect',obj.PTB_win, obj.flashLuminosity, obj.rect);
                 
                 obj.sendTTL(3,true);
                 Screen('Flip', obj.PTB_win);
@@ -86,11 +82,9 @@ classdef VS_mrSpots < VStim
                 
                 [keyIsDown, ~, keyCode] = KbCheck;
                 if keyCode(obj.escapeKeyCode)
-%                     obj.trialsPerCategory=trial;
-                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                    Screen('FillRect',obj.PTB_win,obj.visualFieldBackgroundLuminance);
                     Screen('Flip',obj.PTB_win);
                     obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
-                    % WaitSecs(obj.interTrialDelay);
                     disp('Trial ended early');
                     return
                 end
@@ -98,7 +92,7 @@ classdef VS_mrSpots < VStim
                 WaitSecs(obj.stimDuration);
 
                 % switch back to black screen:
-                Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
+                Screen('FillRect',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.rect);
                 
                 obj.sendTTL(3,true);
                 Screen('Flip', obj.PTB_win);
@@ -106,29 +100,20 @@ classdef VS_mrSpots < VStim
                 
                 [keyIsDown, ~, keyCode] = KbCheck;
                 if keyCode(obj.escapeKeyCode)
-%                     obj.trialsPerCategory=trial;
-                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                    Screen('FillRect',obj.PTB_win,obj.visualFieldBackgroundLuminance);
                     Screen('Flip',obj.PTB_win);
                     obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
-                    % WaitSecs(obj.interTrialDelay);
                     disp('Trial ended early');
                     return
                 end
                 
                 WaitSecs(obj.interval);
-
                 obj.sendTTL(2,false); % Send signal on channel 2 of the LPT that this run is now complete
             end
             
             obj.applyBackgound;
             Screen('DrawingFinished', obj.PTB_win); % Indicate to GUI that we are done
             obj.sendTTL(1,false);                   %Send signal that experiment is finished
-%             if obj.save_stimulus
-%                 filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrSpots_%s.mat',...
-%                     datestr(now,'mm_dd_yyyy_HHMM'));
-%                 save(filename, 'obj', '-v7.3');save(filename, 'obj', '-v7.3')
-%             end
-            %to save the stimuli_it calls the function SaveStimuli
             if obj.save_stimulus
                 SaveStimuli(obj,mfilename)
             end
@@ -140,7 +125,7 @@ classdef VS_mrSpots < VStim
         end
             
         %class constractor
-        function obj=VS_mrSpots(w,h)
+        function obj=VS_mrSpotsFullField(w,h)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
         end

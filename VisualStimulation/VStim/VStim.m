@@ -7,10 +7,10 @@ classdef (Abstract) VStim < handle
         preSessionDelay     = 1;
         postSessionDelay    = 0;
         trialStartTrig      = 'MC=2,Intan=6';
-        
+        user = 'Undefined';
     end
     properties (SetObservable, AbortSet = true, SetAccess=public)
-        visualFieldBackgroundLuminance  = 139;
+        visualFieldBackgroundLuminance  = 0; %mean grey value measured by SR and AH the 04-12-19 136
         visualFieldDiameter             = 0; %pixels
         inVivoSettings                  = false;
         DMDcorrectionIntensity          = 0;
@@ -62,7 +62,7 @@ classdef (Abstract) VStim < handle
         displaySyncSignal   = true;
         pixelConversionFactor = 100/13; %microns per pixel
         sendMailTo %mail adresses to which a notificaion will be sent at the end of the stimulation (if sendMail=true)
-        
+        stimSavePath = "C:\Stimulations\"
         PTB_win                         %Pointer to PTB window
         whiteIdx                        %white index for screen
         blackIdx                        %black index for screen
@@ -153,7 +153,7 @@ classdef (Abstract) VStim < handle
             %set background luminance
             obj.initializeBackground;
             
-            obj.sendTTL(1:4,[false false false false])
+            obj.sendTTL(1:4,[false false false false]) %leaving this to make sure ttl's are at zero when stim starts
         end
         
         function estimatedTime=estimateProtocolDuration(obj)
@@ -202,7 +202,7 @@ classdef (Abstract) VStim < handle
             %maskblob(:,:,2)=sig(x,y)*obj.whiteIdx;
             
             maskblobOff=ones(obj.rect(4)-obj.rect(2),obj.rect(3)-obj.rect(1),2) * obj.whiteIdx;
-            maskblobOff(:,:,1)=obj.blackIdx;
+            maskblobOff(:,:,1)=obj.visualFieldBackgroundLuminance; %obj.blackIdx
             if ~noMask 
                 maskblobOff((obj.visualFieldRect(2)+1):obj.visualFieldRect(4),(obj.visualFieldRect(1)+1):obj.visualFieldRect(3),2)=sig(x,y)*obj.whiteIdx;
             else
@@ -305,14 +305,14 @@ classdef (Abstract) VStim < handle
                 
             end
             
-            sig=false(1,size(obj.trigChNames,1)); %sig=false(1,4);
-            for i=1:size(obj.trigChNames,1) %i=1:4
-                sig(i)=true;
-                sendTTL(obj,1:size(obj.trigChNames,1),sig); % sendTTL(obj,1:4,sig);
-                WaitSecs(0.2);
-                sig(i)=false;
-            end
-            sendTTL(obj,1:size(obj.trigChNames,1),sig);
+%             sig=false(1,size(obj.trigChNames,1)); %sig=false(1,4);
+%             for i=1:size(obj.trigChNames,1) %i=1:4
+%                 sig(i)=true;
+%                 sendTTL(obj,1:size(obj.trigChNames,1),sig); % sendTTL(obj,1:4,sig);
+%                 WaitSecs(0.2);
+%                 sig(i)=false;
+%             end
+%             sendTTL(obj,1:size(obj.trigChNames,1),sig);
             
         end %function initializeTTL
         
@@ -320,9 +320,14 @@ classdef (Abstract) VStim < handle
             if obj.OSPlatform==1
                 obj.currentBinState(obj.trigChNames(TTLNum,:)-1)=[TTLValue;TTLValue]';
                 io64(obj.io.ioObj,obj.parallelPortNum,sum(obj.binaryMultiplicator.*obj.currentBinState));
+%                 disp('TTL Sent');
                 %io64(obj.io.ioObj,obj.parallelPortNum,sum(obj.binaryMultiplicator.*obj.currentBinState));
             elseif obj.OSPlatform==2
-                pp(uint8(obj.trigChNames(TTLNum,:)),[TTLValue TTLValue],false,uint8(0),uint64(obj.parallelPortNum)); %session start trigger (also triggers the recording start)
+                if ismac
+                    disp('No triggers sent');
+                else
+                    pp(uint8(obj.trigChNames(TTLNum,:)),[TTLValue TTLValue],false,uint8(0),uint64(obj.parallelPortNum)); %session start trigger (also triggers the recording start)
+                end
             else
                 disp(['Simulation mode trigger/value - ' num2str([TTLNum TTLValue])]);
             end

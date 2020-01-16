@@ -1,10 +1,10 @@
-classdef VS_mrStaticGratings < VStim
+classdef VS_mrStaticGratingsBatch < VStim
     properties (SetAccess=public)
         
         grating_width   = [7 13 20];     %pixel/cycle, choose sp=225, tp=5 for 30deg/s at 60x
         temporalFreq    = 2;       %cycles/sec
         txtSmaskRadius  = 500;	%radius of circular mask
-        txtSnumDirs     = nan;
+        txtSnumDirs     = 8;
         txtSnumTrials   = 4;
         txtSduration    = 4;       %txtSduration in secs
         txtSpreStimWait = 0.5;
@@ -245,8 +245,7 @@ classdef VS_mrStaticGratings < VStim
                 Screen('Flip', obj.PTB_win);
                 obj.sendTTL(1,false);
                 if obj.save_stimulus
-                    filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrStaticGratings_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
-                    save(filename, 'directions', 'obj', '-v7.3');
+                   SaveStimuli(obj,mfilename)
                 end
             end
         end
@@ -255,7 +254,7 @@ classdef VS_mrStaticGratings < VStim
             outStats.props=obj.getProperties;
         end
         %class constractor
-        function obj=VS_mrStaticGratings(w,~)
+        function obj=VS_mrStaticGratingsBatch(w,~)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
             obj.stimDuration=NaN;

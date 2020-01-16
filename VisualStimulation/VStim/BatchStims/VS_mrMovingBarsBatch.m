@@ -1,12 +1,12 @@
-classdef VS_mrMovingBars < VStim
+classdef VS_mrMovingBarsBatch < VStim
     properties (SetAccess=public)
 
         nTrials   = 5;%5
         nDirections     = 8;%8
-        barWidth    = 333;%36;
-        barLength   = 120;%180;
-        barSpeed       = 80;%324;
-        maskRadius  = 500;% 225;
+        barWidth    = 333; %2497.5um
+        barLength   = 120; %900 um
+        barSpeed       = 80; %600um/sec
+        maskRadius  = 500; %for the mea 400pix(3000px)should be fine
         barIntensity= 255; %white bar
         popBbarColor    = [1 1 1]; %white
         prestimWait = 5;
@@ -131,15 +131,13 @@ classdef VS_mrMovingBars < VStim
             Screen('Flip', obj.PTB_win);
             obj.sendTTL(1,false);
             SaveStimuli(obj,mfilename,'directions',directions)
-%             filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrMovingBars_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
-%             save(filename, 'directions', 'obj', '-v7.3');
         end
 
         function outStats=getLastStimStatistics(obj,hFigure)
            outStats.props=obj.getProperties; 
         end
         %class constractor
-        function obj=VS_mrMovingBars(w,h)
+        function obj=VS_mrMovingBarsBatch(w,h)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
             obj.stimDuration=NaN;

@@ -1,7 +1,7 @@
 classdef VS_mrCChirp < VStim
     properties (SetAccess=public)
-        brightLuminosity         = 255; 
-        darkLuminosity         = 0; 
+        brightLuminosity         = 255;
+        darkLuminosity         = 0;
         screenTriggerDuration   = 0.1;  % sec
         interval                = 0.5;    % secs
         delay                   = 0.5;    % secs
@@ -12,7 +12,8 @@ classdef VS_mrCChirp < VStim
     end
     
     properties (Constant)
-        flashLuminosityTxt  = 'The luminocity value for the spot (0-255)';
+        brightLuminosityTxt  = 'The brighest luminosity value for the spot';
+        darkLuminosityTxt  = 'The darkest luminosity value for the spot (0-255)'
         delayTxt            = 'The time of background luminance (sec) before presentation of the spot.';
         intervalTxt         = 'The time of background luminance (sec) after presentation of the spot.';
         remarks             = {'Categories in Flash stimuli are:','delay, interval, flashLuminosity'};
@@ -108,6 +109,17 @@ classdef VS_mrCChirp < VStim
                     Screen('Flip', obj.PTB_win);
                     obj.sendTTL(3,false)
                     WaitSecs(intensity_duration);
+                    
+                    [keyIsDown, ~, keyCode] = KbCheck;
+                    if keyCode(obj.escapeKeyCode)
+%                         obj.trialsPerCategory=trial;
+                        Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                        Screen('Flip',obj.PTB_win);
+                        obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                        %                         WaitSecs(obj.interTrialDelay);
+                        disp('Trial ended early');
+                        return
+                    end
                 end
                 Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
                 obj.sendTTL(3,true)
@@ -117,19 +129,26 @@ classdef VS_mrCChirp < VStim
                 WaitSecs(obj.interval);
 
                 obj.sendTTL(2,false); % Send signal on channel 2 of the LPT that this run is now complete
+                
+                
             end
             
             obj.applyBackgound;
             Screen('DrawingFinished', obj.PTB_win); % Indicate to GUI that we are done
             obj.sendTTL(1,false);                   %Send signal that experiment is finished
             
-            if obj.save_stimulus
-                filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrCChirp_%s.mat',...
-                    datestr(now,'mm_dd_yyyy_HHMM'));
-                save(filename, 'obj', '-v7.3');save(filename, 'obj', '-v7.3','allContrasts')
-            end
+%             if obj.save_stimulus
+%                 filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrCChirp_%s.mat',...
+%                     datestr(now,'mm_dd_yyyy_HHMM'));
+%                 save(filename, 'obj', '-v7.3');save(filename, 'obj', '-v7.3','allContrasts')
+%             end        
+
+        %to save the stimuli_it calls the function SaveStimuli
         
-        
+        if obj.save_stimulus
+            SaveStimuli(obj,mfilename,'allContrasts',allContrasts)
+        end
+
         end
         
         function outStats=getLastStimStatistics(obj,hFigure)

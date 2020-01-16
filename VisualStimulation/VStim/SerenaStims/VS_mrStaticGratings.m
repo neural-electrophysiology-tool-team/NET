@@ -216,6 +216,17 @@ classdef VS_mrStaticGratings < VStim
                                     '_time',num2str(obj.txtSsaveImageTime),'.bmp'],'bmp');
                             end
                         end
+                        
+                        [keyIsDown, ~, keyCode] = KbCheck;
+                        if keyCode(obj.escapeKeyCode)
+%                             obj.trialsPerCategory=trial;
+                            Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
+                            Screen('Flip',obj.PTB_win);
+                            obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                            % WaitSecs(obj.interTrialDelay);
+                            disp('Trial ended early');
+                            return
+                        end
 
                     end
                     Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);

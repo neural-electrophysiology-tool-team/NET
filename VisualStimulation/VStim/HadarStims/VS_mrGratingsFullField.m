@@ -1,10 +1,8 @@
-classdef VS_mrGratings < VStim
+classdef VS_mrGratingsFullField < VStim
     properties (SetAccess=public)
         
         grating_width       = 53;       %pixel/cycle, choose sp=225, tp=5 for 30deg/s at 60x
-%         tmporalFreq         = 2;
         temporalFreq          = 2;        %cycles/sec
-%         maskRadius      = 500;      %radius of circular mask
         nDirections         = 8;
         nTrials       = 5;
         duration        = 4;        %duration in secs
@@ -56,7 +54,6 @@ classdef VS_mrGratings < VStim
     end
     properties (SetAccess=protected)
         speeds
-        %         directions
         offsets
         barTrajectories1X
         barTrajectories2X
@@ -105,16 +102,8 @@ classdef VS_mrGratings < VStim
             Screen('Flip',obj.PTB_win);
             
             [width, height]=Screen('WindowSize', obj.PTB_win);
-%             
-%             if ~obj.chkMaskRectangle
-%                 mask = makeCircularMaskForGUI(obj.maskRadius,width, height,'color',screen_full_color);
-%                 mask = mask(:,:,[2,4]);
-%             else
-%                 obj.maskRadius = max(ceil(obj.rectangleWidth/2),ceil(obj.rectangleHeight/2));
-%                 mask = makeRectangularMaskForGUI(obj.rectangleWidth,obj.rectangleHeight);
-%             end
             
-            mask = ones(width,height,2)*0;
+            mask = ones(width*3,height*3,2)*0;
             masktex=Screen('MakeTexture', obj.PTB_win, mask);
             
             % Calculate parameters of the Sinusoid
@@ -126,8 +115,8 @@ classdef VS_mrGratings < VStim
             fr=(1/obj.grating_width)*2*pi;
             
             if obj.visualFieldDiameter==0
-                visiblesize = height+1;
-                maskRadius = height/2;
+                visiblesize = height*3+1;
+                maskRadius = (height*3)/2;
             else
                 visiblesize=obj.visualFieldDiameter+1;
                 maskRadius = obj.visualFieldDiameter/2;
@@ -152,12 +141,7 @@ classdef VS_mrGratings < VStim
             else
                 color_sinusoid = sinusoid;
             end
-            
-            %add code to make edges of bars the same color as the edges of
-            %circular mask
-%             color_sinusoid(1:find(mask(:,1,2)==0,1,'First'),color_sinusoid(1,:)>0)=mask(find(mask(:,1,2)~=0,1,'First'),1,2);
-%             color_sinusoid(find(mask(:,1,2)==0,1,'Last'):end,color_sinusoid(1,:)>0)=mask(find(mask(:,1,2)~=0,1,'First'),1,2);
-            
+                        
             sinusoidtex=Screen('MakeTexture', obj.PTB_win, color_sinusoid);
             
             % configure display window
@@ -175,7 +159,7 @@ classdef VS_mrGratings < VStim
             for trial=1:length(directions)
                 direction=directions(trial);
                 direction=mod((direction+180),360);               
-                obj.sendTTL(2,true)
+                
                 i=0;
                 WaitSecs(obj.delay);
                 vbl=Screen('Flip', obj.PTB_win);
@@ -188,7 +172,6 @@ classdef VS_mrGratings < VStim
                     srcRect=[xoffset 0 xoffset + visiblesize visiblesize];
                     Screen('DrawTexture', obj.PTB_win, sinusoidtex, srcRect, dstRect, direction);
                     Screen('DrawTexture',  obj.PTB_win, masktex, [0 0 visiblesize visiblesize], dstRect, direction);
-                    obj.applyBackgound;
                     obj.sendTTL(3,true);
                     vbl=Screen('Flip',  obj.PTB_win);
                     obj.sendTTL(3,false);
@@ -205,12 +188,9 @@ classdef VS_mrGratings < VStim
                 
                     [keyIsDown, ~, keyCode] = KbCheck;
                     if keyCode(obj.escapeKeyCode)
-%                         obj.trialsPerCategory=i;
                         Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance);
                         Screen('Flip',obj.PTB_win);
                         obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
-%                         WaitSecs(obj.interTrialDelay);
-                        obj.sendTTL(1,false);
                         disp('Trial ended early');
                         return
                     end
@@ -219,8 +199,7 @@ classdef VS_mrGratings < VStim
                 Screen('Flip', obj.PTB_win);
                 WaitSecs(obj.interTrialWait);%pause to allow recording device to prepare for new trial
                 obj.sendTTL(2,false);
-                disp(['Direction ' num2str(trial) '/' num2str(obj.nTrials*obj.nDirections),...
-                    ' (',num2str(direction),')']);
+                disp(['Direction ' num2str(trial) '/' num2str(obj.nTrials*obj.nDirections)]);
             end
             obj.applyBackgound;
             Screen('Flip', obj.PTB_win);
@@ -237,7 +216,7 @@ classdef VS_mrGratings < VStim
             outStats.props=obj.getProperties;
         end
         %class constractor
-        function obj=VS_mrGratings(w,h)
+        function obj=VS_mrGratingsFullField(w,h)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
             obj.stimDuration=NaN;

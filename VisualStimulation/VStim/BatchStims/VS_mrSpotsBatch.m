@@ -1,4 +1,4 @@
-classdef VS_mrSpots < VStim
+classdef VS_mrSpotsBatch < VStim
     properties (SetAccess=public)
         flashLuminosity         = 255; 
         screenTriggerDuration   = 0.1;  % sec
@@ -140,7 +140,7 @@ classdef VS_mrSpots < VStim
         end
             
         %class constractor
-        function obj=VS_mrSpots(w,h)
+        function obj=VS_mrSpotsBatch(w,h)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
         end
