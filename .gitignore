@@ -126,6 +126,10 @@ PCspecificFiles/VSConfig.txt
 
 #ignore PCspecific folder
 PCspecificFiles/
+PCspecificFiles/*
+/PCspecificFiles
+VSConfig*
+*VSConfig
 
 # Compiled MEX binaries (all platforms)
 *.mex*

@@ -1,1 +1,0 @@
-syncSquareSizePix = 150
