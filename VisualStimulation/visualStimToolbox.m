@@ -78,8 +78,8 @@ rng('shuffle');
 
 %initial configuration
 VS.par.currentVSO=find(strcmp(VS.par.VSMethods,initialVStim)); %the default visual stim (first on the list)
-VS.par.currentGUIScreen=1; %the default monitor to display GUI
-VS.par.currentPTBScreen=2; %the default monitor to display the visual stimulation
+VS.par.currentGUIScreen=2; %the default monitor to display GUI
+VS.par.currentPTBScreen=1; %the default monitor to display the visual stimulation
 
 %initialize Psychophysics toolbox screens
 VS.par.PTB_win=[];
