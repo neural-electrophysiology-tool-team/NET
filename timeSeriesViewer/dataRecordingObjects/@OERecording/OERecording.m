@@ -335,7 +335,9 @@ classdef OERecording < dataRecording
             end
             obj=obj.getRecordingFiles(recordingFile);
             
-            obj.recordingDir=[obj.recordingDir obj.dataFileNames{1}];
+            if ~isempty(obj.dataFileNames)
+                obj.recordingDir=[obj.recordingDir obj.dataFileNames{1}];
+            end
             
             if exist([obj.recordingDir filesep 'metaData.mat'],'file') && ~obj.overwriteMetaData
                 obj=loadMetaData(obj);

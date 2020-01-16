@@ -1,20 +1,23 @@
-classdef VS_mrChirp < VStim
+classdef VS_mrFreqChirp < VStim
     properties (SetAccess=public)
 
-        txtCduration = 5;
+        txtCduration = 15;
         txtCf0 = 0;
-        txtCt1 = 10;
+        txtCt1 = 15;
         txtCf1 = 20;
         popCmethods = 1;
-        txtCpreStimWait = 1;
-        txtCinterStimWait = 0.5;
-        txtCSintervalIntensity = 255/2;
+        txtCpreStimWait = 30;
+        txtCdelay = 0.5;
+        txtCinterval = 0.5;
+        txtCSintervalIntensity = 139;
         txtCradius = 300;
         popCchirpColor = [1 1 1];
         popCinterColor = [1 1 1];
+        save_stimulus  = true;
+        nTrials = 5;
     end
     properties (Hidden,Constant)
-        barLuminosityTxt='The luminocity value for the rectangles, if array->show all given contrasts';
+        barLuminosityTxt='The luminosity value for the rectangles, if array->show all given contrasts';
         barWidthTxt='The width of the moving bar [pixels] - parallel to motion direction (<10)';
         barLengthTxt='The length of the moving bar [pixels] - perpendicular to motion direction (<number of pixels in the smaller screen axis)';
         numberOfDirectionsTxt='The number of directions to test (directions will be distributed uniformly over 360 degrees)';
@@ -96,14 +99,17 @@ classdef VS_mrChirp < VStim
             Screen('Flip', window);
             WaitSecs(obj.txtCpreStimWait);
             obj.sendTTL(1,true)
-            for trial = 1:length(obj.txtCradius)
+%             for trial = 1: length(obj.txtCradius) % nTrials
+            for trial = 1: obj.nTrials % nTrials
                 obj.sendTTL(2,true);
-                WaitSecs(2);
-                for tStim =1: length(crp)
+                WaitSecs(obj.txtCdelay);
+                for tStim =1:length(crp)
                     Screen('FillRect', window, interlColor, []);
                     crpColor = round(crp(tStim)*obj.popCchirpColor*255);
-                    Screen('FillOval', window,crpColor ,[x-(obj.txtCradius(trial)) y-obj.txtCradius(trial)...
-                        x+(obj.txtCradius(trial)) y+obj.txtCradius(trial)]); %original
+%                     Screen('FillOval', window,crpColor ,[x-(obj.txtCradius(trial)) y-obj.txtCradius(trial)...
+%                         x+(obj.txtCradius(trial)) y+obj.txtCradius(trial)]); %original
+                    Screen('FillOval', window,crpColor ,[x-(obj.txtCradius) y-obj.txtCradius...
+                        x+(obj.txtCradius) y+obj.txtCradius]); %original
                     obj.sendTTL(3,true);
                     Screen('Flip', window);
                     obj.sendTTL(3,false);
@@ -112,19 +118,27 @@ classdef VS_mrChirp < VStim
                 Screen('FillRect', window, interlColor);
                 Screen('Flip', window);
                 obj.sendTTL(2,false);
-                WaitSecs(3);
-                WaitSecs(obj.txtCinterStimWait);
+                WaitSecs(obj.txtCinterval);
             end
-             obj.applyBackgound;
-             Screen('DrawingFinished', obj.PTB_win);
+            obj.applyBackgound;
+            Screen('DrawingFinished', obj.PTB_win);
             obj.sendTTL(1,false);
+            
+            if obj.save_stimulus
+                SaveStimuli(obj,mfilename)
+            end
+%             if obj.save_stimulus
+%                 filename = sprintf('C:\\MATLAB\\user=ND\\SavedStimulations\\VS_mrFreqChirp_%s.mat', datestr(now,'mm_dd_yyyy_HHMM'));
+%                 save(filename, 'obj', '-v7.3');
+%             end
         end
-        
+       
+
         function outStats=getLastStimStatistics(obj,hFigure)
            outStats.props=obj.getProperties; 
         end
         %class constractor
-        function obj=VS_mrChirp(w,h)
+        function obj=VS_mrFreqChirp(w,h)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
             obj.stimDuration=NaN;

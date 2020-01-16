@@ -1,5 +1,6 @@
 function []=visualStimToolbox(varargin)
 %% Default params
+batchmode = 0;
 simulationModel=false;
 initialVStim='VS_testStim';
 % PsychImaging('PrepareConfiguration');
@@ -43,15 +44,15 @@ subdirinfo = cell(1,1);
 subdirname = cell(1,1);
 c = 1;
 for K = 1 : length(dirinfo)
-  thisdir = dirinfo(K).name;
-  if ~isempty(dir(fullfile(strcat(dirinfo(3).folder,'\',thisdir), 'VS_*.m')))
-    subdirinfo{c,1} = dir(fullfile(strcat(dirinfo(3).folder,'\',thisdir), 'VS_*.m'));
-    if ismember('.',thisdir)
-        thisdir = 'main';
-    end 
-    subdirname{c,1} = thisdir;
-    c=c+1;
-  end
+    thisdir = dirinfo(K).name;
+    if ~isempty(dir(fullfile(strcat(dirinfo(3).folder,filesep,thisdir), 'VS_*.m')))
+        subdirinfo{c,1} = dir(fullfile(strcat(dirinfo(3).folder,filesep,thisdir), 'VS_*.m'));
+        if ismember('.',thisdir)
+            thisdir = 'main';
+        end
+        subdirname{c,1} = thisdir;
+        c=c+1;
+    end
 end
 
 groupnumbers = [];
@@ -83,16 +84,160 @@ VS.par.currentPTBScreen=1; %the default monitor to display the visual stimulatio
 %initialize Psychophysics toolbox screens
 VS.par.PTB_win=[];
 initializeScreens(simulationModel);
+    function hlist = reorderlist(hObj,event,hfig, buts,methods)
+        
+        ListBoxPanel = uix.ScrollingPanel('Parent',hfig);
+        %     ButtonBoxPanel = uix.Panel('Parent',hfig);
+        ListBox = uix.VBox('Parent', ListBoxPanel, 'Padding', 5, 'Spacing', 5);
+        ListButtonBox  = uix.VBox('Parent', ListBox, 'Padding', 5, 'Spacing', 5);
+        set(ListBox, 'units', 'norm', 'position', [0 0 0.75 1])
+        set(ListButtonBox, 'units', 'norm', 'position', [0.8 0 1 1])
+        items = methods(arrayfun(@(x) buts{x}.Value == 1, 1:numel(buts)));
+        hlist = uicontrol('Parent', ListBox, 'style', 'listbox', 'string', items);
+        
+        promote = uicontrol('Parent', ListButtonBox, 'String', '^');
+        demote = uicontrol('Parent', ListButtonBox, 'String', 'v');
+        duplicate = uicontrol('Parent',ListButtonBox,'String','+');
+        runbatch = uicontrol('Parent',ListButtonBox,'String','>');
+        
+        % Set locations/sizes
+%         set(hlist, 'units', 'norm', 'position', [0 0 0.50 1])
+%         set(promote, 'units', 'norm', 'position', [0.6 0.95 0.15 0.10])
+%         set(demote, 'units', 'norm', 'position', [0.6 0.75 0.15 0.10].*0.75)
+%         set(duplicate, 'units', 'norm', 'position', [0.6 0.50 0.15 0.10].*0.75)
+%         set(runbatch, 'units', 'norm', 'position', [0.6 0.25 0.15 0.10].*0.75)
+        
+        % Set button callbacks
+        set(promote, 'Callback', @(s,e)moveitem(1))
+        set(demote, 'Callback', @(s,e)moveitem(-1))
+        set(duplicate, 'Callback', @(s,e)duplicateitem);
+        set(runbatch, 'Callback', @(s,e)LaunchBatch);
+        
+        function moveitem(increment)
+            % Get the existing items and the current item
+            items = get(hlist, 'string');
+            current = get(hlist, 'value');
+            
+            toswap = current - increment;
+            
+            % Ensure that we aren't already at the top/bottom
+            if toswap < 1 || toswap > numel(items)
+                return
+            end
+            
+            % Swap the two entries that need to be swapped
+            inds = [current, toswap];
+            items(inds) = flipud(items(inds));
+            
+            % Update the order and the selected item
+            set(hlist, 'string', items);
+            set(hlist, 'value', toswap)
+        end
+        
+        function duplicateitem()
+            items = get(hlist, 'string');
+            current = get(hlist, 'value');
+            
+            if current < length(items)
+                items = [items(1:current); items(current); items(current+1:end)];
+            else
+                items = [items;items(current)];
+            end
+            
+            set(hlist, 'string', items);
+        end
+        
+        function LaunchBatch()
+            waitbetween = 30; %Wait 30 seconds between stimulations
+            selectedstims = get(hlist, 'string');
+            numselected = length(selectedstims);
+            for i = 1:numselected
+                
+                stimname = selectedstims{i};
+                
+                if isfield(VS.par,'VSO')
+                    VS.par.VSO.cleanUp; %clean old Vstim object
+                end
+                
+                VS.par.VSO=eval([stimname,'(VS.par.PTB_win)']);
+                
+                %get properties of visual stimulation object
+                VSControlMethods=VS.par.VSO.getVSControlMethods;
+                VS.par.VSOMethod=VSControlMethods.methodName;
+                VS.par.VSOMethodDescription=VSControlMethods.methodDescription;
+                VS.par.nVSOMethods=numel(VS.par.VSOMethod);
+                
+                %get methods of visual stimulation object
+                props=VS.par.VSO.getProperties;
+                VS.par.VSOProp=props.publicPropName;
+                VS.par.VSOPropDescription=props.publicPropDescription;
+                VS.par.nProps=numel(VS.par.VSOProp);
+                
+                VS.par.VSO=VS.par.VSO.run;
+                pause(waitbetween)
+            end
+            disp('Complete');
+        end
+        
+    end
 
 % Create the main GUI of the visual stimulation toolbox
-createVSGUI;
+if batchmode == 0
+    createVSGUI;
+    % Switch to realtime:
+    priorityLevel=MaxPriority(VS.par.PTB_win);
+    Priority(priorityLevel); %%priority is set back to regular after GUI closes
+    %initialize current visual stimulation object
+    initializeVisualStim;
+else
+    nummethods = length(VS.par.VSMethods);
+    display(strcat(['Batch Mode: ',num2str(nummethods), ' stimulations found']));
+    f = figure;
+    
+    % put the figure on top of matlab
+    set(0,'Units','Pixels');
+    desktop = com.mathworks.mde.desk.MLDesktop.getInstance;
+    desktopMainFrame = desktop.getMainFrame;
+    desktopDims = desktopMainFrame.getSize;
+    desktopW = desktopDims.getWidth;
+    desktopH = desktopDims.getHeight;
+    guipos = [0,0,desktopW,desktopH];
+    set(f,'position',guipos);
+    %%%%%
+    
+    StimBoxPanel = uix.ScrollingPanel('Parent',f);
+    ButtonBox = uix.VBox('Parent', StimBoxPanel, 'Padding', 5, 'Spacing', 5);
+    SubmitBox = uix.VBox('Parent', ButtonBox, 'Padding', 5, 'Spacing', 5);
+    ButtonGrid=uix.Grid('Parent', ButtonBox, 'Padding', 5, 'Spacing', 5);
+    
+    % Search for methods with Batch in the name
+    methods={};
+    c = 1;
+    for j = 1:nummethods
+        if contains(VS.par.VSMethods{j},'Batch')
+            methods{c} = VS.par.VSMethods{j};
+            c = c+1;
+        end
+    end
+    nummethods = length(methods);
+    display(strcat(['Batch Mode: ',num2str(nummethods), ' batch stimulations found']));
+    buts = {};
+    if ~isempty(methods)
+        for j = 1:nummethods
+            buts{j} = uicontrol('Parent',ButtonGrid, ...
+                'Style','togglebutton','String',strcat([num2str(j),' - ',methods{j}]));
+        end
+        height  = 20; %pixels
+        numchars = max(cellfun(@length,methods))+4;
+        set(ButtonGrid,'Widths', 5*numchars*ones(size(methods)),"Heights",height*ones(size(methods)) );
+        ButtonGrid.Heights(:) = height;
+        ButtonBox.Heights = [25,(nummethods)*height + (nummethods+1)*5];
+        uicontrol('Parent',SubmitBox, 'Style','pushbutton','String','Submit','Callback', {@reorderlist,f,buts,methods});
+        set(SubmitBox, 'Heights',height);
+        StimBoxPanel.Heights =  (nummethods+1)*height + (nummethods+2)*5;
+    end
+end
 
-% Switch to realtime:
-priorityLevel=MaxPriority(VS.par.PTB_win);
-Priority(priorityLevel); %%priority is set back to regular after GUI closes
-
-%initialize current visual stimulation object
-initializeVisualStim;
 %% %%%%%%%%%%%%%%%% Nested functions (only header) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%%%%%%%%% Initialize PTB Screen %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -110,7 +255,7 @@ initializeVisualStim;
         if isunix %for visual stimulation setup
             %for working with two graphic cards on linux
             Screen('Preference', 'ScreenToHead', 0,0,0);
-            Screen('Preference', 'ScreenToHead', 1,0,0);
+            %             Screen('Preference', 'ScreenToHead', 1,0,0);
             PsychTweak('UseGPUIndex',1);
         elseif ispc % this option is actually generic to situations of dual monitors on one graphics card
             if numel(VS.par.screens)>size(VS.par.screenPositionsMatlab,1)
@@ -169,8 +314,8 @@ initializeVisualStim;
         if isfield(VS.par,'VSO')
             VS.par.VSO.cleanUp; %clean old Vstim object
         end
-        if length(VS.par.currentVSO)>1 
-            disp('More than one stimulation with the same name found') 
+        if length(VS.par.currentVSO)>1
+            disp('More than one stimulation with the same name found')
         end
         eval(['VS.par.VSO=' VS.par.VSMethods{VS.par.currentVSO(1)} '(VS.par.PTB_win,VS.hand.GenealBox.hInteractiveGUIparent);']);
         
@@ -187,8 +332,9 @@ initializeVisualStim;
         VS.par.nProps=numel(VS.par.VSOProp);
         
         updateVisualStimBoxGUI;
-
+        
     end
+
 %% %%%%%%%%%%%%%%%%%%%%%%%%%% Callbacks %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function changeSaveDirectory(hObj,event)
@@ -211,22 +357,22 @@ initializeVisualStim;
             saveFile=[VS.par.VSDirectory '\stats\' VS.par.VSObjNames{VS.par.currentVSO} '_' timeString];
         end
         
-        %run visual stimulation        
+        %run visual stimulation
         VS.par.VSO=VS.par.VSO.run;
-
+        
         VSMetaData=VS.par.VSO.getProperties; %get properties
         
         if get(VS.hand.GenealBox.hSaveStats,'value')
             save (saveFile,'VSMetaData');
             set(VS.hand.GenealBox.hChangeDirEdit,'string','Default dir'); %to prevent saving again on the same file name after running
-            disp('Stimulation parameters saved!');          
+            disp('Stimulation parameters saved!');
         end
         
         %send mail
         if VSMetaData.allPropVal{find(ismember(VSMetaData.allPropName, 'sendMail'))}
-                for i=1:numel(VSMetaData.allPropVal{find(ismember(VSMetaData.allPropName, 'sendMailTo'))})
-                    sendMailViaGmail(VSMetaData.allPropVal{find(ismember(VSMetaData.allPropName, 'sendMailTo'))}{i},[VSMetaData.metaClassData.Name(4:end) ' Stimulation Ended'], 'You can now open the door.');
-                end
+            for i=1:numel(VSMetaData.allPropVal{find(ismember(VSMetaData.allPropName, 'sendMailTo'))})
+                sendMailViaGmail(VSMetaData.allPropVal{find(ismember(VSMetaData.allPropName, 'sendMailTo'))}{i},[VSMetaData.metaClassData.Name(4:end) ' Stimulation Ended'], 'You can now open the door.');
+            end
         end
         %prepare figure
         if VS.par.VSO.lastExcecutedTrial~=0
@@ -239,6 +385,7 @@ initializeVisualStim;
         
         
     end
+
 
     function CallbackEstimateStimDurationPush(hObj,event)
         estimatedTime=VS.par.VSO.estimateProtocolDuration;
@@ -256,6 +403,14 @@ initializeVisualStim;
     end
     function CallbackInitializeTriggersPush(hObj,event)
         VS.par.VSO.initializeTTL;
+        VS.par.VSO.sendTTL(1,true);
+        VS.par.VSO.sendTTL(2,true);
+        VS.par.VSO.sendTTL(3,true);
+        VS.par.VSO.sendTTL(4,true);
+        VS.par.VSO.sendTTL(1,false);
+        VS.par.VSO.sendTTL(2,false);
+        VS.par.VSO.sendTTL(3,false);
+        VS.par.VSO.sendTTL(4,false);
         disp('Triggers initialized');
     end
 
@@ -307,7 +462,6 @@ initializeVisualStim;
         set(VS.hand.visualStimMenu.([VS.par.VSMethods{VS.par.currentVSO}]),'Checked','off');
         set(VS.hand.visualStimMenu.([VS.par.VSMethods{selectedVSO}]),'Checked','on'); %select one of the stims
         VS.par.currentVSO=selectedVSO;
-        
         initializeVisualStim;
     end
 
@@ -357,19 +511,19 @@ initializeVisualStim;
         
         % set visual stimulation menu
         VS.hand.hVisualStimMenuMain = uimenu(VS.hand.hMainFigure, 'Label', 'Visual stimulation' );
-       
+        
         for j=1:length(VS.par.VSMethodGroups)
             VS.hand.hVisualStimMenu{j} = uimenu('Parent',VS.hand.hVisualStimMenuMain, 'Label', VS.par.VSMethodGroups{j});
         end
- 
+        
         for i=1:length(VS.par.VSMethods)
             VS.hand.visualStimMenu.([VS.par.VSMethods{i}])=uimenu('Parent',VS.hand.hVisualStimMenu{VS.par.VSMethodGroupNumber{i}},...
-                    'Label', VS.par.VSObjNames{i}, 'Checked','off', 'Callback', {@CallbackChangeVisualStim,i});
+                'Label', VS.par.VSObjNames{i}, 'Checked','off', 'Callback', {@CallbackChangeVisualStim,i});
         end
-
+        
         set(VS.hand.visualStimMenu.([VS.par.VSMethods{VS.par.currentVSO(1)}]),'Checked','on'); %select one of the stims
         if VS.par.useNewUIX %use uix for GUI layouts
-
+            
             % Arrange the main interface windows
             VS.hand.hMainWindow = uix.HBoxFlex('Parent',VS.hand.hMainFigure, 'Spacing',8);
             VS.hand.hGenealBox = uix.VBox('Parent',VS.hand.hMainWindow, 'Spacing',4, 'Padding',4);
@@ -417,7 +571,6 @@ initializeVisualStim;
             VS.hand.GenealBox.hInteractiveGUIparent = uipanel('Parent', VS.hand.GenealBox.hScreenVBox,'Title','VS interactive panel');
             
             set(VS.hand.GenealBox.hScreenVBox, 'Heights',[30 40 40 -1]);
-            
             set(VS.hand.GenealBox.hMainVBox, 'Heights',[50 30 30 30 30 -1]);
             
         else %use uiextras and not uix
@@ -481,11 +634,12 @@ initializeVisualStim;
         
         if VS.par.useNewUIX %use uix for GUI layouts
             
-            VS.hand.PropertyBox.hPropertyBoxPanel = uix.Panel('Parent',VS.hand.hPropertyBox, 'Title','Visual stimlation object');
-            VS.hand.PropertyBox.hPropertyVBox = uix.VBox('Parent', VS.hand.PropertyBox.hPropertyBoxPanel, 'Padding', 2, 'Spacing', 5);
+            VS.hand.PropertyBox.hPropertyBoxPanel = uix.ScrollingPanel('Parent',VS.hand.hPropertyBox); %, 'Title','Visual stimlation object'
+            VS.hand.PropertyBox.hMethodsVBox = uix.VBox('Parent', VS.hand.PropertyBox.hPropertyBoxPanel, 'Padding', 5, 'Spacing', 5);
             
+            h = 20;
             %set VS methods box
-            VS.hand.PropertyBox.hMethodsGrid=uix.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
+            VS.hand.PropertyBox.hMethodsGrid=uix.Grid('Parent', VS.hand.PropertyBox.hMethodsVBox, 'Padding', 5, 'Spacing', 5);
             
             VSOcopy=VS.par.VSO; %For some reason, it is not possible to send a object that is part of a structure as callback
             if VS.par.nVSOMethods>0
@@ -498,11 +652,14 @@ initializeVisualStim;
                         'String',VS.par.VSOMethod{i}(3:end),'TooltipString',VS.par.VSOMethodDescription{i},'HorizontalAlignment','Left');
                     eval(['set(VS.hand.PropertyBox.h' VS.par.VSOMethod{i} 'Push,''Callback'',@(src,event)' VS.par.VSOMethod{i} '(VSOcopy,src,event,VS.hand.GenealBox.hInteractiveGUIparent));']);
                 end
-                set(VS.hand.PropertyBox.hMethodsGrid,'Widths',-1,'Heights',25*ones(1,ceil(VS.par.nVSOMethods/2)));
+                VS.hand.PropertyBox.hMethodsGrid.Widths = [-2,-1];
+                VS.hand.PropertyBox.hMethodsGrid.Heights(:) = h;
             end
+            VS.hand.PropertyBox.hMethodsVBox.Heights = VS.par.nVSOMethods*h + (VS.par.nVSOMethods+1)*5;
             
-            %set VS methods box
-            VS.hand.PropertyBox.hPropertyGrid=uix.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
+            %set VS property box
+            VS.hand.PropertyBox.hPropertyVBox = uix.VBox('Parent', VS.hand.PropertyBox.hMethodsVBox, 'Padding', 5, 'Spacing', 5);
+            VS.hand.PropertyBox.hPropertyGrid = uix.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
             
             for i=1:VS.par.nProps
                 VS.hand.PropertyBox.(['h' VS.par.VSOProp{i} 'Txt'])=uicontrol('Parent', VS.hand.PropertyBox.hPropertyGrid, 'Style','text',...
@@ -527,13 +684,15 @@ initializeVisualStim;
                     error('One of the fields in the visual stimulation object is not a numeric, logical or string');
                 end
             end
-            set(VS.hand.PropertyBox.hPropertyGrid,'Widths',[-2 -1],'Heights',[25*ones(1,VS.par.nProps) 50]);
+            VS.hand.PropertyBox.hPropertyGrid.Widths = [-2,-1];
+            VS.hand.PropertyBox.hPropertyGrid.Heights(:) = h;
+            VS.hand.PropertyBox.hPropertyVBox.Heights = VS.par.nProps*h + (VS.par.nProps+1)*5;
             
-            set(VS.hand.PropertyBox.hPropertyVBox,'Heights',[-ceil(VS.par.nVSOMethods/2) -VS.par.nProps]);
+            VS.hand.PropertyBox.hPropertyBoxPanel.Heights =  (VS.par.nVSOMethods+VS.par.nProps)*h + (VS.par.nVSOMethods+VS.par.nProps+1)*5;
             
         else %use uiextras and not uix
             
-            VS.hand.PropertyBox.hPropertyBoxPanel = uiextras.Panel('Parent',VS.hand.hPropertyBox, 'Title','Visual stimlation object');
+            VS.hand.PropertyBox.hPropertyBoxPanel = uiextras.Panel('Parent',VS.hand.hPropertyBox, 'Title','Visual stimulation object');
             VS.hand.PropertyBox.hPropertyVBox = uiextras.VBox('Parent', VS.hand.PropertyBox.hPropertyBoxPanel, 'Padding', 2, 'Spacing', 5);
             
             %set VS methods box
@@ -550,7 +709,7 @@ initializeVisualStim;
                 set(VS.hand.PropertyBox.hMethodsGrid,'ColumnSizes',[-1 -1],'RowSizes',25*ones(1,ceil(VS.par.nVSOMethods/2)));
             end
             
-            %set VS methods box
+            %set VS property box
             VS.hand.PropertyBox.hPropertyGrid=uiextras.Grid('Parent', VS.hand.PropertyBox.hPropertyVBox, 'Padding', 5, 'Spacing', 5);
             
             for i=1:VS.par.nProps

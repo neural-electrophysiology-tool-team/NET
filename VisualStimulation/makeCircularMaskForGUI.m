@@ -3,7 +3,8 @@ function mask=makeCircularMaskForGUI(radius,varargin)
     interior_val=0;
     exterior_val=255;
     color = [1 0 0]*255;
-%     pvpmod(varargin)
+    
+% pvpmod(varargin)
 
     sz=2*radius+1;
     mask=ones(sz, sz, 4);

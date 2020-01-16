@@ -206,7 +206,7 @@ classdef MEAAnalysis < recAnalysis
             rez = set_cutoff(rez);
             save(resultsFileName,'rez', '-v7.3');
             
-            fprintf('Total time used for running kilo-sort was %f hours', toc/60/60);
+            fprintf('Total time used for running kilo-sort was %f hours\n', toc/60/60);
             delete(ops.fproc);
         end
         
@@ -234,14 +234,14 @@ classdef MEAAnalysis < recAnalysis
             par.saveFileName=obj.getFileName(dbstack,par.saveFileName); %extracts file save name
             
             %save/load data
-            if exist(par.saveFileName,'file') & ~par.overwrite & ~par.manual & ~par.exportGS
-                if nargout==1
-                    data=load(par.saveFileName);
-                else
-                    disp('JRClust sorting already exists, use overwrite=true');
-                end
-                return;
-            end
+%             if exist(par.saveFileName,'file') & ~par.overwrite & ~par.manual & ~par.exportGS
+%                 if nargout==1
+%                     data=load(par.saveFileName);
+%                 else
+%                     disp('JRClust sorting already exists, use overwrite=true');
+%                 end
+%                 return;
+%             end
             
             if ~strcmp(class(obj.currentDataObj),'binaryRecording')
                 disp('JRClust only works on binaryRecording data class!!!');
@@ -251,7 +251,7 @@ classdef MEAAnalysis < recAnalysis
             par.layoutName=[obj.currentDataObj.layoutName '_JRC.prb'];
             recName=obj.currentDataObj.recordingName;
             recDir=obj.currentDataObj.recordingDir;
-            if ~exist([recDir filesep filesep par.layoutName],'file')
+            if ~exist([recDir filesep par.layoutName],'file')
                 obj.currentDataObj.convertLayoutJRClust([sqrt(pi*15^2) sqrt(pi*15^2)]); %electrode side is sqrt(pi*15^2)=26.6;
                 disp('Layout converted to JRclust format');
             end
@@ -274,9 +274,12 @@ classdef MEAAnalysis < recAnalysis
             if ~exist([par.fullParamFile(1:end-4) '_ksort.mat'],'file')
                 C = strsplit(par.fullParamFile,filesep);
                 paramDir = fullfile(join(C(1:end-1),'/'));
-                resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
+                resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName '_JRC_ksort.mat'];
                 load(resultsFileName, 'rez');
-                rezToPhy(rez, paramDir{1});
+                if contains(paramDir{1}, 'wexac')
+                    paramDir{1} = strrep(paramDir{1},'\','\\');
+                end
+                rezToPhy(rez,paramDir{1});
                 jrc('import-ksort',paramDir{1});
             else
                 disp('Data from ksort already imported');
