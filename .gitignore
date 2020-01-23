@@ -134,3 +134,4 @@ VSConfig*
 # Compiled MEX binaries (all platforms)
 *.mex*
 VisualStimulation/VStim/tmpVSFile.mat
+*.prb
