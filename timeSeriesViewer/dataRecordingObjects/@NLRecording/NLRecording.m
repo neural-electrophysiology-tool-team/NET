@@ -266,7 +266,39 @@ classdef NLRecording < dataRecording
             disp('saving meta data');
             obj.saveMetaData;
         end
+        
+         function obj=getRecordingFiles(obj,recordingFile,fileExtension)
+            %Get directory with data files
+            %Usage: obj = getRecordingFiles(obj,recordingFile,fileExtension)
+            %if no recording file is entered lauches a GUI
+            %if no file extension entered, a directory is chosen rather than a specific files (for example for neuralynx recordings)
+            
+            %If no files were entered open GUI for choosing a file or a directory else get the files entered
+            obj.multifileMode=false; %the ability to process multiple folders together was not implemented
+            
+            if isempty(recordingFile) %if directory with data was not entered open get directory GUI
+                [obj.recordingDir]= uigetdir(obj.defaultLocalDir,'Choose the data folder');
+            end
+            if iscell(recordingFile)
+                if numel(recordingFile)>1
+                    error('NLRecoding currently only works with one directory (multiFileMode not implemented)')
+                else
+                    recordingFile=recordingFile{1};
+                end
+            end
+            if recordingFile(end)==filesep %required for separating recordingFile to pathstr and name (and not only pathstr with empty name)
+                recordingFile(end)=[];
+            end
+            [pathstr, name] = fileparts(recordingFile);
+            obj.recordingDir=recordingFile;
+            obj.recordingName=name;
+            obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
+         end
+         
     end
+    
+   
+
     
     methods (Hidden)
         %class constructor
@@ -284,7 +316,6 @@ classdef NLRecording < dataRecording
             obj.datatype='int16';
             obj.folderMode=true; %neuralynx always work in folder mode - a recording is defined by a folder
             obj=obj.getRecordingFiles(recordingFile);
-            obj.recordingDir=[obj.recordingDir obj.recordingName];
             obj.channelFiles=dir([obj.recordingDir filesep '*.' obj.fileExtension]);
             obj.channelFiles={obj.channelFiles.name};
             
