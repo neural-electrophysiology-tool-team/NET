@@ -375,6 +375,7 @@ classdef (Abstract) recAnalysis < handle
                     obj.currentDataFiles=allFullFiles';
                     %check which data acquisition system was used
                     pFormat=find(strcmp(obj.recTable.Properties.VariableNames,'recFormat'));
+                    obj.currentExpFolder=obj.recTable.folder{pRec(1)};
                     obj = getCurrentObjectMeta(obj);
 %                     obj.currentDataObj.samplingFrequency = obj.currentDataMeta.fs;
                     if ~isempty(pFormat) & iscell(obj.recTable{pRec(1),pFormat})
@@ -415,7 +416,6 @@ classdef (Abstract) recAnalysis < handle
                     %define related folders and construct correspondin file names
                     obj.currentAnalysisFolder=[obj.recTable.folder{pRec(1)} filesep 'analysis' filesep recName];
                     obj.currentPlotFolder=[obj.recTable.folder{pRec(1)} filesep 'plots' filesep recName];
-                    obj.currentExpFolder=obj.recTable.folder{pRec(1)};
                     obj=obj.getFileNames;
                     
                     [stat,mess,messid]=mkdir(char(join(obj.currentAnalysisFolder,''))); %creates analysis directory if not existing
@@ -452,47 +452,60 @@ classdef (Abstract) recAnalysis < handle
             % find MEA, read serial number of lookup table and add
             % electrode diameter and spacing to obj.CurrentDataMeta            
             temp    = tbl{exp_idx,MEA_idx};
-            MEA_serialNr = str2double(regexp(temp{1},'\d*','match'));
-
-            NSKToolBoxMainDir   = fileparts(which('identifierOfMainDir4NSKToolBox'));
-            fn = [NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'MEA_lookupTable_path.txt'];
-            fileID = fopen(fn,'r'); formatSpec = '%s';
-            fn_lookuptable  = fscanf(fileID,formatSpec);
-            T               = readtable(fn_lookuptable);
-            headings = T.Properties.VariableNames;
-            MEA_idx             = find(T{:,find(strcmp(headings,'serialNumber'))} == MEA_serialNr);
-            electrode_diam      = T{MEA_idx,find(strcmp(headings,'electrodeDiameter'))};
-            electrode_spacing   = T{MEA_idx,find(strcmp(headings,'electrodeSpacing'))};
-            nElectrodes         = T{MEA_idx,find(strcmp(headings,'nElectrodes'))};
-            nElectrodes_x        = T{MEA_idx,find(strcmp(headings,'electrodes_x'))};
-            nElectrodes_y        = T{MEA_idx,find(strcmp(headings,'electrodes_y'))};
-            obj.currentDataMeta.electrode_diam      = electrode_diam;
-            obj.currentDataMeta.electrode_spacing   = electrode_spacing;
-            
-            % sampling rate
-            temp    = tbl{exp_idx,fs_idx};
-            if isempty(temp{1})
-                fs = 20e3; % default of 20kHz if it's empty
-            elseif (strcmp(temp{1},'20kH') ==1) ||(strcmp(temp{1},'20kHz')==1)
-                fs = 20e3;
-            else
-                fs = temp{1}; % check if this will be a string, char or double; change to double
-            end
-            obj.currentDataMeta.fs   = fs;
-            
-            % create layout.chMap
-            if exist([obj.currentExpFolder,filesep,'layout.chMap']) == 2
-                disp('layout.chMap already exists in the experiment folder. Doing nothing.')
-            else
-                str = [num2str(electrode_spacing),'_',num2str(nElectrodes_x),'x',num2str(nElectrodes_y),'_newSetup'];
-                temp = obj.currentDataFiles{1}; 
-                temp2 = strsplit(temp,filesep);
-                exp_folder = strjoin({temp2{1:end-1}},filesep);
-                fileID = fopen([exp_folder,filesep,'layout.chMap'],'w');
-                fprintf(fileID,str);
-                fclose(fileID);
-                disp('Created layout.chMap in experiment folder based on MEA lookup table.')
-            end
+            try
+                MEA_serialNr = str2double(regexp(temp{1},'\d*','match'));
+                NSKToolBoxMainDir   = fileparts(which('identifierOfMainDir4NSKToolBox'));
+                fn = [NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'MEA_lookupTable_path.txt'];
+                fileID = fopen(fn,'r'); formatSpec = '%s';
+                fn_lookuptable  = fscanf(fileID,formatSpec);
+                T               = readtable(fn_lookuptable);
+                headings = T.Properties.VariableNames;
+                MEA_idx             = find(T{:,find(strcmp(headings,'serialNumber'))} == MEA_serialNr);
+                electrode_diam      = T{MEA_idx,find(strcmp(headings,'electrodeDiameter'))};
+                electrode_spacing   = T{MEA_idx,find(strcmp(headings,'electrodeSpacing'))};
+                nElectrodes         = T{MEA_idx,find(strcmp(headings,'nElectrodes'))};
+                nElectrodes_x        = T{MEA_idx,find(strcmp(headings,'electrodes_x'))};
+                nElectrodes_y        = T{MEA_idx,find(strcmp(headings,'electrodes_y'))};
+                obj.currentDataMeta.electrode_diam      = electrode_diam;
+                obj.currentDataMeta.electrode_spacing   = electrode_spacing;
+                % sampling rate
+                temp    = tbl{exp_idx,fs_idx};
+                if isempty(temp{1})
+                    fs = 20e3; % default of 20kHz if it's empty
+                elseif (strcmp(temp{1},'20kH') ==1) ||(strcmp(temp{1},'20kHz')==1)
+                    fs = 20e3;
+                else
+                    fs = temp{1}; % check if this will be a string, char or double; change to double
+                end
+                obj.currentDataMeta.fs   = fs;
+                
+                % create layout.chMap
+                if exist([obj.currentExpFolder,filesep,'layout.chMap']) == 2
+                    disp('layout.chMap already exists in the experiment folder. Doing nothing.')
+                else
+                    str = [num2str(electrode_spacing),'_',num2str(nElectrodes_x),'x',num2str(nElectrodes_y),'_newSetup'];
+                    temp = obj.currentDataFiles{1};
+                    temp2 = strsplit(temp,filesep);
+                    exp_folder = strjoin({temp2{1:end-1}},filesep);
+                    fileID = fopen([exp_folder,filesep,'layout.chMap'],'w');
+                    fprintf(fileID,str);
+                    fclose(fileID);
+                    disp('Created layout.chMap in experiment folder based on MEA lookup table.')
+                end
+            catch
+                if exist([obj.currentExpFolder,filesep,'layout.chMap']) == 2
+                    disp('layout.chMap already exists in the experiment folder. Doing nothing.')
+                else
+                    disp('No MEA Lookup found, using default layout_100_16x16_newSetup');
+                    str = '100_16x16_newSetup';
+                    temp = obj.currentDataFiles{1};
+                    temp2 = strsplit(temp,filesep);
+                    exp_folder = strjoin({temp2{1:end-1}},filesep);
+                    fileID = fopen([exp_folder,filesep,'layout.chMap'],'w');
+                    fprintf(fileID,str);
+                    fclose(fileID);
+                end      
+            end    
 
         end
     
