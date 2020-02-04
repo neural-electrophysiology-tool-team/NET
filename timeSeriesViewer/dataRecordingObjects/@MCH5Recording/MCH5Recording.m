@@ -153,7 +153,7 @@ classdef MCH5Recording < dataRecording
                         
                         if f>1 && f<=(obj.nRecordings+1) % data in inside recording range
                             startend=[tmpStartTime;tmpEndTime]-cumStart(f);
-                            startEndSample=startend/1000*obj.samplingFrequency;
+                            startEndSample=round(startend./1000*obj.samplingFrequency);
                             tempWindowSamples=startEndSample(2)-startEndSample(1);
                             display(obj.fullFilename{f-1});
                             V_uV(:, i, startSample:endSample) = h5read(obj.fullFilename{f-1}, [obj.pathToRawDataStreamGroup '/ChannelData'], ...
