@@ -100,10 +100,12 @@ classdef (Abstract) dataRecording < handle
             end
             if iscell(obj.recordingDir)
                 recordingDir=obj.recordingDir{1};
+                recordingName = strjoin(cellfun(@(x) x(1:end-3), obj.dataFileNames,'UniformOutput',false),'-');
             else
                 recordingDir=obj.recordingDir;
+                recordingName = obj.recordingName; %make sure this always work
             end
-            save([recordingDir filesep obj.recordingName '_metaData.mat'],'metaData');
+            save([recordingDir filesep recordingName '_metaData.mat'],'metaData');
         end
         
         function [X,Y,Z]=getElectrodePositions(obj,electrodePitch)
@@ -155,11 +157,12 @@ classdef (Abstract) dataRecording < handle
                         obj.(fieldNames{i})=metaData.(fieldNames{i});
                     end
                 else %multi file recording
+                    recordingName = strjoin(cellfun(@(x) x(1:end-3), obj.dataFileNames,'UniformOutput',false),'-');
                     for i=1:numel(obj.recordingDir)
                         if nargin==2
                             load(fileName{i});
                         else
-                            load([oldRecordingDir{i} filesep obj.recordingName '_metaData'],'metaData');
+                            load([oldRecordingDir{i} filesep recordingName '_metaData'],'metaData');
                         end
                         fieldNames=fieldnames(metaData);
                         for j=1:numel(fieldNames)
@@ -384,9 +387,11 @@ classdef (Abstract) dataRecording < handle
 %             end
             
             if iscell(obj.recordingDir)
-               recordingDir=obj.recordingDir{1}; 
+               recordingDir=obj.recordingDir{1};
+               recordingName = strjoin(cellfun(@(x) x(1:end-3), obj.dataFileNames,'UniformOutput',false),'-');
             else 
                 recordingDir=obj.recordingDir;
+                recordingName = obj.recordingName;
             end
             
             %converts data recording object to kilo sort binary format for sorting
@@ -394,7 +399,7 @@ classdef (Abstract) dataRecording < handle
                 dataChannels=obj.channelNumbers;
             end
             if nargin<2 || isempty(targetFile)
-                targetFile=[recordingDir filesep obj.recordingName '.bin'];
+                targetFile=[recordingDir filesep recordingName '.bin'];
                 disp(['File name for binary is:' targetFile]);
             end
             if ~any(strcmp(targetFile(end-3:end),{'.dat','.bin'}))
