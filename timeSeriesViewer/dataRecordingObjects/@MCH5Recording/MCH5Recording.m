@@ -1,5 +1,5 @@
 classdef MCH5Recording < dataRecording
-    
+%     This is a comment
   %MCH5Recording Reads a h5 recording file exported by MCS DataManager.
   % This class is used to read h5 containing raw data and
   % trigger information (currently from digital in data) from a 
