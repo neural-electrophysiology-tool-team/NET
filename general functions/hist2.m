@@ -13,6 +13,7 @@ function [D,h,cb]=hist2(X1,X2,varargin)
 %                           dX2 - [1x1] - interval for coordinate 2
 %                           edges1 - [1,M] - bin centers for coordinate 1
 %                           edges2 - [1,M] - bin centers for coordinate 2
+%                           plotProb [default=false] - display the count histrogram or the probability 
 %
 % Function give back :  D - the count histogram
 %                       h - a handle to the density plot (if not entered only calculates and doesnt plot)
@@ -30,6 +31,7 @@ h=[];
 plotResults=1;
 logColorScale=1;
 plotColorBar=1;
+plotProb=0;
 limits1=[];
 limits2=[];
 
@@ -108,6 +110,9 @@ x1r=interp1(edges1,1:numel(edges1),X1(:),'nearest','extrap');
 x2r=interp1(edges2,1:numel(edges2),X2(:),'nearest','extrap');
 
 D=accumarray([x1r x2r],1,[nBinBins1 nBinBins2])';
+if plotProb
+    D=D./sum(D);
+end
 
 if plotResults %plot results
     if isempty(h)
@@ -124,9 +129,18 @@ if plotResults %plot results
     if plotColorBar
         cb=colorbar('location','EastOutside');
         if logColorScale
-            ylabel(cb,'log_{10}(1+#)');
+            if plotProb
+                ylabel(cb,'log_{10}(1+Prob.)');
+            else
+                ylabel(cb,'log_{10}(1+#)');
+            end
         else
-            ylabel(cb,'#');
+            if plotProb
+                ylabel(cb,'Prob.');
+            else
+                ylabel(cb,'#');
+            end
+            
         end
     else
         cb=[];

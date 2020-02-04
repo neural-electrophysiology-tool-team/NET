@@ -1467,9 +1467,164 @@ classdef sleepAnalysis < recAnalysis
                 fprintf('%d,',i);
                 MLong=obj.currentDataObj.getData(ch,startTimes(i),movLongWin);
                 if applyNotch
-                    FMLong=obj.filt.FN.getFilteredData(MLong); %for 50Hz noise
+                    FLong=obj.filt.FN.getFilteredData(MLong); %for 50Hz noise
                 end
-                FMLong=obj.filt.F.getFilteredData(FMLong);
+                FMLong=obj.filt.F.getFilteredData(MLong);
+                
+                FMLong(FMLong<-maxVoltage | FMLong>maxVoltage)=nan; %remove high voltage movement artifacts
+                
+                FMLongB = buffer(FMLong,movWinSamples,movOLWinSamples,'nodelay');
+                pValid=all(~isnan(FMLongB));
+                
+                [pxx,f] = pwelch(FMLongB(:,pValid),segmentWelchSamples,samplesOLWelch,dftPointsWelch,obj.filt.FFs);
+                
+                if saveSpectralProfiles
+                    allFreqProfiles(:,(fftInBuffer*(i-1)+find(pValid)))=pxx;
+                end
+                deltaBetaRatioAll{i}=zeros(1,numel(pValid));
+                deltaBetaRatioAll{i}(pValid)=(mean(pxx(pfLowBand,:))./mean(pxx(pfHighBand,:)))';
+                
+                deltaRatioAll{i}=zeros(1,numel(pValid));
+                deltaRatioAll{i}(pValid)=mean(pxx(pfLowBand,:))';
+                
+                betaRatioAll{i}=zeros(1,numel(pValid));
+                betaRatioAll{i}(pValid)=mean(pxx(pfHighBand,:))';
+                
+                t_ms{i}=startTimes(i)+((movWin/2):timeBin:(movLongWin-movWin/2));
+            end
+            fprintf('\n');
+            deltaBetaRatioAll{end}(t_ms{end}>(endTime-movWin/2))=NaN; 
+            deltaRatioAll{end}(t_ms{end}>(endTime-movWin/2))=NaN; 
+            betaRatioAll{end}(t_ms{end}>(endTime-movWin/2))=NaN; 
+            
+            bufferedDelta2BetaRatio=cell2mat(deltaBetaRatioAll);bufferedDelta2BetaRatio=bufferedDelta2BetaRatio(:);
+            bufferedDeltaRatio=cell2mat(deltaRatioAll);bufferedDeltaRatio=bufferedDeltaRatio(:);
+            bufferedBetaRatio=cell2mat(betaRatioAll);bufferedBetaRatio=bufferedBetaRatio(:);
+            
+            t_ms=cell2mat(t_ms);
+            
+            save(obj.files.dbRatio,'t_ms','bufferedDelta2BetaRatio','parDBRatio','bufferedBetaRatio','bufferedDeltaRatio','allFreqProfiles');
+        end
+        
+        %% getPhaseAnalysis
+        function data=getPhaseAnalysis(obj,varargin)
+            obj.checkFileRecording;
+            
+            parseObj = inputParser;
+            addParameter(parseObj,'ch1',NaN,@isnumeric);
+            addParameter(parseObj,'ch2',NaN,@isnumeric);
+
+
+            addParameter(parseObj,'overwrite',0,@isnumeric);
+            addParameter(parseObj,'inputParams',false,@isnumeric);
+            parseObj.parse(varargin{:});
+            if parseObj.Results.inputParams
+                disp(parseObj.Results);
+                return;
+            end
+            
+            %evaluate all input parameters in workspace
+            for i=1:numel(parseObj.Parameters)
+                eval([parseObj.Parameters{i} '=' 'parseObj.Results.(parseObj.Parameters{i});']);
+            end
+            
+            %make parameter structure
+            parPhaseAnalysis=parseObj.Results;
+            
+            if isnan(ch1) || isnan(ch2)
+                disp('Error: no reference channel for Delta 2 Beta extraction');
+                return;
+            end
+            %check if analysis was already done done
+            obj.files.phaseAnalysis=[obj.currentAnalysisFolder filesep 'phaseAnalysis_ch' num2str(ch1) '-' num2str(ch2) '.mat'];
+            if exist(obj.files.phaseAnalysis,'file') & ~overwrite
+                if nargout==1
+                    data=load(obj.files.phaseAnalysis);
+                else
+                    disp('Phase analysis already exists for this recording');
+                end
+                return;
+            end
+            
+            slowCyclesFile1=[obj.currentAnalysisFolder filesep 'slowCycles_ch' num2str(ch1) '.mat'];
+            slowCyclesFile2=[obj.currentAnalysisFolder filesep 'slowCycles_ch' num2str(ch2) '.mat'];
+            obj.checkFileRecording(slowCyclesFile1,'slow cycle analysis missing, please first run getSlowCycles');
+            obj.checkFileRecording(slowCyclesFile2,'slow cycle analysis missing, please first run getSlowCycles');
+            SC1=load(slowCyclesFile1); %load data
+            SC2=load(slowCyclesFile2); %load data
+            
+            obj.getFilters;
+            
+            %Extract REM / SWS segments that are common to both channels
+            
+            %pREM=ones(1,SC1.
+            
+            fprintf('\nDelta2Beta extraction (%d chunks)-',nChunks);
+            
+            for i=1:nChunks
+                fprintf('%d,',i);
+                MLong=obj.currentDataObj.getData(ch,startTimes(i),movLongWin);
+                if applyNotch
+                    FLong=obj.filt.FN.getFilteredData(MLong); %for 50Hz noise
+                end
+                FMLong=obj.filt.F.getFilteredData(MLong);
+                
+                FMLong(FMLong<-maxVoltage | FMLong>maxVoltage)=nan; %remove high voltage movement artifacts
+                
+            end
+            
+            
+            
+            movWinSamples=movWin/1000*obj.filt.FFs;%obj.filt.FFs in Hz, movWin in samples
+            movOLWinSamples=movOLWin/1000*obj.filt.FFs;
+            timeBin=(movWin-movOLWin); %ms
+            
+            segmentWelchSamples = round(segmentWelch/1000*obj.filt.FFs);
+            samplesOLWelch = round(segmentWelchSamples*OLWelch);
+            
+            %run welch once to get frequencies for every bin (f) determine frequency bands
+            [~,f] = pwelch(randn(1,movWinSamples),segmentWelchSamples,samplesOLWelch,dftPointsWelch,obj.filt.FFs);
+            pfLowBand=find(f<=deltaBandCutoff);
+            pfHighBand=find(f>=betaBandLowCutoff & f<betaBandHighCutoff);
+            
+            %if obj.currentDataObj.recordingDuration_ms<movLongWin
+            %    movLongWin=obj.currentDataObj.recordingDuration_ms;
+            %end
+            
+            if win==0
+                win=obj.currentDataObj.recordingDuration_ms-tStart;
+                endTime=obj.currentDataObj.recordingDuration_ms;
+            else
+                endTime=min(win+tStart,obj.currentDataObj.recordingDuration_ms);
+            end
+            startTimes=tStart:(movLongWin-movOLWin):endTime;
+            nChunks=numel(startTimes);
+            deltaBetaRatioAll=cell(1,nChunks);
+            t_ms=cell(1,nChunks);
+            %deltaBetaRatioAllLow=cell(1,nChunks);;deltaBetaRatioAllHigh=cell(1,nChunks);
+            
+            if saveSpectralProfiles
+                FMLongB = buffer(true(1,movLongWin/1000*obj.filt.FFs),movWinSamples,movOLWinSamples,'nodelay');
+                fftInBuffer=size(FMLongB,2)
+                allFreqProfiles=zeros(ceil(dftPointsWelch/2)+1,nChunks*fftInBuffer);
+            else
+                allFreqProfiles=[];
+            end
+            if parPhaseAnalysis.applyNotch
+                obj.filt.FN=filterData(obj.currentDataObj.samplingFrequency(1));
+                obj.filt.FN.filterDesign='cheby1';
+                obj.filt.FN.padding=true;
+                obj.filt.FN=obj.filt.FN.designNotch;
+            end
+            
+            fprintf('\nDelta2Beta extraction (%d chunks)-',nChunks);
+            for i=1:nChunks
+                fprintf('%d,',i);
+                MLong=obj.currentDataObj.getData(ch,startTimes(i),movLongWin);
+                if applyNotch
+                    FLong=obj.filt.FN.getFilteredData(MLong); %for 50Hz noise
+                end
+                FMLong=obj.filt.F.getFilteredData(MLong);
                 
                 FMLong(FMLong<-maxVoltage | FMLong>maxVoltage)=nan; %remove high voltage movement artifacts
                 
@@ -1548,10 +1703,10 @@ classdef sleepAnalysis < recAnalysis
             dbRatioFile=[obj.currentAnalysisFolder filesep 'dbRatio_ch' num2str(ch) '.mat'];
             dbAutocorrFile=[obj.currentAnalysisFolder filesep 'dbAutocorr_ch' num2str(ch) '.mat'];
             
-            obj.checkFileRecording(dbRatioFile,'Delta to beta analysis missing, please first run getDBRatio');
+            obj.checkFileRecording(dbRatioFile,'Delta to beta analysis missing, please first run getDelta2BetaRatio');
             load(dbRatioFile,'t_ms','bufferedDelta2BetaRatio','parDBRatio'); %load data  
             
-            obj.checkFileRecording(dbAutocorrFile,'Delta to beta autocorr analysis missing, please first run getDBRatioAC');
+            obj.checkFileRecording(dbAutocorrFile,'Delta to beta autocorr analysis missing, please first run getDelta2BetaAC');
             load(dbAutocorrFile,'pSleepDBRatio'); %load data
                 
             timeBin=(parDBRatio.movWin-parDBRatio.movOLWin);
@@ -1599,7 +1754,7 @@ classdef sleepAnalysis < recAnalysis
             pTcycleMid=pTcycleMid+pTcycleOnset+edgesSamples+1;
             TcycleMid=t_ms(pTcycleMid);
             
-            save(obj.files.slowCycles,'parSlowCycles','TcycleOnset','TcycleOffset','TcycleMid','pSleepDBRatio','DBRatioMedFilt');
+            save(obj.files.slowCycles,'parSlowCycles','TcycleOnset','TcycleOffset','TcycleMid','pSleepDBRatio','t_ms','DBRatioMedFilt');
         end
         
         %% plotDelta2BetaRatio
@@ -1669,11 +1824,9 @@ classdef sleepAnalysis < recAnalysis
                 set(f,'PaperPositionMode','auto');
                 fileName=[obj.currentPlotFolder filesep 'slowCycles_ch' num2str(ch)];
                 print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
-                print(fileName,'-depsc',['-r' num2str(obj.figResEPS)]);
                 if printLocalCopy
                     fileName=[cd filesep obj.recTable.Animal{obj.currentPRec} '_Rec' num2str(obj.currentPRec) '_slowCycles_ch' num2str(ch)];
                     print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
-                    print(fileName,'-depsc',['-r' num2str(obj.figResEPS)]);
                 end
             end
         end
@@ -1802,11 +1955,9 @@ classdef sleepAnalysis < recAnalysis
                 set(f,'PaperPositionMode','auto');
                 fileName=[obj.currentPlotFolder filesep 'sharpWaveAnalysis_ch' num2str(ch)];
                 print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
-                print(fileName,'-depsc',['-r' num2str(obj.figResEPS)]);
                 if printLocalCopy
                     fileName=[cd filesep obj.recTable.Animal{obj.currentPRec} '_Rec' num2str(obj.currentPRec) '_sharpWaveAnalysis_ch' num2str(ch)];
                     print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
-                    print(fileName,'-depsc',['-r' num2str(obj.figResEPS)]);
                 end
             end
         end
@@ -2741,6 +2892,9 @@ classdef sleepAnalysis < recAnalysis
                 eval([parseObj.Parameters{i} '=' 'parseObj.Results.(parseObj.Parameters{i});']);
             end
             
+            if isnan(ch)
+                error('LFP channel not define, either define in database as ''defaulLFPCh'' or as input to method ,eg ''ch'',''1''');
+            end
             %make parameter structure
             parFreqBandDetection=parseObj.Results;
             
