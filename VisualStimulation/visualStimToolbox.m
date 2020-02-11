@@ -81,6 +81,20 @@ VS.par.currentVSO=find(strcmp(VS.par.VSMethods,initialVStim)); %the default visu
 VS.par.currentGUIScreen=2; %the default monitor to display GUI
 VS.par.currentPTBScreen=1; %the default monitor to display the visual stimulation
 
+%check configuration file for PC specific values
+NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
+configFile=[NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'GUIConfig.txt']; %JSON encoded
+if exist(configFile,'file')
+    fid=fopen(configFile);
+    configText=fscanf(fid,'%s');
+	configData=jsondecode(configText); % NOTICE: decodes all '.' to '_', ruining field names. 
+	fclose(fid);
+	fn = fieldnames(configData);
+	for i=1:numel(fn)
+        fn2{i}=strrep(fn{i},'_','.');% converts '_' back to proper fied separators ('.')
+        eval([fn2{i} '=configData.(fn{i})' ]);
+	end
+end
 %initialize Psychophysics toolbox screens
 VS.par.PTB_win=[];
 initializeScreens(simulationModel);
