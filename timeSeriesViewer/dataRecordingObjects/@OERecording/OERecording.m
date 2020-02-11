@@ -7,20 +7,28 @@ classdef OERecording < dataRecording
         eventFiles
         evntFileSize
         fileSize
+        fileSizeA
         
         n2sA
         fileHeaders
+        fileHeadersA
         ADBitVolts
         recordSize
         
         sample_ms
         bufferSize;
+        bufferSizeA
         blockLength;
+        blockLengthA;
+        MicrovoltsPerADA
+        samplingFrequencyA
         
+        startDateA
         blkCont
         nRecordsCont
         blkBytesCont
         dataDescriptionCont
+        dataDescriptionContA
         bytesPerRecCont
         recordLength
         
@@ -116,13 +124,84 @@ classdef OERecording < dataRecording
             end
             
             if obj.convertData2Double
-                V_uV = permute(double(V_uV) * obj.MicrovoltsPerAD ,[3 2 1]);
+                V_uV = permute(double(V_uV) * obj.MicrovoltsPerAD(1) ,[3 2 1]);
             else
                 V_uV = permute(V_uV,[3 2 1]);
             end
             
             if nargout==2
                 t_ms=(1:windowSamples)*(1e3/obj.samplingFrequency(1));
+            end
+        end
+        
+        function [V_uV,t_ms]=getAnalogData(obj,channels,startTime_ms,window_ms)
+            %Extract Neuralynx recording data from file to memory
+            %Usage: [V_uV,t_ms]=obj.getData(channels,startTime_ms,window_ms);
+            %Input : channels - [1xN] a vector with channel numbers as appearing in the data folder files
+            %        startTime_ms - a vector [1xN] of start times [ms]. If Inf, returns all time stamps in recording (startTime_ms is not considered)
+            %        window_ms - a scalar [1x1] with the window duration [ms].
+            %Output: V_us - A 3D matrix [nChannels x nTrials x nSamples] with voltage waveforms across specified channels and trials
+            %        t_ms - A time vector relative to recording start (t=0 at start)
+            windowSamples=round(window_ms/obj.sample_ms);
+            nWindows=numel(startTime_ms);
+            startTime_ms=round(startTime_ms/obj.sample_ms)*obj.sample_ms;
+            window_ms=windowSamples*obj.sample_ms;
+            
+            if isempty(channels) %if no channels are entered, get all channels
+                channels=obj.channelNumbersAnalog;
+            end
+            nCh=numel(channels);
+            
+            V_uV=zeros(windowSamples,nWindows,nCh,obj.blkCont(4).Types); %initialize waveform matrix
+            pOutIdx=cell(nWindows,1);
+            pRecIdx=cell(nWindows,1);
+            %generate time stamps for block waveform extraction and extract waveforms from file
+            %clear pOutIdx
+            for i=1:nWindows
+                pSingleTrialTimeStamps{i}=find(obj.allTimeStamps>=startTime_ms(i)-obj.recordLength & obj.allTimeStamps<(startTime_ms(i)+window_ms)); %find relevant blocks
+                singleTrialTimeStamps=round(obj.allTimeStamps(pSingleTrialTimeStamps{i})/obj.sample_ms)*obj.sample_ms;
+                recordsPerTrial(i)=numel(singleTrialTimeStamps);
+                timeIdx=bsxfun(@plus,(1:obj.dataSamplesPerRecord)*obj.sample_ms,singleTrialTimeStamps);
+                pRecIdx{i,:}=(timeIdx>startTime_ms(i)) & timeIdx<(startTime_ms(i)+window_ms);
+                timeIdx=timeIdx';
+                pOutIdx{i,1}=round((timeIdx(pRecIdx{i,:}')-startTime_ms(i))/obj.sample_ms)+windowSamples*(i-1); %round should not be changed to floor or ceil - it creates a weird artifact
+            end
+            if pOutIdx{1}(1)==0
+                pOutIdx{1}=pOutIdx{1}+1;
+            end
+            pRecIdx=cell2mat(pRecIdx);
+            pOutIdx=cell2mat(pOutIdx);
+            
+            %{
+            if pOutIdx(1)==0 && numel(pOutIdx)==windowSamples+1 %due to rounding issues, in necessary, examine how this can be solved
+                pOutIdx(1)=[];
+            elseif pOutIdx(1)==0
+                pOutIdx=pOutIdx+1;
+            end
+            %}
+            
+            for i=1:nCh
+                data=zeros(size(pRecIdx),'int16')';currRec=1;
+                for j=1:nWindows
+                    if ~isempty(pSingleTrialTimeStamps{j})
+                        fseek(obj.fidA(obj.n2sA(channels(i))),obj.headerSizeByte+(pSingleTrialTimeStamps{j}(1)-1)*obj.bytesPerRecCont+sum(obj.blkBytesCont(1:3)),'bof'); %(64+32+32+32)/8=20
+                        data(:,(1:recordsPerTrial(j))+currRec-1)=fread(obj.fidA(obj.n2sA(channels(i))), [obj.dataSamplesPerRecord recordsPerTrial(j)], '1024*int16',obj.bytesPerRecCont - obj.blkBytesCont(4),'b');
+                        currRec=currRec+recordsPerTrial(j);
+                    else
+                        disp('requested time stamp outside recording range!');
+                    end
+                end
+                V_uV(pOutIdx+(i-1)*nWindows*windowSamples)=data(pRecIdx');
+            end
+            
+            if obj.convertData2Double
+                V_uV = permute(double(V_uV) * obj.MicrovoltsPerADA(1) ,[3 2 1]);
+            else
+                V_uV = permute(V_uV,[3 2 1]);
+            end
+            
+            if nargout==2
+                t_ms=(1:windowSamples)*(1e3/obj.samplingFrequencyA(1));
             end
         end
         
@@ -150,10 +229,10 @@ classdef OERecording < dataRecording
             
             pTTL=eventType==3;
             for i=1:numel(activeCh)
-                T_ms{(2*activeCh+1)}=timestamps(eventId==1 & ch==activeCh(i) & pTTL)';%ch1 is 0
-                T_ms{(2*activeCh+2)}=timestamps(eventId==0 & ch==activeCh(i) & pTTL)';%ch1 is 0
-                chNumber((2*activeCh+1))=activeCh(i);
-                chNumber((2*activeCh+2))=activeCh(i);
+                T_ms{(2*activeCh(i)+1)}=timestamps(eventId==1 & ch==activeCh(i) & pTTL)';%ch1 is 0
+                T_ms{(2*activeCh(i)+2)}=timestamps(eventId==0 & ch==activeCh(i) & pTTL)';%ch1 is 0
+                chNumber((2*activeCh(i)+1))=activeCh(i);
+                chNumber((2*activeCh(i)+2))=activeCh(i);
             end
         end
         
@@ -184,7 +263,7 @@ classdef OERecording < dataRecording
             
             %find channel types analog ch / electrode ch
             pCh=cellfun(@(x) mean(x([1 2])=='CH')==1,channelNamesAll);
-            pAnalogCh=cellfun(@(x) mean(x([1 2])=='AU')==1,channelNamesAll);
+            pAnalogCh=cellfun(@(x) mean(x([1 2])=='AU')==1 || mean(x([1 2])=='AD')==1,channelNamesAll);
             
             obj.channelFilesAnalog=channelFiles(pAnalogCh);
             obj.channelFiles=channelFiles(pCh);
@@ -212,10 +291,10 @@ classdef OERecording < dataRecording
                 
                 fseek(obj.fid(i),0,'bof');
                 hdr = fread(obj.fid(i), obj.headerSizeByte, 'char*1');
-                eval(char(hdr'));
+                eval(char(hdr')); %convert to an header structure
                 
                 obj.samplingFrequency(i)=header.sampleRate;
-                obj.MicrovoltsPerAD=header.bitVolts;
+                obj.MicrovoltsPerAD(i)=header.bitVolts;
                 obj.startDate{i}=header.date_created;
                 obj.bufferSize(i)=header.bufferSize;
                 obj.blockLength(i)=header.blockLength;
@@ -228,6 +307,23 @@ classdef OERecording < dataRecording
                 end
             end
             obj.sample_ms=1e3/obj.samplingFrequency(1);
+            
+            for i=1:numel(obj.channelFilesAnalog)
+                fseek(obj.fidA(i),0,'eof');
+                obj.fileSizeA(i)=ftell(obj.fidA(i));
+                
+                fseek(obj.fidA(i),0,'bof');
+                hdr = fread(obj.fidA(i), obj.headerSizeByte, 'char*1');
+                eval(char(hdr'));
+                
+                obj.samplingFrequencyA(i)=header.sampleRate;
+                obj.MicrovoltsPerADA(i)=header.bitVolts;
+                obj.startDateA{i}=header.date_created;
+                obj.bufferSizeA(i)=header.bufferSize;
+                obj.blockLengthA(i)=header.blockLength;
+                obj.dataDescriptionContA{i}=header.description;
+                obj.fileHeadersA{i} = header;
+            end
             
             %prepare data structures for continuous - assumes that all channels have the same size structure and time stamps, else run separetly on every file
             bStr = {'ts' 'nsamples' 'recNum' 'data' 'recordMarker'};
@@ -313,9 +409,37 @@ classdef OERecording < dataRecording
             seg = fread(obj.fidEvnt, obj.nRecordsEvnt*obj.blkEvnt(segNum).Repeat, sprintf('%d*%s', obj.blkEvnt(segNum).Repeat,obj.blkEvnt(segNum).Types), obj.bytesPerRecEvnt - obj.blkBytesEvnt(segNum), mf);
         end
         
+        function obj=getRecordingFiles(obj,recordingFile,fileExtension)
+            %Get directory with data files
+            %Usage: obj = getRecordingFiles(obj,recordingFile,fileExtension)
+            %if no recording file is entered lauches a GUI
+            %if no file extension entered, a directory is chosen rather than a specific files (for example for neuralynx recordings)
+            obj.folderMode=1;
+            obj.multifileMode=false;
+            
+            %If no files were entered open GUI for choosing a file or a directory else get the files entered
+            if ~isempty(recordingFile) %if directory with data was not entered open get directory GUI
+                [pathstr, name, ext] = fileparts(recordingFile);
+                
+                if ~exist([pathstr filesep obj.dataFileNames],'dir')
+                    disp(['Searching for recording file: ' [pathstr filesep obj.dataFileNames]]);
+                    error('Object was not constructed since no valid recording file name was chosen');
+                end
+
+                obj.dataFileNames=recordingFile;
+                
+            else %if directory with data was not entered open get directory GUI
+                [obj.recordingDir]= uigetdir(obj.defaultLocalDir,'Choose the data folder');
+                [pathstr, name] = fileparts(obj.recordingDir);
+                
+            end
+            obj.recordingDir=[pathstr filesep name];
+            obj.recordingName = name;
+            obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
+            %obj.dataFileNames=dir([pathstr filesep name filesep '*.' obj.fileExtension]);
+        end
+        
     end
-    
-    
     
     methods (Hidden)
         %class constructor
@@ -334,12 +458,8 @@ classdef OERecording < dataRecording
                 recordingFile=recordingFile{1};
             end
             obj=obj.getRecordingFiles(recordingFile);
-            
-            if ~isempty(obj.dataFileNames)
-                obj.recordingDir=[obj.recordingDir obj.dataFileNames{1}];
-            end
-            
-            if exist([obj.recordingDir filesep 'metaData.mat'],'file') && ~obj.overwriteMetaData
+                        
+            if exist(obj.metaDataFile,'file') && ~obj.overwriteMetaData
                 obj=loadMetaData(obj);
                 obj=obj.getFileIdentifiers;
             else

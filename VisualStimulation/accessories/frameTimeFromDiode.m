@@ -17,6 +17,7 @@ function [frameShifts,upCross,downCross,T,transitionNotFound]=frameTimeFromDiode
 tStart=0;
 tEnd=dataRecordingObj.recordingDuration_ms;
 
+samplingFreq=20000; %Hz
 chunckOverlap=1; %ms
 maxChunck=1000*60*20; %ms
 trialStartEndDigiTriggerNumbers=[3 4];
@@ -29,7 +30,7 @@ plotDiodeTransitions=0;
 T=[]; %digital triggers in the recording
 
 %LPF parameters
-F=filterData(20000);
+F=filterData(samplingFreq);
 F.lowPassStopCutoff=1/100;
 F.lowPassPassCutoff=1/120;
 F.highPassStopCutoff=0.000625;
