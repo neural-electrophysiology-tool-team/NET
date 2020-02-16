@@ -368,6 +368,6 @@ classdef KwikRecording < dataRecording
        activeChannelNums=cellfun(@(x) str2num(x), chNums(isActive));
     end
   end
-  
+  %test
 end
  
