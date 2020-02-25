@@ -2,8 +2,8 @@ classdef VS_fullFieldFlash < VStim
     properties (SetAccess=public)
         flashLuminosity = 255; %(L_high-L_low)/L_low
         randomize = true;
-        equalize = true; %Make distribution of intenisty diffs more uniform by adding large diffs. Currently all added diffs will have inter trial delay of obj.interTrialDelay(1)
-        Back2Background=false; %display images between luminosities
+        equalize = false; %Make distribution of intenisty diffs more uniform by adding large diffs. Currently all added diffs will have inter trial delay of obj.interTrialDelay(1)
+        Back2Background=true; %display images between luminosities
         screenTriggerDuration=0.1; %sec
     end
     properties (Constant)
@@ -108,7 +108,11 @@ classdef VS_fullFieldFlash < VStim
             %main loop - start the session
             obj.sendTTL(1,true); %session start trigger (also triggers the recording start)
             WaitSecs(obj.preSessionDelay); %pre session wait time
-            
+            if ~obj.Back2Background  && obj.interTrialDelay~=0
+               disp('Warning! Back2Background is false, while interTrialDelay>0! This means actual stim length is not stimDuration! Continue?')
+                pause
+            end
+                
             for i=1:obj.nTotTrials
                 
                 [obj.on_Flip(i),obj.on_Stim(i),obj.on_FlipEnd(i),obj.on_Miss(i)]=Screen('Flip',obj.PTB_win);
