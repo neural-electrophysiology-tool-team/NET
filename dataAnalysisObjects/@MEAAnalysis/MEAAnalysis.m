@@ -289,7 +289,7 @@ classdef MEAAnalysis < recAnalysis
                 disp('Deleting results file since manual mode is run again');
                 jrc('manual',par.fullParamFile);
                 if ~exist([par.fullParamFile(1:end-4) '_gridSorter.mat'],'file') || par.exportGS
-                    resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
+                    resultsFileName  = [obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName '_JRC_ksort.mat'];
                     export_gridsorter2(resultsFileName);
                     %                 S=load([par.fullParamFile(1:end-4) '_gridSorter.mat']);
                     %                 save(par.saveFileName,'par','S','-v7.3');
