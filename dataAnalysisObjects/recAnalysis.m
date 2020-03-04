@@ -453,7 +453,8 @@ classdef (Abstract) recAnalysis < handle
             % electrode diameter and spacing to obj.CurrentDataMeta            
             temp    = tbl{exp_idx,MEA_idx};
             try
-                MEA_serialNr = str2double(regexp(temp{1},'\d*','match'));
+                MEA_serialNr = str2double(regexp(temp{1}));
+%                 MEA_serialNr = str2double(regexp(temp{1},'\d*','match'));
                 NSKToolBoxMainDir   = fileparts(which('identifierOfMainDir4NSKToolBox'));
                 fn = [NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'MEA_lookupTable_path.txt'];
                 fileID = fopen(fn,'r'); formatSpec = '%s';
@@ -506,7 +507,6 @@ classdef (Abstract) recAnalysis < handle
                     fclose(fileID);
                 end      
             end    
-
         end
     
         %% checkFile - check the existance of a data file and a recording object

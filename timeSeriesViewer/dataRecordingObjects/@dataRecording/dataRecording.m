@@ -317,7 +317,7 @@ classdef (Abstract) dataRecording < handle
                     temp = strsplit(outputName{Index}, '.mat');
                     new_outputname = strcat(temp{1},'_JRC.prb');
                     obj.layoutName = new_outputname;
-                    fid=fopen(new_outputname,'w');
+                    fid=fopen([outputName{1},new_outputname],'w');
             else
                 fid=fopen(outputName,'w');
             end
