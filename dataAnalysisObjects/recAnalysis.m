@@ -357,7 +357,7 @@ classdef (Abstract) recAnalysis < handle
                 end
                 pRec=find(all(pRec==1,1));
                 nRec=numel(pRec);
-                
+                disp(nRec);
                 if nRec>0
                     %collect all files in case multiple files were inserted (comma separated) or group format and couple folder with file name
                     allFullFiles=[];multipleFiles={''};
@@ -453,8 +453,11 @@ classdef (Abstract) recAnalysis < handle
             % electrode diameter and spacing to obj.CurrentDataMeta            
             temp    = tbl{exp_idx,MEA_idx};
             try
-                MEA_serialNr = str2double(regexp(temp{1}));
-%                 MEA_serialNr = str2double(regexp(temp{1},'\d*','match'));
+                if iscell(temp)
+                    MEA_serialNr = str2double(regexp(temp{1},'\d*','match'));
+                else
+                    MEA_serialNr = temp;
+                end
                 NSKToolBoxMainDir   = fileparts(which('identifierOfMainDir4NSKToolBox'));
                 fn = [NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'MEA_lookupTable_path.txt'];
                 fileID = fopen(fn,'r'); formatSpec = '%s';

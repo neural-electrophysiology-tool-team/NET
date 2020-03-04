@@ -74,21 +74,16 @@ class convertuploaddocument:
                 self.logger.info('Process: start_fresh disabled, only %d new files will be processed' % len(self.files))
         
         if len(self.files)>0:
-            self.field['fullpathmsrd'] = self.files * 2
+            self.field['fullpathmsrd'] = self.files 
             self.field.sort_values(by=['fullpathmsrd'], inplace=True)
             self.field.reset_index(drop=True, inplace=True)
-            self.field['MEAfiles'] = self.field['fullpathmsrd'].apply(
-                lambda x: x.split('\\')[-1].replace(self.suffix, 'h5'))
-            self.field['recNames'] = self.field['MEAfiles'].apply(lambda x: hashlib.md5(x.replace('.h5', '').encode()).hexdigest())
-            
-#             self.field['MEAfiles'].loc[::2] = self.field['MEAfiles'].loc[::2].apply(lambda x: x.replace('h5', 'bin'))
-            
+            self.field['MEAfiles'] = self.field['fullpathmsrd'].apply(lambda x: x.split('\\')[-1].replace(self.suffix, 'h5'))
+            self.field['recNames'] = self.field['MEAfiles'].apply(lambda x: hashlib.md5(x.replace('.h5', '').encode()).hexdigest())                                      
             self.field['OrigFileFolder'] = ['\\' + os.path.join(*word[:-1]) for word in
                                     [f.split('\\') for f in self.field['fullpathmsrd']]]
-            self.field['folder'] = self.WexacH5Path+self.field['recNames']
+            self.field['folder'] = [os.path.join(self.WexacH5Path,recname) for recname in self.field['recNames']]
             self.field['OrigFileName'] = self.field['MEAfiles']
             self.field['MEAfiles'] = self.field['recNames']+'.h5'            
-#             self.field['MEAfiles'].loc[::2] = self.field['MEAfiles'].loc[::2].apply(lambda x: x.replace('h5', 'bin'))
             self.field['recNames'] = self.field['MEAfiles']
     
             def setrecformat(x):
@@ -102,6 +97,7 @@ class convertuploaddocument:
             flatten = lambda l: [item for sublist in l for item in sublist]
             nvc = '|'.join(flatten([nextfieldchar]))
             gvc = '|'.join(flatten([getvalchar]))
+            
             for ind in self.field.index:
                 word = self.field['fullpathmsrd'].loc[ind].split('\\')
                 keyvalpair = [re.split(nvc, w) for w in word]
@@ -118,7 +114,7 @@ class convertuploaddocument:
                             self.field[key].loc[ind] = val.split('.' + self.suffix)[0]
             self.field.fillna('unspecified', inplace=True)
         else:
-                self.logger.info('End: No new files to process')
+            self.logger.info('End: No new files to process')
 
     def makeGSdir(self, directory='database/'):
         """Creates a google storage bucket for data
@@ -340,7 +336,7 @@ class convertuploaddocument:
             if self.field_completed.shape[0] > 0:
                 self.field = self.field.append(self.field_completed, sort=False)
             self.field = self.field.replace("unspecified", "")
-            self.field['folder'] = self.WexacH5Path
+#             self.field['folder'] = self.WexacH5Path
             self.logger.info('Process: Saving Excel Experiment Record')
             if self.field.shape[0] > 0:
                 try:
