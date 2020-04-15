@@ -54,7 +54,7 @@ classdef (Abstract) dataRecording < handle
             %        startTime_ms - a vector [1xN] of start times [ms]. If Inf, returns all time stamps in recording (startTime_ms is not considered)
             %        window_ms - a scalar [1x1] with the window duration [ms].
             %        name - the name of the recording (if empty takes the default name)
-            %Output: V_us - A 3D matrix [nChannels x nTrials x nSamples] with voltage waveforms across specified channels and trials
+            %Output: V_uv - A 3D matrix [nChannels x nTrials x nSamples] with voltage waveforms across specified channels and trials
             %        t_ms - A time vector relative to recording start (t=0 at start)
         end
         function [V_uV,T_ms]=getAnalogData(obj,channels,startTime_ms,window_ms,name)
@@ -64,7 +64,7 @@ classdef (Abstract) dataRecording < handle
             %        startTime_ms - a vector [1xN] of start times [ms]. If Inf, returns all time stamps in recording (startTime_ms is not considered)
             %        window_ms - a scalar [1x1] with the window duration [ms].
             %        name - the name of the recording (if empty takes the default name)
-            %Output: V_us - A 3D matrix [nChannels x nTrials x nSamples] with voltage waveforms across specified channels and trials
+            %Output: V_uv - A 3D matrix [nChannels x nTrials x nSamples] with voltage waveforms across specified channels and trials
             %        t_ms - A time vector relative to recording start (t=0 at start)
         end
         function [T_ms]=getTrigger(obj,startTime_ms,window_ms,name)
