@@ -325,7 +325,7 @@ classdef (Abstract) dataRecording < handle
             nCh=size(obj.chLayoutPositions,2);
             fprintf(fid, 'channels = [1:%d];\n\n',nCh);
             fprintf(fid, 'geometry = [%.1f,%.1f',obj.chLayoutPositions(1,1),obj.chLayoutPositions(2,1));
-            for i=2:nCh
+            for i=2:nCh % why starting in chnnel 2?! (nCh is 252)
                 fprintf(fid,';%.1f,%.1f',obj.chLayoutPositions(1,i),obj.chLayoutPositions(2,i));
             end
             fprintf(fid, '];\n\n');
@@ -399,7 +399,9 @@ classdef (Abstract) dataRecording < handle
                 dataChannels=obj.channelNumbers;
             end
             if nargin<2 || isempty(targetFile)
-                targetFile=[recordingDir filesep recordingName '.bin'];
+%                 targetFile=[recordingDir filesep recordingName '.bin']; %
+                temp = strsplit(recordingName,'-');
+                targetFile=[recordingDir filesep temp{1} '_concat_',num2str(numel(temp)),'.bin']; %
                 disp(['File name for binary is:' targetFile]);
             end
             if ~any(strcmp(targetFile(end-3:end),{'.dat','.bin'}))

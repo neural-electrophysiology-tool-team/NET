@@ -183,7 +183,7 @@ classdef MEAAnalysis < recAnalysis
             end
             
             nCh=numel(obj.currentDataObj.channelNumbers);
-            NT=64+2^round(log2(1024*(128/nCh)))*1024;
+            NT=64+2^round(log2(1024*(128/nCh)))*1024; % why is NT defined here? It's inside ops; shouldn't be defined (Alina, 29/3/20)
             
             % Run the configuration file, it builds the structure of options (ops)
             ops=makeConfigKiloSort2(obj.currentDataObj.recordingDir,nCh,...
@@ -191,7 +191,7 @@ classdef MEAAnalysis < recAnalysis
                 'fs',obj.currentDataObj.samplingFrequency);
             
             layoutName=[obj.currentDataObj.layoutName '_JRC.prb'];
-            resultsFileName=[obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName(1:end-4) '_JRC_ksort.mat'];
+            resultsFileName=[obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName '_JRC_ksort.mat'];
             tic; %this is important otherwise fitTemplates crashes since it includes a toc without a tic
             [rez, DATA] = preprocessDataSub(ops);
             save(resultsFileName,'rez', 'DATA', '-v7.3');
@@ -625,7 +625,8 @@ classdef MEAAnalysis < recAnalysis
         %set binaryRecordingName in the same way export2binary sets the
         %name. If something changes there, it should be changed here also
         if iscell(obj.currentDataObj.recordingDir)
-           binaryRecordingName = strjoin(cellfun(@(x) x(1:end-3), obj.currentDataObj.dataFileNames,'UniformOutput',false),'-');
+%            binaryRecordingName = strjoin(cellfun(@(x) x(1:end-3), obj.currentDataObj.dataFileNames,'UniformOutput',false),'-');
+           binaryRecordingName = [obj.currentDataObj.dataFileNames{1}(1:end-3),'_concat_',num2str(numel(obj.currentDataObj.dataFileNames))];
         else 
             binaryRecordingName = obj.currentDataObj.recordingName;
         end
