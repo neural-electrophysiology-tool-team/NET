@@ -304,7 +304,8 @@ class convertuploaddocument:
     def wexac_copy(self,rawflag = False, h5flag = True):
         
         if rawflag:
-            self.logger.info('Process: Copy raw data to Wexac archive')
+            sretinush3qs
+            elf.logger.info('Process: Copy raw data to Wexac archive')
             subprocess.call(
                 ["xcopy", self.searchpath, self.localarchivepath,'/S /Y /D'])
             self.logger.info('Process: Raw data copied succesfully to archive')
@@ -312,7 +313,7 @@ class convertuploaddocument:
             for p, d, fi in os.walk(self.localarchivepath):
                 for ff in fi:
                     if ff.endswith(self.suffix):
-                        hashstring = hashlib.md5(ff.split('.')[0].encode()).hexdigest()
+                        hashstring = hashlib.md5(ff.split('.msrd')[0].encode()).hexdigest()
                         if not os.path.exists(os.path.join(os.path.join(self.WexacH5Path,hashstring+'\\'), hashstring+'.h5')):   
                             f = os.path.join(p, ff)
                             try:
