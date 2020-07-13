@@ -23,7 +23,7 @@ maxChunck=1000*60*20; %ms
 trialStartEndDigiTriggerNumbers=[3 4];
 analogChNum=[]; %this used to be 1, now Kwik's getAnalog finds on its own
 transition=[];
-delay2Shift=1.5/60*1000; %ms
+delay2Shift=2.5/60*1000; %ms
 maxFrameDeviation=1/60*1000; %ms
 
 plotDiodeTransitions=0;
@@ -204,21 +204,23 @@ if plotDiodeTransitions
     end
     hold on;
     
-    plot(t_ms,A);
-    plot(t_ms,medA,'g');
+    hp1=plot(t_ms,A);
+    hp2=plot(t_ms,medA,'g');
     
     upCrossTmp=find(medA(1:end-1)<transitions(1) & medA(2:end)>=transitions(1));
     downCrossTmp=find(medA(1:end-1)>transitions(1) & medA(2:end)<=transitions(1));
-    plot(t_ms(upCrossTmp),medA(upCrossTmp),'^r');
-    plot(t_ms(downCrossTmp),medA(downCrossTmp),'vr');
+    hp3=plot(t_ms(upCrossTmp),medA(upCrossTmp),'^r');
+    hp4=plot(t_ms(downCrossTmp),medA(downCrossTmp),'vr');
     mMedA=mean(medA);
     
     p=find(T{trialStartEndDigiTriggerNumbers(1)}>=chunkStart(end) & T{trialStartEndDigiTriggerNumbers(1)}<chunkEnd(end));
-    plot(T{trialStartEndDigiTriggerNumbers(1)}(p)-chunkStart(end),mMedA*ones(1,numel(p)),'ok');
+    hp5=plot(T{trialStartEndDigiTriggerNumbers(1)}(p)-chunkStart(end),mMedA*ones(1,numel(p)),'ok');
     
     p=find(upCross>=chunkStart(end) & upCross<chunkEnd(end));
-    plot(upCross(p)-chunkStart(end),mMedA*ones(1,numel(p)),'*m');
+    hp6=plot(upCross(p)-chunkStart(end),mMedA*ones(1,numel(p)),'*m');
     
     p=find(downCross>=chunkStart(end) & downCross<chunkEnd(end));
-    plot(downCross(p)-chunkStart(end),mMedA*ones(1,numel(p)),'*c');
+    hp7=plot(downCross(p)-chunkStart(end),mMedA*ones(1,numel(p)),'sc');
+    
+    l=legend([hp1 hp2 hp3 hp4 hp5 hp6 hp7],{'Diode','Diode-Filt','upCrossDiode','downCrossDiode','digitalTrig','finalUp','finalDown'});
 end
