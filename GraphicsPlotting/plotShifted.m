@@ -81,7 +81,7 @@ else
 end
 
 %look for inputs into varargin which are within the local list, place them into Par and remove them from varargin
-localPropertyList={'verticalShift'};
+localPropertyList={'verticalShift','removeOverlap'};
 for i=1:numel(localPropertyList)
     pProp=find(strcmp(localPropertyList{i},varargin));
     if ~isempty(pProp) %assign input value from varargin
@@ -94,10 +94,15 @@ end
 
 %determine the vertical shifts
 [nSamples,nCh]=size(varargin{pData});
-if isempty(Par.verticalShift); %automatically detection
-    Par.verticalShift=cumsum(nanstd(varargin{pData})*3);
-elseif numel(Par.verticalShift)==1 %manual detection
+if ~isempty(Par.removeOverlap)
+    minM=nanmin(varargin{pData},[],1)';
+    maxM=nanmax(varargin{pData},[],1)';
+    Par.verticalShift=flipud(cumsum([0;maxM(end:-1:2)-minM(end-1:-1:1)]))';
+    yl=[Par.verticalShift(end)+minM(end) Par.verticalShift(1)+maxM(1)];
+elseif ~isempty(Par.verticalShift)==1 %manual detection
     Par.verticalShift=0:Par.verticalShift:(Par.verticalShift*(nCh-1));
+else %automatically detection
+    Par.verticalShift=cumsum(nanstd(varargin{pData})*3);
 end
 
 varargin{pData}=bsxfun(@plus,varargin{pData},Par.verticalShift);
