@@ -85,16 +85,12 @@ classdef VS_TwoMoviesKeyPress < VStim
                        
             WaitSecs(obj.preSessionDelay); %pre session wait time
             for i=1:obj.nTotTrials
-                
+                trialStopped=false;
+
                 %wait for a key to be pressed to start a trial
-                disp('Waiting for key press to start next trial...');
-                timedout = false;
-                while ~timedout,
-                    [clicks,~,~,whichButton] = GetClicks(obj.PTB_win);
-                    %[ keyIsDown, keyTime, keyCode ] = KbCheck;
-                    if(clicks), break; end
-                end
-                
+                disp('Waiting for any mouse key press to start next trial...');
+                [clicks,~,~,whichButton] = GetClicks(obj.PTB_win);
+
                 currMovie=obj.movieSequence(i);
                 obj.sendTTL(2,true); %session start trigger (also triggers the recording start)
                 
@@ -112,7 +108,16 @@ classdef VS_TwoMoviesKeyPress < VStim
                             [obj.flip(currMovie,i,j),obj.stim(currMovie,i,j),obj.flipEnd(currMovie,i,j),obj.miss(currMovie,i,j)]=Screen('Flip',obj.PTB_win,tFrameTmp(j));
                             obj.sendTTL(3,frameTTL);
                             frameTTL=~frameTTL;
+                            
+                            [~,~,buttons] = GetMouse(obj.PTB_win);
+                            if(buttons(1)==1)
+                                obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                                trialStopped=true;
+                                disp('Prey catch captured!!!');
+                                break;
+                            end
                         end
+                    if trialStopped, break; end
                     end
                 end
                 [endSessionTime]=GetSecs;
@@ -134,8 +139,14 @@ classdef VS_TwoMoviesKeyPress < VStim
                 Screen('FillRect',obj.PTB_win,obj.visualFieldBackgroundLuminance);
                 obj.applyBackgound;
                 Screen('Flip',obj.PTB_win);
-                obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
-                WaitSecs(obj.interTrialDelay-(GetSecs-endSessionTime));
+                %WaitSecs(obj.interTrialDelay-(GetSecs-endSessionTime));
+                
+                %wait for a key to be pressed to start a trial
+                if ~trialStopped
+                    disp('Waiting for any mouse key press to mark pray catch...');
+                    [clicks,~,~,whichButton] = GetClicks(obj.PTB_win);
+                    disp('Prey catch captured');
+                end
             end
             
             WaitSecs(obj.postSessionDelay);
