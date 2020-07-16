@@ -65,6 +65,7 @@ VS.par.VSMethodGroupNumber = groupnumbers;
 VS.par.VSMethods={VS.par.VSMethods.name};
 VS.par.VSMethods=cellfun(@(x) x(1:end-2),VS.par.VSMethods,'UniformOutput',0);
 VS.par.VSObjNames=cellfun(@(x) x(4:end),VS.par.VSMethods,'UniformOutput',0);
+
 %check Matlab version for using uiextras of uix gui layout support
 matlabVer=strsplit(version,'.');
 if str2num(matlabVer{1})>=8
@@ -98,6 +99,8 @@ end
 %initialize Psychophysics toolbox screens
 VS.par.PTB_win=[];
 initializeScreens(simulationModel);
+
+%{
     function hlist = reorderlist(hObj,event,hfig, buts,methods)
         
         ListBoxPanel = uix.ScrollingPanel('Parent',hfig);
@@ -194,7 +197,7 @@ initializeScreens(simulationModel);
         end
         
     end
-
+%}
 % Create the main GUI of the visual stimulation toolbox
 if batchmode == 0
     createVSGUI;
