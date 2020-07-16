@@ -5,6 +5,7 @@ classdef VS_TwoMoviesKeyPress < VStim
         loops = 1;
         skipFrames = 0;
         initialFrozenFrames = 0;
+        %trialTimeOut = 300;
     end
     properties (SetObservable, SetAccess=public)
         rotation = 0;
@@ -17,6 +18,7 @@ classdef VS_TwoMoviesKeyPress < VStim
         playAsImgSequenceTxt='Play movie using the ptb movie function or as sequence of textures (frames)';
         rotationTxt='The angle for visual field rotation (clockwise)';
         nMoviesTxt='the number of movies to play';
+        %trialTimeOutTxt='The timeout afterwhich if prey is not caught, the trial is canceled';
         remarks={'Categories in stimuli are: speed, rotateDots, rotationZoomDirection'};
     end
     properties (SetAccess=protected)
@@ -90,6 +92,8 @@ classdef VS_TwoMoviesKeyPress < VStim
                 %wait for a key to be pressed to start a trial
                 disp('Waiting for any mouse key press to start next trial...');
                 [clicks,~,~,whichButton] = GetClicks(obj.PTB_win);
+                startTrialTime=GetSecs;
+                disp('Waiting for any mouse key press to mark pray catch...');
 
                 currMovie=obj.movieSequence(i);
                 obj.sendTTL(2,true); %session start trigger (also triggers the recording start)
@@ -112,6 +116,7 @@ classdef VS_TwoMoviesKeyPress < VStim
                             [~,~,buttons] = GetMouse(obj.PTB_win);
                             if(buttons(1)==1)
                                 obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                                obj.interTrialDelay(i)=GetSecs-startTrialTime;
                                 trialStopped=true;
                                 disp('Prey catch captured!!!');
                                 break;
@@ -143,8 +148,9 @@ classdef VS_TwoMoviesKeyPress < VStim
                 
                 %wait for a key to be pressed to start a trial
                 if ~trialStopped
-                    disp('Waiting for any mouse key press to mark pray catch...');
                     [clicks,~,~,whichButton] = GetClicks(obj.PTB_win);
+                    obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
+                    obj.interTrialDelay(i)=GetSecs-startTrialTime;
                     disp('Prey catch captured');
                 end
             end
@@ -257,6 +263,8 @@ classdef VS_TwoMoviesKeyPress < VStim
         function obj=VS_TwoMoviesKeyPress(w,h)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
+            obj.stimDuration=NaN;
+            obj.interTrialDelay=NaN;
             addlistener(obj,'rotation','PostSet',@obj.calculateVideoTextures); %add a listener to rotation, after its changed the textures should be updated
         end
     end
