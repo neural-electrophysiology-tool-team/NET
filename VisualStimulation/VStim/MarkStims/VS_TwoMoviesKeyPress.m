@@ -88,14 +88,14 @@ classdef VS_TwoMoviesKeyPress < VStim
             WaitSecs(obj.preSessionDelay); %pre session wait time
             for i=1:obj.nTotTrials
                 trialStopped=false;
-
+                currMovie=obj.movieSequence(i);
+                
                 %wait for a key to be pressed to start a trial
-                disp('Waiting for any mouse key press to start next trial...');
+                fprintf('Movie %d preared - waiting for any mouse key press to start next trial...',currMovie);
                 [clicks,~,~,whichButton] = GetClicks(obj.PTB_win);
                 startTrialTime=GetSecs;
                 disp('Waiting for any mouse key press to mark pray catch...');
 
-                currMovie=obj.movieSequence(i);
                 obj.sendTTL(2,true); %session start trigger (also triggers the recording start)
                 
                 frameTTL=true;
@@ -138,7 +138,12 @@ classdef VS_TwoMoviesKeyPress < VStim
                 [keyIsDown, ~, keyCode] = KbCheck;
                 if keyCode(obj.escapeKeyCode)
                     obj.lastExcecutedTrial=i;
-                    return;
+                    s=input('Experiment halted! to resume press r (or another key) and Enter, to stop and save press s and Enter: ','s');
+                    if ~isempty(s)
+                        if (s=='s' || s=='S')
+                            return;
+                        end
+                    end
                 end
                 
                 Screen('FillRect',obj.PTB_win,obj.visualFieldBackgroundLuminance);
@@ -265,6 +270,7 @@ classdef VS_TwoMoviesKeyPress < VStim
             obj = obj@VStim(w); %calling superclass constructor
             obj.stimDuration=NaN;
             obj.interTrialDelay=NaN;
+            obj.syncSquareSizePix=20;
             addlistener(obj,'rotation','PostSet',@obj.calculateVideoTextures); %add a listener to rotation, after its changed the textures should be updated
         end
     end
