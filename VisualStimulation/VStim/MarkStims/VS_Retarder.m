@@ -97,7 +97,7 @@ classdef VS_Retarder < VStim
             for i=1:obj.nTotTrials
                 
                 obj.sendTTL(2,true);
-                fprintf(dg1000z, [':SOURce1:APPLy:SQUare 2000,' str2num(obj.orientations(i))] ); %apply half-wave retardance
+                fprintf(dg1000z, [':SOURce1:APPLy:SQUare 2000,' num2str(obj.orientations(i))] ); %apply half-wave retardance
                 disp(['Trial ' num2str(i) '/' num2str(obj.nTotTrials)]);
                 WaitSecs(obj.stimDuration);
                 if obj.Back2Background %Display background between orientations
