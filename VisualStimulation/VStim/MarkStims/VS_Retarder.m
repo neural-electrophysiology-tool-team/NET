@@ -106,7 +106,7 @@ classdef VS_Retarder < VStim
                     WaitSecs(obj.delays(i));
                 else %just move on to the next orienation but first turn off trigger
                     obj.sendTTL(2,false);
-                    WaitSecs(obj.delay(i));
+                    WaitSecs(obj.delays(i));
                 end
                 
                 %check if stimulation session was stopped by the user
