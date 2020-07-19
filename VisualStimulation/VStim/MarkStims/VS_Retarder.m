@@ -103,7 +103,7 @@ classdef VS_Retarder < VStim
                 if obj.Back2Background %Display background between orientations
                     obj.sendTTL(2,false);
                     fprintf(dg1000z, ':SOURce1:APPLy:SQUare 2000,6.2' ); %apply half-wave retardance (rotate light 90 deg)
-                    WaitSecs(obj.delays(i))
+                    WaitSecs(obj.delays(i));
                 else %just move on to the next orienation but first turn off trigger
                     obj.sendTTL(2,false);
                     WaitSecs(obj.delay(i));
