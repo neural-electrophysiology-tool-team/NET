@@ -1,6 +1,7 @@
 classdef VS_Retarder < VStim
     properties (SetAccess=public)
-        signalAmplitudes = 1.8; 
+        signalAmplitudes = 1.8;  %the voltages applied on the retarder
+        zeroWave = 6.2; %baseline voltage for zero retardance
         randomize = true;
         Back2Background=true; %display images between orientations
         screenTriggerDuration=0.1; %sec
@@ -99,10 +100,11 @@ classdef VS_Retarder < VStim
                 obj.sendTTL(2,true);
                 fprintf(dg1000z, [':SOURce1:APPLy:SQUare 2000,' num2str(obj.orientations(i))] ); %apply half-wave retardance
                 disp(['Trial ' num2str(i) '/' num2str(obj.nTotTrials)]);
+                disp(['Applied voltage: ' num2str(obj.orientations(i))]);
                 WaitSecs(obj.stimDuration);
                 if obj.Back2Background %Display background between orientations
                     obj.sendTTL(2,false);
-                    fprintf(dg1000z, ':SOURce1:APPLy:SQUare 2000,6.2' ); %apply half-wave retardance (rotate light 90 deg)
+                    fprintf(dg1000z, [':SOURce1:APPLy:SQUare 2000,' str2num(obj.zeroWave)] ); %apply half-wave retardance (rotate light 90 deg)
                     WaitSecs(obj.delays(i));
                 else %just move on to the next orienation but first turn off trigger
                     obj.sendTTL(2,false);
