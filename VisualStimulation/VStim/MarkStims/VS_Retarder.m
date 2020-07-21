@@ -120,7 +120,7 @@ classdef VS_Retarder < VStim
             end
             WaitSecs(obj.postSessionDelay);
             obj.sendTTL(1,false); %session start trigger (also triggers the recording start)
-            fprintf(dg1000z, ':OUTP2 OFF'); %Turn off output
+            fprintf(dg1000z, ':OUTP1 OFF'); %Turn off output
             fclose(dg1000z); %Close the VISA object 
             
             obj.orientations=obj.orientations(1:end-1); %removing last dummy luminocity value from array
