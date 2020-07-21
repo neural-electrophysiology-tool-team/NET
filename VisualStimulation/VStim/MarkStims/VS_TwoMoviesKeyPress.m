@@ -48,7 +48,7 @@ classdef VS_TwoMoviesKeyPress < VStim
         function obj=run(obj)
             
             obj.nTotTrials=obj.trialsPerCategory*obj.nVideos;
-            
+            obj.interTrialDelay=nan(1,obj.nTotTrials);
             %calculate sequence of positions and times
             obj.movieSequence=reshape(repmat(1:obj.nVideos,obj.trialsPerCategory,1),1,size(repmat(1:obj.nVideos,obj.trialsPerCategory,1),1)*size(repmat(1:obj.nVideos,obj.trialsPerCategory,1),2));
             
