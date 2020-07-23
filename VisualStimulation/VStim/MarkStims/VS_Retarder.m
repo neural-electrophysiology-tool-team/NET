@@ -2,6 +2,7 @@ classdef VS_Retarder < VStim
     properties (SetAccess=public)
         signalAmplitudes = 1.8;  %the voltages applied on the retarder
         zeroWave = 6.2; %baseline voltage for zero retardance
+        loadValue = 50;
         randomize = true;
         Back2Background=true; %display images between orientations
         screenTriggerDuration=0.1; %sec
@@ -84,7 +85,7 @@ classdef VS_Retarder < VStim
             dg1000z=visa('ni','USB0::0x1AB1::0x0642::DG1ZA220900474::INSTR'); %create VISA object for control of AWG
             fopen(dg1000z); %Open the VISA object created
             fprintf(dg1000z, ':SOURce1:APPLy:SQUare 2000,6.2' );%set the waveform
-            fprintf(dg1000z, ':OUTP1:LOAD 50 ' ); %set the impedance at the output
+            fprintf(dg1000z, [':OUTP1:LOAD HighZ']); %set the impedance at the output
             
             %main loop - start the session
             obj.sendTTL(1,true); %session start trigger (also triggers the recording start)
@@ -104,7 +105,7 @@ classdef VS_Retarder < VStim
                 WaitSecs(obj.stimDuration);
                 if obj.Back2Background %Display background between orientations
                     obj.sendTTL(2,false);
-                    fprintf(dg1000z, [':SOURce1:APPLy:SQUare 2000,' str2num(obj.zeroWave)] ); %apply half-wave retardance (rotate light 90 deg)
+                    fprintf(dg1000z, [':SOURce1:APPLy:SQUare 2000,' num2str(obj.zeroWave)] ); %apply half-wave retardance (rotate light 90 deg)
                     WaitSecs(obj.delays(i));
                 else %just move on to the next orienation but first turn off trigger
                     obj.sendTTL(2,false);
@@ -117,6 +118,7 @@ classdef VS_Retarder < VStim
                     obj.lastExcecutedTrial=i;
                     obj.sendTTL(1,false);
                     fprintf(dg1000z, ':OUTP1 OFF');
+                    fclose(dg1000z); %Close the VISA object 
                     return;
                 end               
             end
