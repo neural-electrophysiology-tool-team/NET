@@ -3,22 +3,22 @@ classdef VS_mrDenseNoise3 < VStim
         %all these properties are modifiable by user and will appear in visual stim GUI
         %Place all other variables in hidden properties
         %test
-        brightIntensity    = 255; %white
-        darkIntensity    = 0; %black
-        screenIntensity    = 139; %background
+        brightIntensity      = 255; %white
+        darkIntensity        = 0; %black
+        screenIntensity      = 139; %background
         popDNnoiseColor      = [1 1 1]; %black/white
         popDNscrColor        = [1 1 1]; %background
-        duration        = 1200; %300sec = 5min
-        temporalFreq          = 30; %hz
-        nPxls_x        = 100;
-        nPxls_y         = 75;
+        duration             = 1200; %300sec = 5min
+        temporalFreq         = 30; %hz
+        nPxls_x              = 100;
+        nPxls_y              = 75;
         padRows              = 0;
         padColumns           = 0;
         chkDNmaskRect        = false;
 %         txtDNrectWidth       = 264;
 %         txtDNrectHeight      = 264;
 %         txtDNmaskRadius      = 2000;
-        prestimWait     = 30;
+        prestimWait         = 30;
         makeBWnoise          = true;
         noiseType            = 'sparse';    %sparse / single / full
         percentChange        = 50;
@@ -26,28 +26,28 @@ classdef VS_mrDenseNoise3 < VStim
 
     end
     properties (Hidden,Constant)
-        defaultTrialsPerCategory=50; %number of gratings to present
-        defaultBackground=0;
-        defaultITI=0;
-        meanLuminosityTxt='luminance value for grey pixels';
-        contrastTxt='% of dynamic range to use';
-        largeRectNumTxt='How many rectangles to put onto each spatial dimension (not counting the mask)';
-        smallRectNumTxt='make it a multiple of largeRectNum';
-        smallRectFrameRateTxt='temporal frequency (Hz)';
-        largeRectSparsityTxt='%of non grey squares';
-        smallRectSparsityTxt='%of non grey squares';
-        makeBWnoiseTxt = 'check for BW, uncheck for gaussian noise';
-        noiseTypeTxt = 'noise type: sparse/single/full';
-        percentChangeTxt = 'in sparse noise: how many pixels should change in each frame';
-        brightIntensityTxt=     'scalar, between 0 and 255, the color of the bright noise';
-        darkIntensityTxt=     'scalar, between 0 and 255, the color of the dark noise';
-        screenIntensityTxt=    'scalar, between 0 and 255, the color of the screen between intervals';
+        defaultTrialsPerCategory= 50; %number of gratings to present
+        defaultBackground       = 0;
+        defaultITI              = 0;
+        meanLuminosityTxt       = 'luminance value for grey pixels';
+        contrastTxt             = '% of dynamic range to use';
+        largeRectNumTxt         = 'How many rectangles to put onto each spatial dimension (not counting the mask)';
+        smallRectNumTxt         = 'make it a multiple of largeRectNum';
+        smallRectFrameRateTxt   = 'temporal frequency (Hz)';
+        largeRectSparsityTxt    = '%of non grey squares';
+        smallRectSparsityTxt    = '%of non grey squares';
+        makeBWnoiseTxt          = 'check for BW, uncheck for gaussian noise';
+        noiseTypeTxt            = 'noise type: sparse/single/full';
+        percentChangeTxt        = 'in sparse noise: how many pixels should change in each frame';
+        brightIntensityTxt      = 'scalar, between 0 and 255, the color of the bright noise';
+        darkIntensityTxt        = 'scalar, between 0 and 255, the color of the dark noise';
+        screenIntensityTxt      = 'scalar, between 0 and 255, the color of the screen between intervals';
         %     popDNnoiseColor       RGB colors (B/W, green, UV) for noise
         %     popDNscrColor         RGB colors (B/W, green, UV) for screen
-        durationTxt=         'Duration of the stimulus'
-        temporalFreqTxt=           'Temporal Frq of frames (frames/s)'
-        nPxls_xTxt=            'Number of noise pixels in the x axis'
-        nPxls_yTxt=            'Number of noise pixels in the y axis'
+        durationTxt             = 'Duration of the stimulus (in seconds).'
+        temporalFreqTxt         = 'Temporal Frq of frames (frames/s)'
+        nPxls_xTxt              = 'Number of noise pixels in the x axis'
+        nPxls_yTxt              = 'Number of noise pixels in the y axis'
         %     chkDNmaskRect
         %     txtDNrectWidth
         %     txtDNrectHeight
@@ -92,7 +92,7 @@ classdef VS_mrDenseNoise3 < VStim
             [screenXpixels, screenYpixels] = Screen('WindowSize', obj.PTB_win);
             
             % Get the centre coordinate of the obj.PTB_win
-            xNoisePxls = obj.txtDNnPxls_x;% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
+            xNoisePxls = obj.nPxls_x;% 2.*round(txtDNnPxls/2)/2; %num cells x %for mightex
             yNoisePxls = obj.nPxls_y; %num cells y
             nNoisePxls = xNoisePxls * yNoisePxls;
             blankScreen = repmat(scrColor',1,nNoisePxls);
@@ -147,7 +147,7 @@ classdef VS_mrDenseNoise3 < VStim
                 end
                 
                 % optional padding of the stimulation area
-                sqMat = reshape(permute(noiseColorsMat,[2,3,1]),obj.nPxls_y,obj.txtDNnPxls_x,3);
+                sqMat = reshape(permute(noiseColorsMat,[2,3,1]),obj.nPxls_y,obj.nPxls_x,3);
                 sqMat = padarray(sqMat,[obj.padRows obj.padColumns]);
                 
                 if obj.indicator_row
@@ -167,7 +167,7 @@ classdef VS_mrDenseNoise3 < VStim
                 noiseArray = colorsArray;
             end
             
-            realXNoisePxls = obj.txtDNnPxls_x+(obj.padColumns*2); %including padding
+            realXNoisePxls = obj.nPxls_x+(obj.padColumns*2); %including padding
             realYNoisePxls = obj.nPxls_y+(obj.padRows*2);
                         
             ySizeNoisePxls=(screenYpixels/realYNoisePxls);
