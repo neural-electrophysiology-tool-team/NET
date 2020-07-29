@@ -1,6 +1,6 @@
-classdef VS_fullFieldFlash < VStim
+classdef VS_lumCheck_mediumBatch < VStim
     properties (SetAccess=public)
-        flashLuminosity = 255; %(L_high-L_low)/L_low
+        flashLuminosity = [239:255]; %(L_high-L_low)/L_low
         randomize = true;
         equalize = false; %Make distribution of intenisty diffs more uniform by adding large diffs. Currently all added diffs will have inter trial delay of obj.interTrialDelay(1)
         Back2Background=true; %display images between luminosities
@@ -203,9 +203,13 @@ classdef VS_fullFieldFlash < VStim
             end
         end
         %class constractor
-        function obj=VS_fullFieldFlash(w,h)
+        function obj=VS_lumCheck_mediumBatch(w,h)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
+            obj.interTrialDelay = 10;
+            obj.stimDuration = 10;
+            obj.trialsPerCategory= 60;
+            obj.visualFieldBackgroundLuminance = 247;
         end
     end
 end %EOF

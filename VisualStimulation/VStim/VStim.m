@@ -221,8 +221,9 @@ classdef (Abstract) VStim < handle
             
             maskblobOn=maskblobOff; %make on mask addition
             if obj.displaySyncSignal
-                maskblobOn((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,:)=obj.syncSquareLuminosity;
-                maskblobOff((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,2)=obj.syncSquareLuminosity;
+                maskblobOn((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,1)=obj.syncSquareLuminosity;
+                maskblobOn((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,2)=obj.whiteIdx;
+                maskblobOff((obj.rect(1,4)-obj.syncSquareSizePix):end,1:obj.syncSquareSizePix,2)=obj.whiteIdx;
             end 
             
             % Build a single transparency mask texture:
