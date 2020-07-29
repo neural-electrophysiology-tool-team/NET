@@ -1,9 +1,9 @@
-classdef VS_rectGrid < VStim
+classdef VS_rectGrid_mediumBatch < VStim
     properties (SetAccess=public)
-        rectLuminosity = 255; %(L_high-L_low)/L_low
-        rectGridSize = 4;
+        rectLuminosity = [ 0 127 255]; %(L_high-L_low)/L_low
+        rectGridSize = 5;
         randomize = true;
-        tilingRatio = 1;
+        tilingRatio = 0.75;
         rotation = 0;
     end
     properties (Constant)
@@ -268,9 +268,12 @@ classdef VS_rectGrid < VStim
             end
         end
         %class constractor
-        function obj=VS_rectGrid(w,h)
+        function obj=VS_rectGrid_mediumBatch(w,h)
             %get the visual stimulation methods
             obj = obj@VStim(w); %calling superclass constructor
+            obj.interTrialDelay = 10;
+            obj.stimDuration = 10;
+            obj.trialsPerCategory= 60;
         end
     end
 end %EOF

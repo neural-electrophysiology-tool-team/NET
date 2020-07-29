@@ -17,7 +17,7 @@ classdef filterData
         upSamplingFactor=[]; %up sampling factor for decimation
         currentDesignedFilter=[];
         filteredSamplingFrequency=[];
-        padding=false;
+        padding=true;
         padWithMirrorTraces=true;
         SOS_b=[];
         G_a=[];

@@ -376,7 +376,7 @@ classdef (Abstract) recAnalysis < handle
                     %check which data acquisition system was used
                     pFormat=find(strcmp(obj.recTable.Properties.VariableNames,'recFormat'));
                     obj.currentExpFolder=obj.recTable.folder{pRec(1)};
-                    obj = getCurrentObjectMeta(obj);
+                    %obj = getCurrentObjectMeta(obj);
 %                     obj.currentDataObj.samplingFrequency = obj.currentDataMeta.fs;
                     if ~isempty(pFormat) & iscell(obj.recTable{pRec(1),pFormat})
                         recFormat=obj.recTable{pRec(1),pFormat};
