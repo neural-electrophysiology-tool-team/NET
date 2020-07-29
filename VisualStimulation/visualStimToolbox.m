@@ -27,6 +27,23 @@ for k=1:2:nargin
     eval([varargin{k} '=' 'varargin{k+1};']);
 end
 
+%% Check GUI layout installation
+%Check that GUI layout is installed and if not install it
+installGUILayoutToolBox=false;
+toolboxes = matlab.addons.toolbox.installedToolboxes;
+if isempty(toolboxes)
+    installGUILayoutToolBox=1;
+else
+    if ~any(strcmp(toolboxes.Name,'GUI Layout Toolbox'))
+        installGUILayoutToolBox=1;
+    end
+end
+if installGUILayoutToolBox
+    disp('GUI Layout toolbox is not installed, trying to install...');
+    d=which('GUI Layout Toolbox 2.3.4.mltbx');
+    installedToolbox = matlab.addons.toolbox.installToolbox(d,true);
+end
+
 %% %%%%%%%%%%%%%%%% Parameter definitions  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 VS.hand.hMainFigure=figure; %initialize GUI figure
 VS.par.NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));

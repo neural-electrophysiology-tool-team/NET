@@ -277,8 +277,9 @@ classdef (Abstract) VStim < handle
         end
         
         function initializeTTL(obj)
+            testPCList={'DESKTOP-H2D3EI2','MARKSNB'}; %list of PCs with no parallel port for testing! Triggers will display on screen! 
             if ispc
-                if strcmp(getenv('COMPUTERNAME'),'M-01081') || strcmp(getenv('COMPUTERNAME'),'M-01124') || strcmp(getenv('COMPUTERNAME'),'DESKTOP-H2D3EI2')% for the case where there is no parallel port
+                if any(strcmp(getenv('COMPUTERNAME'),testPCList))% for the case where there is no parallel port
                     obj.OSPlatform=3;
                 else
                     obj.OSPlatform=1;
@@ -296,7 +297,7 @@ classdef (Abstract) VStim < handle
                     obj.io.status = io64(obj.io.ioObj);
                     
                     if (obj.io.status ~= 0)
-                        error('inp/outp installation failed!!!!')
+                        error('inp/outp installation failed!!!!');
                     end
                 else
                     disp('Parallel port object already exists');
