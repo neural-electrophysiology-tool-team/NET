@@ -1,9 +1,9 @@
 classdef VS_rectGrid < VStim
     properties (SetAccess=public)
         rectLuminosity = 255; %(L_high-L_low)/L_low
-        rectGridSize = 4;
+        rectGridSize = 4;% grid will be the square of the input (e.g. 4X4)
         randomize = true;
-        tilingRatio = 1;
+        tilingRatio = 1;%ratio tile to be covered by stim rect
         rotation = 0;
     end
     properties (Constant)
@@ -159,7 +159,7 @@ classdef VS_rectGrid < VStim
                 [keyIsDown, ~, keyCode] = KbCheck;
                 if keyCode(obj.escapeKeyCode)
                     obj.lastExcecutedTrial=i;
-                    obj.sendTTL(1,false);
+                    obj.sendTTL(1,false);%end of stimulation
                     return;
                 end
                 
@@ -174,7 +174,7 @@ classdef VS_rectGrid < VStim
         end
         
         function obj=CMShowGrid(obj,srcHandle,eventData,hPanel)
-            
+            %Displays all possible tiles of the grid together
             obj.tilingRatio=obj.tilingRatio*0.95;
             obj.calculatePositions;
             obj.tilingRatio=obj.tilingRatio/0.95;
