@@ -23,7 +23,9 @@ classdef KwikRecording < dataRecording
     dataLength;      % total samples in the data
     info;            % information on recording file
     lengthInfo;      % information on recording file length
-    globalStartTime  % start time within the session
+    globalStartTime;  % start time within the session
+    settingsXMLPath;  %Path of the settings XML created by Open Ephys in Kwik Foramat
+    analogChannel;  % This is the channel number that apears in the first 'ADC1' in the XML
   end
   
   properties (Constant = true)
@@ -171,15 +173,23 @@ classdef KwikRecording < dataRecording
             error('method getAnalogData was not used correctly: wrong number of inputs');
         end
         if isempty(channels)
-            settings=xmlread([obj.recordingDir 'settings.xml']); %This is a file created by openEphys GUI
+            if ~isempty(obj.analogChannel) %We figured out which is the extractMetaData
+                analogChNum=obj.analogChannel;
+            else %something didn't work. try here manually
+            if ~isempty(obj.settingsXMLPath)
+                settings=xmlread(obj.settingsXMLPath); %This is a file created by openEphys GUI
+            else
+                settings=xmlread([obj.recordingDir 'settings.xml']); %This is a file created by openEphys GUI
+            end
             channels=settings.getElementsByTagName("CHANNEL");
             for i=0:channels.getLength-1
                if strcmp(channels.item(i).getAttribute("name"),"ADC1") 
                    analogChNum=str2num(channels.item(i).getAttribute("number"))+1;
 %                    break %in some cases there are more than 1 ADC1 for some reason, so make sure the last one is the right one
                end
-            end    
-        else
+            end 
+            end
+        else %analogChNum was given manually
             analogChNum=channels;
         end    
         
@@ -223,6 +233,11 @@ classdef KwikRecording < dataRecording
       end
       obj.triggerFilename = fullfile(obj.recordingDir, triggerFile.name);
       
+      settingsXMLPath=[obj.recordingDir filesep 'settings.xml'];
+      if exist([obj.recordingDir filesep 'settings.xml'],'file')
+        obj.settingsXMLPath=settingsXMLPath;
+      end
+      
       if exist([obj.recordingDir filesep obj.recordingName '_metaData.mat'],'file') && ~obj.overwriteMetaData
 %     if exist([obj.recordingDir filesep 'metaData.mat'],'file') && ~obj.overwriteMetaData
           obj = loadMetaData(obj); %needs recNameHD5
@@ -265,8 +280,18 @@ classdef KwikRecording < dataRecording
         obj.MicrovoltsPerAD = double(h5read(obj.fullFilename, [obj.recNameHD5{1} '/application_data/channel_bit_volts']));
       end
       
+      %get only the active channel names
+      if ~isempty(obj.settingsXMLPath)
+        [activeChannelNames,activeChannelNums]=obj.activeChannelNames(obj.settingsXMLPath);
+        nCh=sum(cellfun(@(x) contains(x,'CH'),activeChannelNames,'UniformOutput',1));
+        obj.channelNumbers=1:nCh;
+        obj.channelNames=activeChannelNames(obj.channelNumbers);
+        obj.analogChannel=activeChannelNums(cellfun(@(x) strcmp('ADC1',x),activeChannelNames,'UniformOutput',1))+1;
+      
+      else
       obj.channelNumbers = 1:length(obj.MicrovoltsPerAD);
       obj.channelNames = cellfun(@(x) num2str(x), mat2cell(obj.channelNumbers,1,ones(1,numel(obj.channelNumbers))),'UniformOutput',0);
+      end
       
       try
         obj.samplingFrequency = double(h5readatt(obj.fullFilename, [obj.recNameHD5{1} '/application_data'], 'channel_sample_rates'));
@@ -310,7 +335,39 @@ classdef KwikRecording < dataRecording
       obj.saveMetaData;
     end
   
+    function [activeChannelNames,activeChannelNums,chNames,chNums,isActive]= activeChannelNames(obj,XMLPath)
+       %Read the settings XML file XMLPath (string) to get information
+       %about active channels in the recording. 
+       %    This function is suited to the settings.xml file created by Open Ephys recording when saved
+       %    in kwik format. The function assumes that the first proccessor is
+       %    the relevant one, i.e. gets the information from channels inside
+       %    the first <PROCESSOR></PROCESSOR> tag.
+       %    A typical channel will look like this:
+       %    <CHANNELname="CH1"number="0"gain="0.19499999284744263"/>
+       %output:
+       %    activeChannelNames - the names of only the active channels
+       %    activeChannelNums - the numbers of the channels
+       %    chNames (optional) is a cell array of channel names
+       %    chNums (optional)
+       %    isActive (optional) is logical array with same size as chNames
+       fid=fopen(XMLPath);
+       if fid==-1
+           error('Failed to open file: %s',XMLPath)
+       end
+       XMLcontent=fscanf(fid,'%s');
+       fclose(fid);
+       %get text from inside first PROCESSOR tag
+       firstProcessorTXT=regexp(XMLcontent,'<PROCESSOR(.*?)<\/PROCESSOR>','tokens');
+       firstProcessorTXT=firstProcessorTXT{1}{1};
+       chNamesAndNums=regexp(firstProcessorTXT,'<CHANNELname="(\w+)"number="(.+?)"gain=".*?"\/>','tokens');
+       chNames=cellfun(@(x) x{1},chNamesAndNums,'UniformOutput',0);
+       chNums=cellfun(@(x) x{2},chNamesAndNums,'UniformOutput',0);
+       isActive=regexp(firstProcessorTXT,'<CHANNELname="\d+"number="\d+"><SELECTIONSTATEparam="\d"record="(\d)"audio="\d"\/><\/CHANNEL>','tokens');
+       isActive=cellfun(@(x) strcmp(x{1},'1'),isActive);
+       activeChannelNames=chNames(isActive);
+       activeChannelNums=cellfun(@(x) str2num(x), chNums(isActive));
+    end
   end
   
 end
-
+ 
