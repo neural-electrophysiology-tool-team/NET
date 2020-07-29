@@ -90,8 +90,8 @@ classdef OERecording < dataRecording
                 pSingleTrialTimeStamps{i}=find(obj.allTimeStamps>=startTime_ms(i)-obj.recordLength & obj.allTimeStamps<(startTime_ms(i)+window_ms)); %find relevant blocks
                 singleTrialTimeStamps=round(obj.allTimeStamps(pSingleTrialTimeStamps{i})/obj.sample_ms)*obj.sample_ms;
                 recordsPerTrial(i)=numel(singleTrialTimeStamps);
-                timeIdx=bsxfun(@plus,(1:obj.dataSamplesPerRecord)*obj.sample_ms,singleTrialTimeStamps);
-                pRecIdx{i,:}=(timeIdx>startTime_ms(i)) & timeIdx<(startTime_ms(i)+window_ms);
+                timeIdx=bsxfun(@plus,(0:obj.dataSamplesPerRecord-1)*obj.sample_ms,singleTrialTimeStamps);
+                pRecIdx{i,:}=(timeIdx>=startTime_ms(i)) & timeIdx<(startTime_ms(i)+window_ms);
                 timeIdx=timeIdx';
                 pOutIdx{i,1}=round((timeIdx(pRecIdx{i,:}')-startTime_ms(i))/obj.sample_ms)+windowSamples*(i-1); %round should not be changed to floor or ceil - it creates a weird artifact
             end
@@ -161,8 +161,8 @@ classdef OERecording < dataRecording
                 pSingleTrialTimeStamps{i}=find(obj.allTimeStamps>=startTime_ms(i)-obj.recordLength & obj.allTimeStamps<(startTime_ms(i)+window_ms)); %find relevant blocks
                 singleTrialTimeStamps=round(obj.allTimeStamps(pSingleTrialTimeStamps{i})/obj.sample_ms)*obj.sample_ms;
                 recordsPerTrial(i)=numel(singleTrialTimeStamps);
-                timeIdx=bsxfun(@plus,(1:obj.dataSamplesPerRecord)*obj.sample_ms,singleTrialTimeStamps);
-                pRecIdx{i,:}=(timeIdx>startTime_ms(i)) & timeIdx<(startTime_ms(i)+window_ms);
+                timeIdx=bsxfun(@plus,(0:obj.dataSamplesPerRecord-1)*obj.sample_ms,singleTrialTimeStamps);
+                pRecIdx{i,:}=(timeIdx>=startTime_ms(i)) & timeIdx<(startTime_ms(i)+window_ms);
                 timeIdx=timeIdx';
                 pOutIdx{i,1}=round((timeIdx(pRecIdx{i,:}')-startTime_ms(i))/obj.sample_ms)+windowSamples*(i-1); %round should not be changed to floor or ceil - it creates a weird artifact
             end
@@ -207,7 +207,7 @@ classdef OERecording < dataRecording
         
         function [T_ms,chNumber]=getTrigger(obj,startTime_ms,window_ms,name)
             %Extract triggers from file Neuralynx recording
-            %Usage : [T_ms]=obj.getTrigger(name,startTime_ms,endTime_ms)
+            %Usage : [T_ms]=obj.getTrigger(startTime_ms,window_ms)
             %Input : name - which bit to extract for time stamps (out of 8,default = first bit, 1)
             %        startTime_ms - start time [ms].
             %        window_ms - the window duration [ms]. If Inf, returns all time stamps in recording (startTime_ms is not considered)
@@ -227,10 +227,18 @@ classdef OERecording < dataRecording
             activeCh=unique(ch);
             %if version >= 0.2, info.recNum = obj.segRead('recNum'); end
             
+            if nargin<3
+                pTime=true(size(eventType));
+                startTime_ms=0;
+            else
+                pTime=timestamps>=startTime_ms & timestamps<(startTime_ms+window_ms);
+            end
+            timestamps=timestamps-startTime_ms;
+            
             pTTL=eventType==3;
             for i=1:numel(activeCh)
-                T_ms{(2*activeCh(i)+1)}=timestamps(eventId==1 & ch==activeCh(i) & pTTL)';%ch1 is 0
-                T_ms{(2*activeCh(i)+2)}=timestamps(eventId==0 & ch==activeCh(i) & pTTL)';%ch1 is 0
+                T_ms{(2*activeCh(i)+1)}=timestamps(eventId==1 & ch==activeCh(i) & pTTL & pTime)';%ch1 is 0
+                T_ms{(2*activeCh(i)+2)}=timestamps(eventId==0 & ch==activeCh(i) & pTTL & pTime)';%ch1 is 0
                 chNumber((2*activeCh(i)+1))=activeCh(i);
                 chNumber((2*activeCh(i)+2))=activeCh(i);
             end

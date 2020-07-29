@@ -600,6 +600,62 @@ classdef MEAAnalysis < recAnalysis
             save(par.saveFileName,'MF','par','-v7.3');
         end
         
+        %% Add binary to table after export2Binary
+        function obj=addBinary2Table(obj,varargin)
+        %After using dataRecording's export2Binary a file is created. This
+        %function adds the new file to the table of the MEAObject by
+        %copying the line of the recording file (in multiplefile mode - the
+        %first one) and changing the relevant fields.
+        % Possible varagins (given as 'Key',value pairs): 
+        %       'updateExternalExcel' - rewrites the excel from which
+        %       MEAAnalysis table was taken to the new table which contains
+        %       the binary file. Default is 0.
+        %       'setCurrent2Bin' - after adding the line to the data
+        %       table, also set current recording obj to be the new .bin
+        %       file
+        
+        updateExternalExcel=0;
+        setCurrent2Bin=0;
+        
+        for i=1:2:numel(varargin)
+           eval([varargin{i} '=varargin{' num2str(i+1) '};']);
+        end
+        
+        newBinaryLine=obj.recTable(obj.currentPRec(1),:);
+        %set binaryRecordingName in the same way export2binary sets the
+        %name. If something changes there, it should be changed here also
+        if iscell(obj.currentDataObj.recordingDir)
+           binaryRecordingName = strjoin(cellfun(@(x) x(1:end-3), obj.currentDataObj.dataFileNames,'UniformOutput',false),'-');
+        else 
+            binaryRecordingName = obj.currentDataObj.recordingName;
+        end
+%          %Remove current extension and replace with .bin
+%         newFileName=split(newBinaryLine.MEAfiles,'.');
+%         newFileName=join([newFileName(1:(end-1));'bin'],'.');
+        newBinaryLine.MEAfiles=[binaryRecordingName '.bin'];
+        newBinaryLine.recNames=[binaryRecordingName '.bin'];
+        newBinaryLine.recFormat='binaryRecording';
+        obj.recTable=[obj.recTable(1:obj.currentPRec(end),:);newBinaryLine;obj.recTable((obj.currentPRec(end)+1):end,:)];
+        
+        if updateExternalExcel
+            try
+                writetable(obj.recTable,obj.excelRecordingDataFileName);
+                disp('Excel file updated!')
+            catch
+               disp('Failed to update excel file. Please update manualy') 
+            end
+        end
+        obj.nTotalRecordings=obj.nTotalRecordings+1;
+        
+        if setCurrent2Bin
+           obj.setCurrentRecording(['recNames=' binaryRecordingName '.bin']);
+        end
+        
+        end
+        
+        
+       
+        
         %% getHighSNRNeurons
         function [data]=getSpikeSNR(obj,varargin)
             
