@@ -9,7 +9,7 @@ classdef VS_fullFieldFlash < VStim
     properties (Constant)
         flashLuminosityTxt='The luminocity value for the flash, if array->show all given contrasts';
         randomizeTxt='Randomize stimuli';
-        equalizeTxt='Make distribution of intensity differences more uniform';
+        equalizeTxt='NOT FUNCTIONAL! Make distribution of intensity differences more uniform';
         remarks={'Categories in Flash stimuli are:','luminosity, interTrialDelay'};
     end
     properties (SetAccess=protected)
@@ -115,18 +115,18 @@ classdef VS_fullFieldFlash < VStim
                 
             for i=1:obj.nTotTrials
                 
-                [obj.on_Flip(i),obj.on_Stim(i),obj.on_FlipEnd(i),obj.on_Miss(i)]=Screen('Flip',obj.PTB_win);
-                obj.sendTTL(2,true);
+                [obj.on_Flip(i),obj.on_Stim(i),obj.on_FlipEnd(i),obj.on_Miss(i)]=Screen('Flip',obj.PTB_win);%change to trial's image
+                obj.sendTTL(2,true); %start trial
                 if obj.Back2Background %Display background between luminosities
                     % Update display
-                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);
+                    Screen('FillOval',obj.PTB_win,obj.visualFieldBackgroundLuminance,obj.visualFieldRect);%image buffer for showing background between trials
                     obj.applyBackgound; %set background mask and finalize drawing (drawing finished)
-                    [obj.off_Flip(i),obj.off_Stim(i),obj.off_FlipEnd(i),obj.off_Miss(i)]=Screen('Flip',obj.PTB_win,obj.on_Flip(i)+obj.actualStimDuration-0.5*obj.ifi);
-                    obj.sendTTL(2,false);
-                else %just move on to the next luminosity but first turn of trigger
-                    WaitSecs(obj.screenTriggerDuration);
-                    obj.sendTTL(2,false);
-                    WaitSecs(obj.stimDuration - obj.screenTriggerDuration);
+                    [obj.off_Flip(i),obj.off_Stim(i),obj.off_FlipEnd(i),obj.off_Miss(i)]=Screen('Flip',obj.PTB_win,obj.on_Flip(i)+obj.actualStimDuration-0.5*obj.ifi);%change to background
+                    obj.sendTTL(2,false);%end trial
+                else %just keep the trial image on, but simulate the "flip" before the TTL
+                    WaitSecs(obj.screenTriggerDuration);%account for the time it takes to flip
+                    obj.sendTTL(2,false);%end trial
+                    WaitSecs(obj.stimDuration - obj.screenTriggerDuration);%finish the trial
                 end
                 % Update image buffer
                 Screen('FillOval',obj.PTB_win,obj.luminosities(i+1),obj.visualFieldRect);
@@ -137,14 +137,14 @@ classdef VS_fullFieldFlash < VStim
                 [keyIsDown, ~, keyCode] = KbCheck;
                 if keyCode(obj.escapeKeyCode)
                     obj.lastExcecutedTrial=i;
-                    obj.sendTTL(1,false);
+                    obj.sendTTL(1,false);%end stimulation
                     return;
                 end
                 
-                WaitSecs(obj.delays(i)-(GetSecs-obj.off_Flip(i)));
+                WaitSecs(obj.delays(i)-(GetSecs-obj.off_Flip(i))); %wait for the duration of inter-trial delay
             end
             WaitSecs(obj.postSessionDelay);
-            obj.sendTTL(1,false); %session start trigger (also triggers the recording start)
+            obj.sendTTL(1,false); %session end trigger (also triggers the recording end, if it is gated)
             
             obj.luminosities=obj.luminosities(1:end-1); %removing last dummy luminocity value from array
             disp('Session ended');
