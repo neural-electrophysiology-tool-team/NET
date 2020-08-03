@@ -1,4 +1,4 @@
-function ops=makeConfigKiloSort2(sortingDir,nCh,varargin)
+function ops=makeConfigKiloSort2(sortingDir,nCh,hasGUIConfigFile,varargin)
 
 ops.datatype = 'bin';  % binary ('dat', 'bin') or 'openEphys'		
 ops.GPU                 = 1; % has to be 1, no CPU version yet, sorry
@@ -11,9 +11,9 @@ ops.nNeighPC            = 12; % visualization only (Phy): number of channnels to
 ops.nNeigh              = 16; % visualization only (Phy): number of neighboring templates to retain projections of (16)		
 
 ops.whitening       = 'full'; % type of whitening (default 'full', for 'noSpikes' set options for spike detection below)		
-ops.spkTh           = -4;      % spike threshold in standard deviations (-6)
+ops.spkTh           = -6;      % spike threshold in standard deviations (-6)
 ops.reorder         = 1;       % whether to reorder batches for drift correction. 
-ops.nskip           = 32;  % how many batches to skip for determining spike PCs
+ops.nskip           = 25;  % how many batches to skip for determining spike PCs
 ops.whiteningRange      = 32; % number of channels to use for whitening each channel
 ops.nSkipCov            = 25; %not sure about this. % compute whitening matrix from every N-th batch (1)
 
@@ -23,10 +23,9 @@ ops.fshigh = 200;
 % minimum firing rate on a "good" channel (0 to skip)
 ops.minfr_goodchannels = 0.1; 
 % threshold on projections (like in Kilosort1, can be different for last pass like [10 4])
-ops.Th = [6 12 12];
-% ops.Th = [12 6];  
+ops.Th = [10 4];  
 % how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot) 
-ops.lam = [5 5 5];  
+ops.lam = [10];  
 
 ops.nannealpasses    = 4;        
 
@@ -56,12 +55,12 @@ ops.nfullpasses         = 6;    % number of complete passes through data during 
 ops.maxFR               = 20000;  % maximum number of spikes to extract per batch (20000)		
 ops.fslow               = 3000;   % frequency for low pass filtering (optional)
 
-ops.Nfilt               = 1024; %64; % max number of clusters
+ops.Nfilt               = 480; %64; % max number of clusters
 % ops.Nfilt               = round(nCh*ops.FiltersPerCh/32)*32;
-ops.nfilt_factor        = 3; % max number of clusters per good channel (even temporary ones)
+ops.nfilt_factor        = 4; % max number of clusters per good channel (even temporary ones)
 % ops.Nfilt               = round(nCh*ops.FiltersPerCh/32)*32;  % number of clusters to use (2-4 times more than Nchan, should be a multiple of 32)    
 ops.ntbuff              = 64;    % samples of symmetrical buffer for whitening and spike detection
-ops.NT                  = 128*1024+ops.ntbuff; % must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory). 
+ops.NT                  = 64*1024+ops.ntbuff; % must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory). 
 
 
 ops.scaleproc           = 200;   % int16 scaling of whitened data
@@ -107,6 +106,7 @@ channelMapFile='chanMap.mat';
 ops.fbinary             = fullfile(sortingDir, binaryFileName); % will be created for 'openEphys'		
 ops.fproc               = fullfile(sortingDir, 'temp_wh.dat'); % residual from RAM of preprocessed data		
 ops.root                = sortingDir; % 'openEphys' only: where raw files are		
+ops.saveDir             = sortingDir;
 % define the channel map as a filename (string) or simply an array		
 ops.chanMap             = fullfile(sortingDir, channelMapFile); % make this file using createChannelMapFile.m		
 % ops.chanMap = 1:ops.Nchan; % treated as linear probe if unavailable chanMap file		
@@ -118,17 +118,19 @@ for i=1:2:length(varargin)
     eval(['ops.' varargin{i} '=' 'varargin{i+1};'])
 end
 
-NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
-configText=fscanf(fopen([NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'kiloSortOpsPath.txt']),'%c');
-ops_temp = load(configText);
-% ops_gui = ops_temp.saveDat.ops;
-ops_gui = ops_temp.ops;
-% ops_gui = rmfield(ops_gui, 'fbinary');
-ops_gui = rmfield(ops_gui,'fproc');
-ops_gui = rmfield(ops_gui,'saveDir');
-ops_gui = rmfield(ops_gui,'chanMap');
-ops_gui = rmfield(ops_gui,'fshigh');
-for fn = fieldnames(ops_gui)'
-   ops.(fn{1}) = ops_gui.(fn{1});
+if hasGUIConfigFile == true
+    NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
+    configText=fscanf(fopen([NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'kiloSortOpsPath.txt']),'%c');
+    ops_temp = load(configText);
+    % ops_gui = ops_temp.saveDat.ops;
+    ops_gui = ops_temp.ops
+    ops_gui = rmfield(ops_gui, 'fbinary');
+    ops_gui = rmfield(ops_gui,'fproc');
+    ops_gui = rmfield(ops_gui,'saveDir');
+    ops_gui = rmfield(ops_gui,'chanMap');
+    ops_gui = rmfield(ops_gui,'fshigh');
+    for fn = fieldnames(ops_gui)'
+       ops.(fn{1}) = ops_gui.(fn{1});
+    end
 end
 end
