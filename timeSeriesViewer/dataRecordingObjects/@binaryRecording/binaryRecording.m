@@ -174,8 +174,9 @@ classdef binaryRecording < dataRecording
                 for i=1:numel(nTriggers)
                    	T_ms{i}=double((fread(fid,nTriggers(i),'*uint32')-1))/(obj.samplingFrequency/1000);
                 end
+                fclose(fid);
             end
-            fclose(fid);
+            
         end
         
         function obj=closeOpenFiles(obj)
