@@ -5,7 +5,6 @@ classdef VS_multiVideo < VStim
         loops = 1;
         skipFrames = 0;
         initialFrozenFrames = 0;
-        nVideos = 1;
     end
     properties (SetObservable, SetAccess=public)
         rotation = 0;

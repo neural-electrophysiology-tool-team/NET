@@ -9,7 +9,22 @@ AVG.Params.timeWindowExternalHandles=[]; %to sync gui to another one
 AVG.Params.NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
 AVG.Params.timeSeriesViewerMainDir=fileparts(which('timeSeriesViewer.m'));
 
-%Check that GUI layout is installed
+%Check that GUI layout is installed and if not install it
+installGUILayoutToolBox=false;
+toolboxes = matlab.addons.toolbox.installedToolboxes;
+if isempty(toolboxes)
+    installGUILayoutToolBox=1;
+else
+    if ~any(strcmp(toolboxes.Name,'GUI Layout Toolbox'))
+        installGUILayoutToolBox=1;
+    end
+end
+if installGUILayoutToolBox
+    disp('GUI Layout toolbox is not installed, trying to install...');
+    d=which('GUI Layout Toolbox 2.3.4.mltbx');
+    installedToolbox = matlab.addons.toolbox.installToolbox(d,true);
+end
+
 if isempty(ver('layout'))
     if ~downloadGUILayout
         return;

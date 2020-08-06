@@ -399,13 +399,28 @@ classdef sleepAnalysis < recAnalysis
             tInterp=tStart:interpTimeBin:tEnd;
             
             HR=load([obj.currentAnalysisFolder filesep 'HR.mat']);
+           
+            %Playing with locking on the single cell level.
+            %{
+            M=obj.currentDataObj.getData(ch,HR.time-5000,10000);
+            H=hilbert(squeeze(M(1,1:15000,:))');
+            figure;plot(mean(abs(H),2));line([size(M,3)/2 size(M,3)/2],ylim,'color','r');
+            for j=1:1000
+                
+                %[~,f,t,ps] = spectrogram(squeeze(M(1,j+3000,:)),2^15,round(2^15*0.8),[0:5:500],obj.currentDataObj.samplingFrequency(1),'yaxis');
+                PSA(j,:,:)=ps;
+            end
+            imagesc(t,f,squeeze(log10(mean(PSA))));set(gca,'YDir','normal')
+            %}
             
             interHR=csaps(HR.time,HR.bpm,InterpSmoothness,tInterp);
             interDB=csaps(t_ms,bufferedDelta2BetaRatio,InterpSmoothness,tInterp);
             interpStdHR = movingstd(interHR,stdWin/interpTimeBin);
             %plot(tInterp,interHR);hold on;plot(HR.time,HR.bpm,'r')
             
-            HRStdRaster=BuildBurstMatrixA([1;1;1;numel(tInterp)],tInterp/plotBin,interpStdHR,(TcycleOnset-(plotWin/2))/plotBin,plotWin/plotBin);
+            HRStdRaster=BuildBurstMatrixA([1;1;1;numel(tInterp)],tInterp/plotBin,interpSxtdHR,(TcycleOnset-(plotWin/2))/plotBin,plotWin/plotBin);
+            HRRaster=BuildBurstMatrixA([1;1;1;numel(tInterp)],tInterp/plotBin,interHR,(TcycleOnset-(plotWin/2))/plotBin,plotWin/plotBin);
+
             DBRaster=BuildBurstMatrixA([1;1;1;numel(tInterp)],tInterp/plotBin,interDB,(TcycleOnset-(plotWin/2))/plotBin,plotWin/plotBin);
             tRaster=(-plotWin/2+plotBin/2):plotBin:(plotWin/2);
             
@@ -445,6 +460,40 @@ classdef sleepAnalysis < recAnalysis
                 xlabel('Time [s]');
                 
                 imagesc(tRaster/1000,1:size(HRStdRaster(pSmallRates(1:nEvents),1,:),1),squeeze(HRStdRaster(pSmallRates(1:nEvents),1,:)),'Parent',hAxes(4));
+                ylabel('Cycle #','Parent',hAxes(4));
+                set(hAxes(4),'XTickLabel',[]);
+                xlabel('Time [s]');
+                
+                f=figure;
+                if isempty(hAxes)
+                    hAxes(1)=subaxis(f,2,2,1,'S',0.01,'MR',0.2);
+                    hAxes(2)=subaxis(f,2,2,2,'S',0.01,'MR',0.2);
+                    hAxes(3)=subaxis(f,2,2,3,'S',0.01,'MR',0.2);
+                    hAxes(4)=subaxis(f,2,2,4,'S',0.01,'MR',0.2);
+                    hold(hAxes(1),'on');
+                    hold(hAxes(3),'on');
+                end
+                
+                plot(tRaster/1000,normZeroOne(mean(squeeze(HRRaster))),'Parent',hAxes(1));
+                plot(tRaster/1000,normZeroOne(mean(squeeze(DBRaster))),'r','Parent',hAxes(1));
+                [hl,hO]=legend(hAxes(1),{'norm. HR ','norm. \delta/\beta'},'Box','off');
+                horizontalLegend(hO);
+                hl.Position=[0.4887    0.8825    0.2875    0.0905];
+                line([0 0],[0 1],'color',[0.8 0.8 0.8],'Parent',hAxes(1));
+                
+                plot(tRaster/1000,normZeroOne(mean(squeeze(HRRaster(pSmallRates(1:nEvents),1,:)))),'Parent',hAxes(3));
+                plot(tRaster/1000,normZeroOne(mean(squeeze(DBRaster(pSmallRates(1:nEvents),1,:)))),'r','Parent',hAxes(3));
+                [hl,hO]=legend(hAxes(3),{'norm. HR','norm. \delta/\beta'},'Box','off');
+                horizontalLegend(hO);
+                hl.Position=[0.4887    0.8825    0.2875    0.0905];
+                line([0 0],[0 1],'color',[0.8 0.8 0.8],'Parent',hAxes(3));
+                
+                imagesc(tRaster/1000,1:size(DBRaster(pSmallRates(1:nEvents),1,:),1),squeeze(DBRaster(pSmallRates(1:nEvents),1,:)),'Parent',hAxes(2));
+                ylabel('Cycle #','Parent',hAxes(2));
+                set(hAxes(2),'XTickLabel',[]);
+                xlabel('Time [s]');
+                
+                imagesc(tRaster/1000,1:size(HRRaster(pSmallRates(1:nEvents),1,:),1),squeeze(HRRaster(pSmallRates(1:nEvents),1,:)),'Parent',hAxes(4));
                 ylabel('Cycle #','Parent',hAxes(4));
                 set(hAxes(4),'XTickLabel',[]);
                 xlabel('Time [s]');
