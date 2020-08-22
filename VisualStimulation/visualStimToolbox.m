@@ -388,6 +388,9 @@ end
             saveFile=[VS.par.VSDirectory '\stats\' VS.par.VSObjNames{VS.par.currentVSO} '_' timeString];
         end
         
+        %Add screen location to visual stimulation object
+        VS.par.VSO.screenPositionsMatlab=VS.par.screenPositionsMatlab;
+        
         %run visual stimulation
         VS.par.VSO=VS.par.VSO.run;
         
