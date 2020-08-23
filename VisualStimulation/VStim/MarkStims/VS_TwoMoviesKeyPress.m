@@ -77,12 +77,13 @@ classdef VS_TwoMoviesKeyPress < VStim
             
             %Prepare display gui
             screenPosExperimenterSignal=obj.screenPositionsMatlab(2,:);
-            screenPosExperimenterSignal(1:2)=screenPosExperimenterSignal(1:2)+600;screenPosExperimenterSignal(3:4)=[400 400];
+            screenPosExperimenterSignal(1:2)=[screenPosExperimenterSignal(1:2)+[300 600]];screenPosExperimenterSignal(3:4)=[150 300];
+            createMsg.Interpreter='tex';
+            createMsg.WindowStyle = 'non-modal';
+            hMsgBox = msgbox('\fontsize{200}-','Value',createMsg);
+            hMsgBox.Children(1).delete;
+            %hJavaMsg = get(hMsgBox,'JavaFrame');
 
-            fComm=figure('position',screenPosExperimenterSignal);
-            aComm=axes('visible','off');
-            hText=text(aComm,0.2,0.5,'-','FontSize',100,'Color','r');
-            
             for i=1:obj.nVideos
                 tFrame{i}=( 0 : ((obj.skipFrames+1)*obj.ifi) : (( (obj.skipFrames+1)*obj.ifi)*(obj.initialFrozenFrames+obj.movFrameCount(i)-1)) )';
                 frameIdx{i}=[ones(1,obj.initialFrozenFrames) 1:obj.movFrameCount(i)];
@@ -100,11 +101,9 @@ classdef VS_TwoMoviesKeyPress < VStim
                 
                 %wait for a key to be pressed to start a trial
                 fprintf('Movie %d preared - waiting for any mouse key press to start next trial...',currMovie);
-                hText.String=currMovie;
-                hText.Color='r';
+                hMsgBox.Children.Children.String=['\fontsize{200}' num2str(currMovie)];figure(hMsgBox);%hJavaMsg.requestFocus;
                 
                 [clicks,~,~,whichButton] = GetClicks(obj.PTB_win);
-                hText.Color='k';
                 startTrialTime=GetSecs;
                 disp('Waiting for any mouse key press to mark pray catch...');
 
@@ -131,7 +130,6 @@ classdef VS_TwoMoviesKeyPress < VStim
                                 obj.interTrialDelay(i)=GetSecs-startTrialTime;
                                 trialStopped=true;
                                 disp('Prey catch captured!!!');
-                                hText.Color='r';hText.String='-';
                                 break;
                             end
                         end
@@ -175,7 +173,6 @@ classdef VS_TwoMoviesKeyPress < VStim
                     end
                     obj.sendTTL(2,false); %session start trigger (also triggers the recording start)
                     obj.interTrialDelay(i)=GetSecs-startTrialTime;
-                    hText.Color='r';hText.String='-';
                     disp('Trial ended!!!!');
                 end
             end
@@ -184,7 +181,7 @@ classdef VS_TwoMoviesKeyPress < VStim
             
             obj.sendTTL(1,false); %session end trigger
 
-            delete(fComm);
+            delete(hMsgBox);
             disp('Session ended');
         end
         
