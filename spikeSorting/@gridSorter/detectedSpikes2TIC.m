@@ -2,7 +2,7 @@ function [gridObj] = detectedSpikes2TIC(gridObj,varargin)
 %DETECTEDSPIKES2TIC retrieves all spike times from the spike detection
 %and converts it into a t,IC format
 %   detectedSpikes2TIC loads spike times from gridObj.sortingFileNames, and 
-%   saves the output file to [gridObj.sortingDir '\tic.m'] unless given 
+%   saves the output file to [gridObj.sortingDir '\GridSorterDetectedSpikes.m'] unless given 
 %   otherwise in varargin (use 'ticPath' key,value to change this)
 %   NOTICE: changing these variables was not QA-ed, so use with caution
 
