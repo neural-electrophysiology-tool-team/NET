@@ -21,11 +21,18 @@ t=[];
 
 for i=1:nCh
     spikeTimes=load(gridObj.sortingFileNames.spikeDetectionFile{i},'spikeTimes');
-    spikeTimes=spikeTimes.spikeTimes;
+    try
+        spikeTimes=spikeTimes.spikeTimes;
+    catch
+        spikeTimes=[];
+    end
     ic(3,i)=length(t)+1;
     ic(4,i)=length(t)+length(spikeTimes);
     t=[t spikeTimes];
 end
+
+%remove channels without spikes
+ic(:,ic(3,:)==(ic(4,:)+1))=[];
 
 save(ticPath,'t','ic')
     
