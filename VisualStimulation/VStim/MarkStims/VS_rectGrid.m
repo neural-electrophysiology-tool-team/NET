@@ -53,11 +53,15 @@ classdef VS_rectGrid < VStim
             Y3=Y1+rectSide-1;
             X4=X1;
             Y4=Y1+rectSide-1;
+            if ~obj.inVivoSettings
             obj.pValidRect=find( sqrt((X1-centerX).^2+(Y1-centerY).^2)<=(obj.actualVFieldDiameter/2) &...
                 sqrt((X2-centerX).^2+(Y2-centerY).^2)<=(obj.actualVFieldDiameter/2) &...
                 sqrt((X3-centerX).^2+(Y3-centerY).^2)<=(obj.actualVFieldDiameter/2) &...
                 sqrt((X4-centerX).^2+(Y4-centerY).^2)<=(obj.actualVFieldDiameter/2));
-            
+            else
+                obj.pValidRect=(1:numel(X1))';
+            end
+                
             %move data to object
             obj.rectData.X1=X1;obj.rectData.Y1=Y1;
             obj.rectData.X2=X2;obj.rectData.Y2=Y2;
