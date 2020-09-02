@@ -289,6 +289,8 @@ classdef gridSorter
         
         obj=spikeDetection(obj)
         
+        gridObj=detectedSpikes2TIC(gridObj,varargin);
+        
         [obj,spikeFeaturesAll]=spikeFeatureExtraction(obj)
         
         [obj,idx,initIdx,nClusters,avgSpikeWaveforms,stdSpikeWaveforms]=spikeClustering(obj)
