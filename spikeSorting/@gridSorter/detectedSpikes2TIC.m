@@ -35,6 +35,3 @@ end
 ic(:,ic(3,:)==(ic(4,:)+1))=[];
 
 save(ticPath,'t','ic')
-    
-
-end
