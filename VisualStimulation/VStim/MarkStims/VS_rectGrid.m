@@ -170,7 +170,7 @@ classdef VS_rectGrid < VStim
                 WaitSecs(obj.interTrialDelay-(GetSecs-obj.off_Flip(i)));
             end
             obj.pos(end)=[]; %remove the last stim which is not shown
-            luminosities(end)=[];%remove the last stim which is not shown
+            obj.luminosities(end)=[];%remove the last stim which is not shown
             
             WaitSecs(obj.postSessionDelay);
             obj.sendTTL(1,false); %session end trigger
