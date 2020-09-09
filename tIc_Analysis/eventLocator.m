@@ -8,7 +8,7 @@
 %                       minSBInterval - collapses SB with intervals less than minSBInterval into one SB
 %                       	varargin: 'property name',property value (see list of properties in default values)
 %                           sigma=5; %gaussian width in convolution
-%                           smoothFuncNBins=61; %number of samples in the gaussian function for convolution
+%                           smoothFuncNBins=; %number of samples in the gaussian function for convolution
 %                           res=10; % resolution of SB detection
 %                           stdThresh=2; %the threshold for rejecting noise in the floating median filter
 %                           medianWindow=10000; %[ms] the window for floating median
