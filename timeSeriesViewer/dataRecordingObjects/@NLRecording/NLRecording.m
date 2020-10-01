@@ -277,7 +277,7 @@ classdef NLRecording < dataRecording
             obj.multifileMode=false; %the ability to process multiple folders together was not implemented
             
             if isempty(recordingFile) %if directory with data was not entered open get directory GUI
-                [obj.recordingDir]= uigetdir(obj.defaultLocalDir,'Choose the data folder');
+                [obj.recordingFile]= uigetdir(obj.defaultLocalDir,'Choose the data folder');
             end
             if iscell(recordingFile)
                 if numel(recordingFile)>1
