@@ -272,7 +272,12 @@ classdef (Abstract) recAnalysis < handle
             
             
             %get data from excel spread sheet
-            obj.recTable = readtable(obj.excelRecordingDataFileName);
+            Vers = version('-release');
+            if str2num(Vers(1:4)) >= 2020
+                obj.recTable = readtable(obj.excelRecordingDataFileName,'Format','auto');
+            else
+                obj.recTable = readtable(obj.excelRecordingDataFileName);
+            end
             xlsFieldNames=obj.recTable.Properties.VariableNames;
             maxRow=size(obj.recTable,1);
                 
