@@ -22,7 +22,7 @@
 %                       BCM [ms] - the time of the event center of mass
 %
 % Last updated : 29/03/17
-function [BS,BP,BE,BI,BCM,Act,mAct,sAct]=eventLocator(I,t,ic,minSBInterval,varargin)
+function [BS,BP,BE,BI,BCM,Act,mAct,sAct,BD]=eventLocator(I,t,ic,minSBInterval,varargin)
 %default variables
 sigma=5; %[bins of res] gaussian width in convolution
 smoothFuncNBins=[]; %number of samples in the gaussian function for convolution, if empty takes 6*sigma+1
@@ -35,7 +35,7 @@ mergeAccordingToEventCenter=0; %whether to merge events according to distances b
 refineDetection=true; %reextract events and calculate exact edges
 constantThreshold=0; %a non floating threshold below which events are not detected.
 
-warning('Function is under development, notice that the two inputs do not influence the result');
+%warning('Function is under development, notice that the two inputs do not influence the result');
 %print out default arguments and values if no inputs are given
 if nargin==0
     defaultArguments=who;
@@ -52,14 +52,14 @@ if nargin==0
 end
 
 %sanity checks
-BP=[];BS=[];BE=[];BI=[];
+BP=[];BS=[];BE=[];BI=[];BD=[];
 if isempty(t) || isempty(I) || isempty(ic)
-    BP=[];BS=[];BE=[];BI=[];
+    BP=[];BS=[];BE=[];BI=[];BCM=[];Act=[];mAct=[];sAct=[];
     disp('One of the input vectors is empty');
     return;
 end
 if any(isnan(t)) || any(isnan(I))
-    BP=[];BS=[];BE=[];
+    BP=[];BS=[];BE=[];BI=[];BCM=[];Act=[];mAct=[];sAct=[];
     disp('Input arrays have NaNs');
     return;
 end
@@ -101,10 +101,11 @@ BS=find(diff([0 ActBinary])>0);%SB beginnings
 BE=find(diff([ActBinary 0])<0);%SB endings
 BM=(BS+BE)/2;%SB middles
 
-if isempty(BS) || isempty(BE),
-    fprintf('\nChannel %d %d has only single spikes and consequently was not analyzed',ic(1:2,i));
+if isempty(BS) || isempty(BE)
+    % fprintf('\nChannel %d %d has only single spikes and consequently was not analyzed',ic(1:2,i));
     BI=[];
     BP=[];
+    BCM=[];
 else
     %Collapse SBs with intervals less than minSBInterval into one SB (decision is made according to distances between peaks)
     %decision can also be diverted to distances between endings and beginnings
@@ -127,7 +128,7 @@ else
     
     %separate the first and last events to prevent checking limit cases
     if refineDetection
-        disp('Calculating refined detection on individual events');
+        %disp('Calculating refined detection on individual events');
         for j=1:NSBs
             pBS=(BS(j)-addToSidesRes):BS(j);
             pBS(pBS<=0)=1;
@@ -136,6 +137,9 @@ else
             
             BS(j)=BS(j)-addToSidesRes+find([0 Act(pBS)]<=[1 mAct(pBS)],1,'last');
             BE(j)=BE(j)+find([Act(pBE) 0]<=[mAct(pBE) 1],1,'first');
+            if BE(j) > size(Act,2)
+                BE(j) = size(Act,2);
+            end
             
             pTmp=BS(j):BE(j);
             tmpEvent=Act(pTmp);
@@ -175,6 +179,7 @@ else
         xlabel('Event duration [ms]');
         ylabel('number of events');
     end
+    BD=(BE-BS)*res;
     BS=BS*res-res/2;
     BE=BE*res+res/2;
     BP=BP*res-res/2;
