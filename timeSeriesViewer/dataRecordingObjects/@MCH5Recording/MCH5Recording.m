@@ -563,7 +563,7 @@ classdef MCH5Recording < dataRecording
               
               %get start date.
               try
-                  dateInTicks=h5readatt(obj.fullFilename{i},pathToAllRecordings,'DateInTicks');
+                  dateInTicks=h5readatt(obj.fullFilename{i},obj.pathToAllRecordings,'DateInTicks');
                   %%%%%%%%%%   EXPLANATION   %%%%%%%%
                   %dateInTicks is in .NET ticks, i.e. number of 0.1us (100ns) that has passed since 01.01.0001 00:00.
                   %Unix time is number of seconds since 01.01.1970, which in
