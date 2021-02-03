@@ -59,7 +59,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
     
     if (nrhs==5)
     {
-        matClass = (int)mxGetScalar(prhs[4]);
+        matClass = (int)mxGetScalar(prhs[5]);
     }
     else
     {
