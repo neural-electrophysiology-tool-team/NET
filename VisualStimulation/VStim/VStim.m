@@ -80,6 +80,7 @@ classdef (Abstract) VStim < handle
     
     properties (Hidden)
         trigChNames=[[2;3;4;5] [6;7;8;9]]; %the channel order for triggering in parallel port (first channel will be one)
+        screenPositionsMatlab;
     end
     
     methods

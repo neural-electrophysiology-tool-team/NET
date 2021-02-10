@@ -1,6 +1,7 @@
-/*[M]=BuildBurstMatrix(indexchannel,t,I,Bind(first:last),width);
- t and Bind must be rounded.
-a function that returns a matrix of selected bursts.
+/*[M]=BuildBurstMatrix(indexChchannel,t,Bind(first:last),width);
+ * t and Bind must be rounded.
+ * a function that returns a matrix of selected bursts.
+ * compile function using: mex -largeArrayDims BuildBurstMatrix.c;
  */
 
 #include <stdio.h>
@@ -9,94 +10,90 @@ a function that returns a matrix of selected bursts.
 #include "mex.h"
 #include "matrix.h"
 
-
-/*a function that builds the SBE matrix*/
-void MakeSBE (double *index, double *sbematrix, double *times, double *intensities, double *locaburst,
-int neunum, long int ntimes, int nburst, double width)
-{
-    int t=0,currentburst,neu=0;
-    for (neu=0;neu<neunum;neu++)    /*run along each neuron:*/
-    {
-        /*        printf('first: %d \n',(int)index[neu*4+2]-1); */
-        for (t=((long int)index[neu*4+2]-1);t<=((long int)index[neu*4+3]-1);t++) /*t=indexchannel(3,i):indexxchannel(4,i)*/
-        {
-            /*for each spike, find if it is inside a burst: */
-            for (currentburst=0;currentburst<nburst;currentburst++)
-            {
-                /*check if: tBurst<t<tBurst+window*/
-                if  (   (((long int)times[t])<((long int)locaburst[currentburst]+width))   &   (((long int)times[t])>=((long int)locaburst[currentburst]))   )
-                    sbematrix[currentburst+(neu)*nburst+(((long int)times[t])-((long int)locaburst[currentburst]))*nburst*neunum]   =   sbematrix[currentburst+(neu)*nburst+(((long int)times[t])-((long int)locaburst[currentburst]))*nburst*neunum]   +   intensities[t];
-            }
-        }
-    }
-}
-
-
-
 /********************************************************************************************/
 /*This function defines the incoming and outgoing matlab variables
-  and sets pointers to the begining of each one. Then calls to the
-  function that makes the new SBEmatrix and to the correlation calculation
-  (the in comming array must me all in the same unit)*/
+ * and sets pointers to the begining of each one. Then calls to the
+ * function that makes the new SBEmatrix and to the correlation calculation
+ * (the in comming array must me all in the same unit)*/
 
-void mexFunction( int nlhs, mxArray *plhs[],
-int nrhs, const mxArray *prhs[] )
+void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 {
-    double *index, *times, *intensities, *locaburst, *sbeM;
-    double width;     /*burst window is from [time , time+width]*/
-    long int ntimes;
+    double *indexCh, *times, *tTrial, *intensities;
+    double width;
+    mwSize i, rowIdx, nNeurons, nTrials, nSpikes, trial, neu, t, ndims[3];
     
-    int ndims[3], rowindex, neunum, nburst, i=0;
+    /*Define pointers to go over array of different classes*/
+    uint8_T *Muint8;
+    double *Mdouble;
+    mxLogical *Mlogical;
     
-/*the width is definded as half of the SBE*/
-    
-/*getting pointers and dimensions of the index matrix and the times
-  vector*/
-    
-/*check if format is correct-help*/
+    /*check if format is correct-help*/
     if (nrhs!=5)
     {
         mexPrintf("\nThe number of variables entered is: %d\n",nrhs);
-        mexErrMsgTxt("The correct execution format is:\n[M]=BuildBurstMatrixA(ic,t,I,Bind,width);\nM is a  matrix of size Bind x Neurons x width\nBurst window is from [Bind(i) , Bind(i)+width]\nWhere all variables are ROUNDED and given in the same units\n");
+        mexErrMsgTxt("The correct execution format is:\n[M]=BuildBurstMatrixA(ic,t,I,Bind,width,class);\nM is a  matrix of size Bind x Neurons x width\nBurst window is from [Bind(i) , Bind(i)+width]\nWhere all variables are ROUNDED and given in the same units\n");
     }
     
-    index = mxGetPr(prhs[0]); /*indexchannel (4x number of neurons)*/
-    times = mxGetPr(prhs[1]); /*  t - spikes timings*/
+    /* get input variables and their sizes */
+    indexCh = mxGetPr(prhs[0]); /*indexChchannel (4x number of neurons)*/
+    times = mxGetPr(prhs[1]); /*t - spikes timings*/
     intensities = mxGetPr(prhs[2]); /*  I - the intensities in times t*/
-    locaburst = mxGetPr(prhs[3]); /*location of beginning of burst window - same units as times*/
-    width = mxGetScalar(prhs[4]); /*  width of burst window - same units as times  - totla burst window is [locaburst, locaburst+window]*/
+    tTrial = mxGetPr(prhs[3]); /*time of beginnings of trials - same units as times*/
+    width = (mwSize)mxGetScalar(prhs[4]); /*  width of burst window - same units as times  - totla burst window is [tTrial, tTrial+window]*/
+    
+    
+    rowIdx = (mwSize)mxGetM(prhs[0]);       /* =4  - return number of rows in array*/
+    nNeurons = (mwSize)mxGetN(prhs[0]);         /* number of neurions - return number of columns in array.*/
+    nSpikes = (mwSize)mxGetN(prhs[1]);         /* total number of spikes*/
+    nTrials = (mwSize)mxGetN(prhs[3]);         /* total number of bursts*/
+    
+    /*check that input variables are integers*/
+    for (i=0;i<nSpikes;i++)
+    {
+        times[i]=(long int)times[i];
+    }
+    
+    for (i=0;i<nTrials;i++)
+    {
+        tTrial[i]=(long int)tTrial[i];
+    }
+    
 
-    
-    rowindex = mxGetM(prhs[0]);       /* =4  - return number of rows in array*/
-    neunum = mxGetN(prhs[0]);         /* number of neurions - return number of columns in array.*/
-    ntimes = mxGetN(prhs[1]);         /* total number of spikes*/
-    nburst = mxGetN(prhs[3]);         /* total number of bursts*/
-    
-    /*  Check if no empty variables are given as input*/
-    if (neunum==0 | ntimes==0 | nburst==0)
+    /*Checks that the input varibles are not empty matrices*/
+    if (nNeurons==0 || nSpikes==0 || nTrials==0)
     {
         mexErrMsgTxt("\nOne of the input variables is empty\n");
     }
     
-/*After convolution the vector size is bigger by the size of (the
-  response function(respns))-1)*/
+    /*After convolution the vector size is bigger by the size of (the
+     * response function(respns))-1)*/
     
-/*defenition of a 3D matrix in dynamic memory*/
+    /*dimentions of burst matrixes: M, ConvSbeM:*/
+    ndims[0]=nTrials;
+    ndims[1]=nNeurons;
+    ndims[2]=(mwSize)width;
     
-  /*dimentions of burst matrixes: sbeM, ConvSbeM:*/
-    ndims[0]=nburst;
-    ndims[1]=neunum;
-    ndims[2]=(int)width;
+    /* Error Messages */
+    if (tTrial[0]<0)
+        mexWarnMsgTxt("Burst location starts from a negative value\n");
     
-  /* Set the output pointers :*/
-    plhs[0] = mxCreateNumericArray(3,ndims,mxDOUBLE_CLASS,mxREAL);  /*return burst matrix (sbeM)*/
-    sbeM=mxGetPr(plhs[0]);
-    for (i=0;i<(nburst-1+(neunum-1)*nburst+(width-1)*nburst*neunum);i++)
-        sbeM[i]=0;
-    
-  /* Error Messages */
-    if (locaburst[0]<0) mexWarnMsgTxt("Burst location starts from a negative value\n");
-    
-    /*build SBE matrix*/
-    MakeSBE (index, sbeM, times, intensities, locaburst, neunum, ntimes, nburst, width);
+    /* Set the output pointers :*/
+ 
+
+        plhs[0] = mxCreateNumericArray(3,ndims,mxDOUBLE_CLASS,mxREAL);
+        Mdouble = mxGetPr(plhs[0]);
+        /*mexPrintf("\nDouble class used for output\n");*/
+        
+        for (neu=0;neu<nNeurons;neu++)
+        {
+            for (t=((mwSize)indexCh[neu*4+2]-1);t<=((mwSize)indexCh[neu*4+3]-1);t++)
+            {
+                for (trial=0;trial<nTrials;trial++)
+                {
+                    if  (   ((times[t])<(tTrial[trial]+width))   &   ((times[t])>=(tTrial[trial]))   )
+                        Mdouble[trial+(neu)*nTrials+(((mwSize)times[t])-((mwSize)tTrial[trial]))*nTrials*nNeurons] += intensities[t];
+                }
+            }
+        }
+        
 }

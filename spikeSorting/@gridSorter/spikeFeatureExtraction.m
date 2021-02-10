@@ -81,8 +81,7 @@ for i=find(obj.sortingFileNames.featureExtractionExist==0 | obj.overwriteFeature
                 spikeFeatures=spikeFeatures(:,[tmp1(1:obj.featuresNWaveletCoeff/2) nCoeffs+tmp2(1:obj.featuresNWaveletCoeff/2)]);
                 
                 if obj.featuresReduceDimensionsWithPCA
-                    [PCAsimMat,spikeFeatures] = pca(spikeFeatures); %run PCA for visualization purposes
-                    spikeFeatures=spikeFeatures(:,1:obj.featuresDimensionReductionPCA);
+                    [PCAsimMat,spikeFeatures] = pca(spikeFeatures,'NumComponents',obj.featuresDimensionReductionPCA,'Economy',false); %run PCA for visualization purposes
                 end
                 
             case 'PCA' %this option was tested and gives worse results than wavelets
