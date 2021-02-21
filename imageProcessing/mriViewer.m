@@ -48,7 +48,7 @@ end
 function mriViewer_OpeningFcn(hObject, eventdata, handles, varargin)
 handles.output = hObject;
 if nargin<4
-    addpath('D:\PostDoc\Turtle anatomy\TurtleMRIs');
+    addpath('/media/sil2/Experimental/Reptile anatomy data/TurtleMRIs/');
     load turtle03_5_mriViewerData;
     %load turtle03_5_Reduced_mriViewerData
     %load turtle03_5_ReducedOnlyBrain_mriViewerData;
