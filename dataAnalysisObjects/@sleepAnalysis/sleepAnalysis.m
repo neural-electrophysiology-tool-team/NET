@@ -2211,7 +2211,7 @@ classdef sleepAnalysis < recAnalysis
             chunks=buffer(bufferedDelta2BetaRatio(pt),movWinSamples);
             tLong=t_ms(round(movWinSamples/2):movWinSamples:nSamples)/1000/60/60;
             
-            sortedBetaRatio=sort(bufferedDelta2BetaRatio);
+            sortedBetaRatio=sort(bufferedDelta2BetaRatio(~isnan(bufferedDelta2BetaRatio)));
             estimateColorMapMax=round(sortedBetaRatio(round(numel(sortedBetaRatio)*0.95))/100)*100;
             
             if h==0
@@ -2599,7 +2599,7 @@ classdef sleepAnalysis < recAnalysis
             
             if plotSpectralBands
                 if hSpectra==0
-                    fTmp=figure('position',[680   678   658   420]);
+                    fTmp=figure('position',[680   100   658   420]);
                     hTmp=axes;
                     h=[h hTmp];
                 else
