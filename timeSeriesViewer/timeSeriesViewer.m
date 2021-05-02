@@ -20,7 +20,7 @@ else
     end
 end
 if installGUILayoutToolBox
-    disp('GUI Layout toolbox is not installed, trying to install...');
+    disp('GUI Layout toolbox is not installed, trying to install uix version 2.3.4...');
     d=which('GUI Layout Toolbox 2.3.4.mltbx');
     installedToolbox = matlab.addons.toolbox.installToolbox(d,true);
 end

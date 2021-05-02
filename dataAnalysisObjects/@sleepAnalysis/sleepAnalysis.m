@@ -12,6 +12,253 @@ classdef sleepAnalysis < recAnalysis
             obj=obj@recAnalysis(xlsFile);
         end
         
+                %% plotLizardMovementDB
+        function hOut=plotLizardMovementDB(obj,varargin)
+            %% parameter and settings
+            obj.checkFileRecording;
+            
+            parseObj = inputParser;
+            parseObj.FunctionName='sleepAnalysis\plotLizardMovementDB';
+            addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
+            addParameter(parseObj,'accCh',obj.recTable.accelerometerCh(obj.currentPRec),@isnumeric);
+          
+            addParameter(parseObj,'saveFigures',1,@isnumeric);
+            addParameter(parseObj,'nBins',18,@isnumeric);
+            addParameter(parseObj,'rLim4Rose',[],@isnumeric);
+            addParameter(parseObj,'RoseAlpha',0.9,@isnumeric);
+            addParameter(parseObj,'noBackground',0,@isnumeric);
+            addParameter(parseObj,'printLocalCopy',0,@isnumeric);
+            addParameter(parseObj,'h',0,@ishandle);
+            addParameter(parseObj,'inputParams',false,@isnumeric);
+            addParameter(parseObj,'plotRandomDist',1,@isnumeric);
+            parseObj.parse(varargin{:});
+            if parseObj.Results.inputParams
+                disp(parseObj.Results);
+                return;
+            end
+            
+            %evaluate all input parameters in workspace
+            for i=1:numel(parseObj.Parameters)
+                eval([parseObj.Parameters{i} '=' 'parseObj.Results.(parseObj.Parameters{i});']);
+            end
+            
+            %make parameter structure
+            parPlotLizardMovementDB=parseObj.Results;
+            
+            lizardMovement=[obj.currentAnalysisFolder filesep 'lizMov.mat'];
+            obj.checkFileRecording(lizardMovement,'Lizard movement analysis missing, please first run getLizardMovements');
+            load(lizardMovement); %load data
+            
+            dbRatioFile=[obj.currentAnalysisFolder filesep 'dbRatio_ch' num2str(ch) '.mat'];
+            obj.checkFileRecording(dbRatioFile,'delta to beta file missing, please first run getDBRatio');
+            load(dbRatioFile); %load data
+            
+            slowCyclesFile=[obj.currentAnalysisFolder filesep 'slowCycles_ch' num2str(ch) '.mat'];
+            obj.checkFileRecording(slowCyclesFile,'slow cycles file missing, please first run getSlowCycles');
+            load(slowCyclesFile); %load data
+            
+            %calculate phase in db
+            for i=1:numel(TcycleOnset)
+                cycleDuration=TcycleOffset(i)-TcycleOnset(i);
+                pTmp=find(t_mov_ms>(TcycleMid(i)-cycleDuration/2) & t_mov_ms<(TcycleMid(i)+cycleDuration/2));
+                phaseAll{i}=(t_mov_ms(pTmp)-(TcycleMid(i)-cycleDuration/2))/cycleDuration;
+                
+                shufTimes=rand(1,numel(pTmp))*cycleDuration;
+                phaseAllRand{i}=shufTimes/cycleDuration;
+                
+                pTmp=find(t_ms>(TcycleMid(i)-cycleDuration/2) & t_ms<(TcycleMid(i)+cycleDuration/2));
+                resampledTemplate(i,:) = interp1((0:(numel(pTmp)-1))./(numel(pTmp)-1),bufferedDelta2BetaRatio(pTmp)',(0:(nBins-1))/(nBins-1),'spline');
+            end
+            mResampledTemplate=mean(resampledTemplate);
+
+            phaseMov=cell2mat(phaseAll);
+            phaseRand=cell2mat(phaseAllRand);
+            
+            mPhaseMov=angle(mean(exp(1i*phaseMov*2*pi))); %Mean of circular quantities - wiki
+            binCenters=(0:(nBins))/(nBins);binCenters=(binCenters(1:end-1)+binCenters(2:end))/2;
+            mPhaseDB=angle(mean(mean(resampledTemplate).*exp(1i.*binCenters*2*pi))); %Mean of circular quantities - wiki
+
+            if h==0
+                fH=figure;
+                h=axes;
+            else
+                saveFigures=0;
+                axes(h);
+            end
+            cMap=lines(8);
+            
+            if ~isempty(rLim4Rose)
+                hTmp = polarTight(0, rLim4Rose);
+                delete(hTmp)
+                set(h, 'Nextplot','add');hold on;
+            end
+
+            hOut.hRose=rose(phaseMov*2*pi-mPhaseDB,nBins);
+            hOut.hRose.Color=[0.9 0.078 0.184];
+            XdataRose = get(hOut.hRose,'Xdata');XdataRose=reshape(XdataRose,[4,numel(XdataRose)/4]);
+            YdataRose = get(hOut.hRose,'Ydata');YdataRose=reshape(YdataRose,[4,numel(YdataRose)/4]);
+            hOut.hPatch=patch(XdataRose,YdataRose,[0.9 0.078 0.184]);
+            set(hOut.hPatch,'FaceAlpha',RoseAlpha);
+            %set(h,'color','k');
+            maxSamplesInBin=max(max(sqrt(XdataRose.^2+YdataRose.^2)));hold on;
+            
+            hOut.hPolar=polar([0 (1:nBins)/nBins]*pi*2-mPhaseDB,[mResampledTemplate(end) mResampledTemplate]/(max(mResampledTemplate/maxSamplesInBin)));
+            hOut.hPolar.LineWidth=2;
+            hOut.hPolar.Color=cMap(1,:,:);
+            
+            uistack(hOut.hPatch, 'top');
+            
+            delete(findall(h, 'String', '30', '-or','String','60', '-or','String','120', '-or','String','150', '-or','String','210', '-or','String','240', '-or','String','300', '-or','String','330'));
+            
+            if plotRandomDist
+                hOut.hRose2=rose(phaseRand*2*pi-mPhaseDB,nBins);
+                hOut.hRose2.Color=[0.5 0.5 0.5];
+                hOut.l=legend([hOut.hRose hOut.hPolar hOut.hRose2],'SWC','OF','shuffled');
+            else
+                hOut.l=legend([hOut.hRose hOut.hPolar],'SWC','OF');
+            end
+            hOut.l.Color=[1 1 1];
+            hOut.l.Box='off';
+            hOut.l.Position=[0.7133    0.8317    0.1786    0.1190];
+            
+            %if ~isempty(rLim4Rose)
+            %    set(h_fake,'Visible','off');
+            %end
+            
+            if saveFigures
+                set(fH,'PaperPositionMode','auto');
+                fileName=[obj.currentPlotFolder filesep 'lizardMovementDB'];
+                print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
+                if printLocalCopy
+                    fileName=[cd filesep obj.recTable.Animal{obj.currentPRec} '_Rec' num2str(obj.currentPRec) '_lizardMovementDB_' videoFileName];
+                    print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
+                end
+            end
+            
+        end
+        
+        
+        %% getLizardMovements
+        function data=getLizardMovements(obj,varargin)
+            obj.checkFileRecording;
+            
+            parseObj = inputParser;
+            addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
+            addParameter(parseObj,'accCh',obj.recTable.accelerometerCh(obj.currentPRec),@isnumeric);
+            addParameter(parseObj,'envelopWindow',15,@isnumeric); %max freq. to examine
+            addParameter(parseObj,'kurtosisNoiseThreshold',3,@isnumeric); %Spike detection - the threshold on the kurtosis value that differentiates noise samples from data
+            addParameter(parseObj,'eventDetectionThresholdStd',4,@isnumeric);%Spike detection - number of standard deviations above the noise level for event detection
+            addParameter(parseObj,'movLongWin',1000*60*30,@isnumeric); %max freq. to examine
+            
+            addParameter(parseObj,'movWin',10000,@isnumeric);
+            addParameter(parseObj,'movOLWin',9000,@isnumeric);
+            addParameter(parseObj,'tStart',0,@isnumeric);
+            addParameter(parseObj,'win',0,@isnumeric); %if 0 uses the whole recording duration
+            addParameter(parseObj,'applyNotch',0,@isnumeric);
+            addParameter(parseObj,'overwrite',0,@isnumeric);
+            addParameter(parseObj,'inputParams',false,@isnumeric);
+            parseObj.parse(varargin{:});
+            if parseObj.Results.inputParams
+                disp(parseObj.Results);
+                return;
+            end
+            
+            %evaluate all input parameters in workspace
+            for i=1:numel(parseObj.Parameters)
+                eval([parseObj.Parameters{i} '=' 'parseObj.Results.(parseObj.Parameters{i});']);
+            end
+            
+            %make parameter structure
+            parLizMov=parseObj.Results;
+            
+            if isnan(ch)
+                disp('Error: no reference channel for Delta 2 Beta extraction');
+                return;
+            end
+            if ~iscell(accCh)
+                disp('Error: no accelerometer channels provided for movement analysis');
+                return;
+            else
+                accCh=str2num(cell2mat(split(accCh{1},','))); %get accelerometer channel numbers as numerics
+            end
+            
+            %check if analysis was already done done
+            obj.files.lizMov=[obj.currentAnalysisFolder filesep 'lizMov.mat'];
+            if exist(obj.files.lizMov,'file') & ~overwrite
+                if nargout==1
+                    data=load(obj.files.lizMov);
+                else
+                    disp('accelerometer movement analysis already exists for this recording');
+                end
+                return;
+            end
+            obj.getFilters;
+            
+            movWinSamples=movWin/1000*obj.filt.FFs;%obj.filt.FFs in Hz, movWin in samples
+            movOLWinSamples=movOLWin/1000*obj.filt.FFs;
+            timeBin=(movWin-movOLWin); %ms
+            
+            if win==0
+                win=obj.currentDataObj.recordingDuration_ms-tStart;
+                endTime=obj.currentDataObj.recordingDuration_ms;
+            else
+                endTime=min(win+tStart,obj.currentDataObj.recordingDuration_ms);
+            end
+            startTimes=tStart:(movLongWin-movOLWin):endTime;
+            
+            nChunks=numel(startTimes);
+            t_mov_ms=cell(1,nChunks);
+            movAll=cell(1,nChunks);
+            
+            if applyNotch
+                obj.filt.FN=filterData(obj.currentDataObj.samplingFrequency(1));
+                obj.filt.FN.filterDesign='cheby1';
+                obj.filt.FN.padding=true;
+                obj.filt.FN=obj.filt.FN.designNotch;
+            end
+            
+            fprintf('\nAccelerometer data extraction (%d chunks)-',nChunks);
+            for i=1:nChunks
+                fprintf('%d,',i);
+                MLong=obj.currentDataObj.getData(accCh,startTimes(i),movLongWin);
+                
+                %plot(squeeze(bsxfun(@minus,MLong,mean(MLong,3)))')
+                if applyNotch
+                    MLong=obj.filt.FN.getFilteredData(MLong); %for 50Hz noise
+                end
+                [FMLong,t_ms]=obj.filt.F.getFilteredData(MLong);
+                %plot(squeeze(bsxfun(@minus,FMLong,mean(FMLong,3)))')
+                %y = hilbert(squeeze(FMLong)');
+                
+                %envelop should be able to work with matrices but for some reasdon upper and lower get the same value when using matrix
+                [yupper1,ylower1] = envelope(squeeze(FMLong(1,1,:)),envelopWindow,'peak');
+                [yupper2,ylower2] = envelope(squeeze(FMLong(2,1,:)),envelopWindow,'peak');
+                [yupper3,ylower3] = envelope(squeeze(FMLong(3,1,:)),envelopWindow,'peak');
+                %plot(squeeze(FMLong(1,:,:)));hold on;plot(yupper-ylower);
+                
+                allAxes=yupper1-ylower1+yupper2-ylower2+yupper3-ylower3;
+                %allAxes2=max([yupper1-ylower1 yupper2-ylower2 yupper3-ylower3],[],2);
+                
+                bufferedEnv=buffer(allAxes,500,0,'nodelay');
+
+                noiseSamples=bufferedEnv(:,kurtosis(bufferedEnv,0)<kurtosisNoiseThreshold);
+                noiseStd=std(noiseSamples(:));
+                noiseMean=mean(noiseSamples(:));
+                Th=noiseMean+eventDetectionThresholdStd*noiseStd;
+
+                t_mov_ms{i}=startTimes(i)+t_ms(allAxes>Th);
+                movAll{i}=allAxes(allAxes>Th)';
+            end
+            
+            fprintf('\n');
+            
+            t_mov_ms=cell2mat(t_mov_ms);
+            movAll=cell2mat(movAll);
+
+            save(obj.files.lizMov,'t_mov_ms','movAll','parLizMov');
+        end 
+        
+        
         %% getDayTimeInRecTime
         function data=getSleepVsLights(obj,varargin)
             %% parameter and settings
@@ -591,11 +838,9 @@ classdef sleepAnalysis < recAnalysis
                 set(fH,'PaperPositionMode','auto');
                 fileName=[obj.currentPlotFolder filesep 'syncEye_' videoFileName];
                 print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
-                print(fileName,'-depsc',['-r' num2str(obj.figResEPS)]);
                 if printLocalCopy
                     fileName=[cd filesep obj.recTable.Animal{obj.currentPRec} '_Rec' num2str(obj.currentPRec) '_syncEyeDB_' videoFileName];
                     print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
-                    print(fileName,'-depsc',['-r' num2str(obj.figResEPS)]);
                 end
             end
             
@@ -703,11 +948,9 @@ classdef sleepAnalysis < recAnalysis
                 set(fH,'PaperPositionMode','auto');
                 fileName=[obj.currentPlotFolder filesep 'syncEyeDBRaster_' videoFileName];
                 print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
-                print(fileName,'-depsc',['-r' num2str(obj.figResEPS)]);
                 if printLocalCopy
                     fileName=[cd filesep obj.recTable.Animal{obj.currentPRec} '_Rec' num2str(obj.currentPRec) '_syncEyeDBRaster_' videoFileName];
                     print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
-                    print(fileName,'-depsc',['-r' num2str(obj.figResEPS)]);
                 end
             end
             
@@ -1374,18 +1617,36 @@ classdef sleepAnalysis < recAnalysis
                         if manuallyUpdatePoints
                             f=figure('position',[100 100 1200 600]);
                             subplot(1,3,1:2);imshow(videoFrame);
-                            
                             [xi, yi] = ginput(1);
                             
-                            xInd=round(initialFrameSubregion(1):(initialFrameSubregion(1)+initialFrameSubregion(3)));
-                            yInd=round(initialFrameSubregion(2):(initialFrameSubregion(2)+initialFrameSubregion(4)));
+                            %recalculate the area of the bounding box accroding to the center defined by the user.
+                            bboxCenter=[bboxCenter(1)-xi,bboxCenter(2)-yi];
+                            xyShift=round(bboxCenter-bboxCenterOld);
+                            yInd=round(yInd-(xyShift(1)));
+                            xInd=xInd-(xyShift(2));
+                            if any(yInd<1)
+                                yInd=1:numel(yInd);
+                            end
+                            if any(xInd<1)
+                                xInd=1:numel(xInd);
+                            end
+                            if any(yInd>frameHeight)
+                                yInd=(frameHeight-numel(yInd)+1):frameHeight;
+                            end
+                            if any(xInd>frameWidth)
+                                xInd=(frameWidth-numel(xInd)+1):frameWidth;
+                            end
+                            
+                            bboxPointsOld=bboxPoints;
+                            bboxCenterOld=bboxCenter;
+                            pbboxUpdate=[pbboxUpdate i];
+                            
                             subplot(1,3,3);imshow(videoFrame(yInd,xInd,:));
                             title('Points lost. Selected region - press any key');
                             pause;
                             close(f);
-                            initialFrameSubregion=round(initialFrameSubregion);
-                         
-                            newBox=initialFrameSubregion;
+                            
+                            newBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
                             newPoints = detectMinEigenFeatures(videoFrame, 'ROI', newBox );
                             newPoints = newPoints.Location;
                             in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
@@ -1544,7 +1805,7 @@ classdef sleepAnalysis < recAnalysis
                 fprintf('%d,',i);
                 MLong=obj.currentDataObj.getData(ch,startTimes(i),movLongWin);
                 if applyNotch
-                    FLong=obj.filt.FN.getFilteredData(MLong); %for 50Hz noise
+                    MLong=obj.filt.FN.getFilteredData(MLong); %for 50Hz noise
                 end
                 FMLong=obj.filt.F.getFilteredData(MLong);
                 
@@ -1553,19 +1814,22 @@ classdef sleepAnalysis < recAnalysis
                 FMLongB = buffer(FMLong,movWinSamples,movOLWinSamples,'nodelay');
                 pValid=all(~isnan(FMLongB));
                 
-                [pxx,f] = pwelch(FMLongB(:,pValid),segmentWelchSamples,samplesOLWelch,dftPointsWelch,obj.filt.FFs);
+                deltaBetaRatioAll{i}=nan(1,numel(pValid)); %changes from zeros to nan in these 3 lines (Mark)
+                deltaRatioAll{i}=nan(1,numel(pValid));
+                betaRatioAll{i}=nan(1,numel(pValid));
+                if any(pValid)
+                    [pxx,f] = pwelch(FMLongB(:,pValid),segmentWelchSamples,samplesOLWelch,dftPointsWelch,obj.filt.FFs);
+                    
+                    deltaBetaRatioAll{i}(pValid)=(mean(pxx(pfLowBand,:))./mean(pxx(pfHighBand,:)))';
+                    deltaRatioAll{i}(pValid)=mean(pxx(pfLowBand,:))';
+                    betaRatioAll{i}(pValid)=mean(pxx(pfHighBand,:))';
+                else
+                    pxx=zeros(dftPointsWelch/2+1,numel(pValid));
+                end
                 
                 if saveSpectralProfiles
                     allFreqProfiles(:,(fftInBuffer*(i-1)+find(pValid)))=pxx;
                 end
-                deltaBetaRatioAll{i}=zeros(1,numel(pValid));
-                deltaBetaRatioAll{i}(pValid)=(mean(pxx(pfLowBand,:))./mean(pxx(pfHighBand,:)))';
-                
-                deltaRatioAll{i}=zeros(1,numel(pValid));
-                deltaRatioAll{i}(pValid)=mean(pxx(pfLowBand,:))';
-                
-                betaRatioAll{i}=zeros(1,numel(pValid));
-                betaRatioAll{i}(pValid)=mean(pxx(pfHighBand,:))';
                 
                 t_ms{i}=startTimes(i)+((movWin/2):timeBin:(movLongWin-movWin/2));
             end
@@ -1581,7 +1845,7 @@ classdef sleepAnalysis < recAnalysis
             t_ms=cell2mat(t_ms);
             
             save(obj.files.dbRatio,'t_ms','bufferedDelta2BetaRatio','parDBRatio','bufferedBetaRatio','bufferedDeltaRatio','allFreqProfiles');
-        end
+        end        
         
         %% getPhaseAnalysis
         function data=getPhaseAnalysis(obj,varargin)
