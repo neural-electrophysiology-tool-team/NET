@@ -1346,6 +1346,7 @@ classdef sleepAnalysis < recAnalysis
             parseObj = inputParser;
             addParameter(parseObj,'videoFile',[obj.recTable.VideoFiles{obj.currentPRec}],@(x) exist(x,'file'));
             addParameter(parseObj,'nFramesVideo',[],@isnumeric);
+            addParameter(parseObj,'startTime',0,@isnumeric); %in seconds
             addParameter(parseObj,'startFrame',1,@isnumeric); %max freq. to examine
             addParameter(parseObj,'endFrame',Inf,@isnumeric);
             addParameter(parseObj,'initialFrameSubregion',[],@isnumeric);
@@ -1398,8 +1399,9 @@ classdef sleepAnalysis < recAnalysis
             end
             
             if exist(obj.files.eyeTracking,'file') & loadInitialConditions
-                load(obj.files.eyeTracking,'startFrame','initialFrameSubregion');
+                load(obj.files.eyeTracking,'startTime','startFrame','initialFrameSubregion');
                 parEyeTracking.startFrame=startFrame;
+                parEyeTracking.startTime=startTime;
                 parEyeTracking.initialFrameSubregion=initialFrameSubregion;
             end
             
@@ -1420,7 +1422,15 @@ classdef sleepAnalysis < recAnalysis
             if isempty(frameForEyePosExtraction)
                 frameForEyePosExtraction=startFrame;
             end
-            initFrame = rgb2gray(read(videoReader,frameForEyePosExtraction));% videoReader.CurrentTime=(1/videoReader.FrameRate)*(pFrames(1)-1);
+            
+            if startTime~=0 % this is much faster!!!
+                videoReader.CurrentTime = startTime; 
+                initFrame = rgb2gray(videoReader.readFrame);
+                startFrame = videoReader.FrameRate*videoReader.CurrentTime;
+            elseif startFrame~=1
+                initFrame = rgb2gray(read(videoReader,frameForEyePosExtraction));% videoReader.CurrentTime=(1/videoReader.FrameRate)*(pFrames(1)-1);
+            end
+            
             if isempty(initialFrameSubregion) %to manually select region for extracting eye movements
                 f=figure('position',[100 100 1200 600]);
                 subplot(1,3,1:2);imshow(initFrame);
@@ -1645,8 +1655,8 @@ classdef sleepAnalysis < recAnalysis
                             title('Points lost. Selected region - press any key');
                             pause;
                             close(f);
-                            
-                            newBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
+                            newBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  initialFrameSubregion(3:4)]);
+                            %newBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
                             newPoints = detectMinEigenFeatures(videoFrame, 'ROI', newBox );
                             newPoints = newPoints.Location;
                             in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
@@ -2314,8 +2324,10 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'nTestSegments',20,@isnumeric);
             addParameter(parseObj,'minPeakWidth',200,@isnumeric);
             addParameter(parseObj,'minPeakInterval',1000,@isnumeric);
+            addParameter(parseObj,'crossCorrAmp',0.1,@isnumeric);
+            addParameter(parseObj,'crossCorrProminence',0.2,@isnumeric);
             addParameter(parseObj,'detectOnlyDuringSWS',true);
-            addParameter(parseObj,'preTemplate',400,@isnumeric);
+            addParameter(parseObj,'preTemplate',500,@isnumeric);
             addParameter(parseObj,'winTemplate',1500,@isnumeric);
             addParameter(parseObj,'resultsFileName',[],@isstr);
             addParameter(parseObj,'percentile4ScaleEstimation',5,@isnumeric);
@@ -2355,7 +2367,7 @@ classdef sleepAnalysis < recAnalysis
 
             obj.checkFileRecording(slowCyclesFile,'slow cycle analysis missing, please first run getSlowCycles');
             load(slowCyclesFile); %load data
-            
+            obj.getFilters;
             nCycles=numel(TcycleOnset);
             if ~isempty(startEnds)
                 %Not written yet - for awake states, selection needs to be done.
@@ -2409,7 +2421,7 @@ classdef sleepAnalysis < recAnalysis
                     C=C(numel(tmpFM)-ccEdge:end-ccEdge);
                     %C=xcorr(squeeze(tmpFM),template,'coeff');
                     
-                    [~,peakTime]=findpeaks(C,'MinPeakHeight',0.1,'MinPeakProminence',0.2,'WidthReference','halfprom');
+                    [~,peakTime]=findpeaks(C,'MinPeakHeight',crossCorrAmp,'MinPeakProminence',crossCorrProminence,'WidthReference','halfprom');
                     peakTime(peakTime<=pTemplatePeak)=[]; %remove peaks at the edges where templates is not complete
                     absolutePeakTimes{i}=tmpFT(peakTime-pTemplatePeak)'+TOn(i);
                     

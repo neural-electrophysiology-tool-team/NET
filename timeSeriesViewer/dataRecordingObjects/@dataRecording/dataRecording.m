@@ -132,7 +132,7 @@ classdef (Abstract) dataRecording < handle
         
         function deleteMetaData(obj)
             if ~iscell(obj.recordingDir)
-                delete([obj.recordingDir filesep 'metaData.mat']);
+                delete([obj.recordingDir filesep obj.recordingName '_metaData.mat']);
             else
                 for i=1:numel(obj.recordingDir)
                     delete([obj.recordingDir{i} filesep 'metaData.mat']);
@@ -239,6 +239,111 @@ classdef (Abstract) dataRecording < handle
             
         end
         
+        function []=getKiloSort(obj)
+            % generate config structure
+            rootH = '/home/mark/tempKilosort' %where to save temp files for spike sorting (should be a fast drive) 
+            
+            ops.trange    = [0 Inf]; % time range to sort
+            ops.NchanTOT  = numel(obj.channelNumbers); % total number of channels in your recording
+            ops.fproc   = fullfile(rootH, 'temp_wh.dat'); % proc file on a fast SSD
+            ops.fbinary = fullfile(obj.recordingDir, obj.dataFileNames{1});
+            ops.fs = obj.samplingFrequency(1);% sample rate
+            ops.fshigh = 200;% frequency for high pass filtering (150)
+            ops.minfr_goodchannels = 0.001; % minimum firing rate on a "good" channel (0 to skip)
+            ops.Th = [10 6];% threshold on projections (like in Kilosort1, can be different for last pass like [10 4])
+            ops.lam = 6;% how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)
+            ops.AUCsplit = 0.9;% splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
+            ops.minFR = 1/500;% minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
+            ops.momentum = [20 400];% number of samples to average over (annealed from first to second value)
+            ops.sigmaMask = 30;% spatial constant in um for computing residual variance of spike
+            ops.ThPre = 8;% threshold crossings for pre-clustering (in PCA projection space)
+            ops.CAR=1; %median filter over channels (seems to slightly improve the spike quality).
+            ops.sig= 20;  % spatial smoothness constant for registration
+            ops.nblocks    = 5; % blocks for registration. 0 turns it off, 1 does rigid registration. Replaces "datashift" option.
+            
+            % danger, changing the settings below can lead to fatal errors!!!
+            % options for determining PCs
+            ops.spkTh           = -6;      % spike threshold in standard deviations (-6)
+            ops.reorder         = 1;       % whether to reorder batches for drift correction.
+            ops.nskip           = 25;  % how many batches to skip for determining spike PCs
+            
+            ops.GPU                 = 1; % has to be 1, no CPU version yet, sorry
+            % ops.Nfilt               = 1024; % max number of clusters
+            ops.nfilt_factor        = 4; % max number of clusters per good channel (even temporary ones)
+            ops.ntbuff              = 64;    % samples of symmetrical buffer for whitening and spike detection
+            ops.NT                  = 64*1024+ ops.ntbuff; % must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
+            ops.whiteningRange      = 32; % number of channels to use for whitening each channel
+            ops.nSkipCov            = 25; % compute whitening matrix from every N-th batch
+            ops.scaleproc           = 200;   % int16 scaling of whitened data
+            ops.nPCs                = 3; % how many PCs to project the spikes into
+            ops.useRAM              = 0; % not yet available
+
+            if ~strcmp(class(obj),'binaryRecording') %check if this is a binary recording.
+                fprintf('\nKilosort can only run on binary files, use the export2Binary method to first convert the data.\n Then switch to the binaryRecording object and run again');return;
+            end
+            
+            fprintf('\nConverting layout to kilosort format');
+            obj.convertLayoutKSort;
+            % is there a channel map file in this folder?
+            channelMapFile = dir(fullfile(obj.recordingDir, 'chan*.mat'));
+            if ~isempty(obj.recordingDir)
+                ops.chanMap = fullfile(obj.recordingDir, channelMapFile.name);
+            else
+                fprintf('\nThe Channel map is empty or missing. Please provide and run again!');return;
+            end
+            
+            [kilosortPath]=which('kilosort');
+            if isempty(kilosortPath)
+                fprintf('Kilosort was not found, please add it to the matlab path and run again');return;
+                %addpath(genpath('/media/sil2/Data/Lizard/Stellagama/Kilosort')) % for kilosort
+            end
+            
+            rez2PhyPath=which('rezToPhy2.m');
+            if isempty(rez2PhyPath)
+                fprintf('rez2Phy was not found, please add it to the matlab path and run again');return;
+                %addpath(genpath('/media/sil2/Data/Lizard/Stellagama/Kilosort')) % for kilosort
+            end
+            %ch2Remove=[18 22 23 30 31]
+            
+            mkdir(rootH);
+            rezPreProc = preprocessDataSub(ops);
+            save(fullfile(rootH, expName),'rezPreProc')
+            
+            rezShift                = datashift2(rezPreProc, 1);
+            save(fullfile(rootH, expName),'rezShift','-append')
+            
+            try
+                [rezSpk, st3, tF]     = extract_spikes(rezShift);
+            catch ME
+                tgprintf("There was some problem, come check!");
+                rethrow(ME);
+            end
+            save(fullfile(rootH, expName),'rezSpk','-append')
+            
+            rez                = template_learning(rezSpk, tF, st3);
+            
+            [rez, st3, tF]     = trackAndSort(rez);
+            
+            rez                = final_clustering(rez, tF, st3);
+            
+            rez                = find_merges(rez, 1);
+            
+            % correct times for the deleted batches
+            rez=correct_time(rez);
+            save(fullfile(rootH, expName),'rez','-append')
+            
+            save(fullfile(rootH, expName),'rez','-append')
+
+            % rewrite temp_wh to the original length
+            rewrite_temp_wh(ops)
+            
+            outFolder=fullfile(obj.recordingDir,'kiloSortResults');
+            fprintf('Done kilosort\nSaving results and exporting Phy templates to %s',outFolder);
+            mkdir(outFolder)
+            save(outFolder,'rez');
+            rezToPhy2(rez, outFolder);
+        end
+        
         function []=convertLayoutKSort(obj,outputFile,badChannels)
             if nargin<2
                 if iscell(obj.recordingDir)
@@ -336,7 +441,22 @@ classdef (Abstract) dataRecording < handle
             fclose(fid);
         end
         
-        function export2Binary(obj,targetFile,dataChannels,medianFilterGroup)
+        function generateChannelMapFile(obj,electrodeName)
+            layoutFile=dir([obj.recordingDir filesep '*.chMap']); 
+            if ~isempty(layoutFile)
+                fprintf('\nLayout file already exists - %s\n',layoutFile.name);
+                return;
+            elseif ~exist(electrodeName,'var')
+                [layoutDir]=fileparts(which('layout_40_16x2_FlexLin.mat'));
+                [layoutFile] = uigetfile([layoutDir filesep 'layout_*.mat'],'Select the electrode layout file');
+                electrodeName=layoutFile(1:end-4);
+            end
+            fid=fopen([obj.recordingDir filesep 'electrode.chMap'],'w');
+            fprintf(fid,electrodeName);
+            fclose(fid);
+        end
+        
+        function convert2Binary(obj,targetFile,dataChannels,medianFilterGroup)
             tic;
             targetDataType='int16';
             if nargin<4

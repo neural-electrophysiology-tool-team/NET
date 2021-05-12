@@ -278,6 +278,9 @@ classdef KwikRecording < dataRecording
       try
         disp('Extracting time stamp information...');
         obj.timestamps = double(h5read(obj.fullFilename, [obj.recNameHD5{1} '/application_data/timestamps']));
+        if isempty(obj.timestamps)
+            error('Time stamp information missing from HD5 file');
+        end
         disp('... done');
       catch
         disp('KwikRecording: timestamps information not available')
