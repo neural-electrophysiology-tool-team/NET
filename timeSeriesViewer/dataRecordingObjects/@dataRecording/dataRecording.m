@@ -365,7 +365,7 @@ classdef (Abstract) dataRecording < handle
                     save(tmpSaveFile,'rez','-append')
                 end
                 % rewrite temp_wh to the original length
-                rewrite_temp_wh(ops)
+                %rewrite_temp_wh(ops)
             else
                 % ORDER OF BATCHES IS NOW RANDOM, controlled by random number generator
                 iseed = 1;
