@@ -1347,8 +1347,7 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'videoFile',[obj.recTable.VideoFiles{obj.currentPRec}],@(x) exist(x,'file'));
             addParameter(parseObj,'nFramesVideo',[],@isnumeric);
             addParameter(parseObj,'startTime',0,@isnumeric); %in seconds
-            addParameter(parseObj,'startFrame',1,@isnumeric); %max freq. to examine
-            addParameter(parseObj,'endFrame',Inf,@isnumeric);
+            addParameter(parseObj,'endTime',Inf,@isnumeric); %in seconds
             addParameter(parseObj,'initialFrameSubregion',[],@isnumeric);
             addParameter(parseObj,'frameForEyePosExtraction',[],@isnumeric);
             addParameter(parseObj,'fractionOfBoxJumpThreshold',0.25,@isnumeric);
@@ -1399,8 +1398,7 @@ classdef sleepAnalysis < recAnalysis
             end
             
             if exist(obj.files.eyeTracking,'file') & loadInitialConditions
-                load(obj.files.eyeTracking,'startTime','startFrame','initialFrameSubregion');
-                parEyeTracking.startFrame=startFrame;
+                load(obj.files.eyeTracking,'startTime','initialFrameSubregion');
                 parEyeTracking.startTime=startTime;
                 parEyeTracking.initialFrameSubregion=initialFrameSubregion;
             end
@@ -1413,22 +1411,28 @@ classdef sleepAnalysis < recAnalysis
             frameWidth=videoReader.Width;
             frameHeight=videoReader.Height;
             frameRate=videoReader.FrameRate;
+            videoDuration=videoReader.Duration;
+            nFramesVideo=videoDuration*frameRate;
+            
             
             parEyeTracking.frameWidth=frameWidth;
             parEyeTracking.frameHeight=frameHeight;
             parEyeTracking.frameRate=frameRate;
+            parEyeTracking.nFramesVideo=nFramesVideo;
+            parEyeTracking.videoDuration=videoDuration;
+            parEyeTracking.startFrame=startTime*frameRate;
+
             
             %get initial eye location for tacking
             if isempty(frameForEyePosExtraction)
-                frameForEyePosExtraction=startFrame;
+                frameForEyePosExtraction=parEyeTracking.startFrame;
             end
             
             if startTime~=0 % this is much faster!!!
                 videoReader.CurrentTime = startTime; 
                 initFrame = rgb2gray(videoReader.readFrame);
                 startFrame = videoReader.FrameRate*videoReader.CurrentTime;
-            elseif startFrame~=1
-                initFrame = rgb2gray(read(videoReader,frameForEyePosExtraction));% videoReader.CurrentTime=(1/videoReader.FrameRate)*(pFrames(1)-1);
+                %initFrame = rgb2gray(read(videoReader,frameForEyePosExtraction));% videoReader.CurrentTime=(1/videoReader.FrameRate)*(pFrames(1)-1);
             end
             
             if isempty(initialFrameSubregion) %to manually select region for extracting eye movements
@@ -2736,6 +2740,8 @@ classdef sleepAnalysis < recAnalysis
                 pVally=NaN;
                 vallyPeriod=NaN;
                 peak2VallyDiff=NaN;
+                fprintf('\nCount not complete the run. No prominent oscillations detected in the data!!!\n');
+                return;
             else
                 pPeriod=pPeak(1)+XCFLagSamples;
                 period=xcf_lags(pPeriod);
@@ -2743,7 +2749,6 @@ classdef sleepAnalysis < recAnalysis
                 vallyPeriod=xcf_lags(pAntiPeriod);
                 peak2VallyDiff=xcf(pPeriod)-xcf(pAntiPeriod);
             end
-            
             
             %sliding autocorr analysis
             movingAutoCorrWinSamples=movingAutoCorrWin/timeBin;

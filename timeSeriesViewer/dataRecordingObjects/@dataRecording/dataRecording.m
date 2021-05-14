@@ -304,21 +304,24 @@ classdef (Abstract) dataRecording < handle
                 %addpath(genpath('/media/sil2/Data/Lizard/Stellagama/Kilosort')) % for kilosort
             end
             %ch2Remove=[18 22 23 30 31]
+            [~,recFolder]=fileparts(obj.recordingDir)
+            expName=['kilosortRez_' recFolder];
+            tmpSaveFile=fullfile(rootH, expName);
             
             mkdir(rootH);
             rezPreProc = preprocessDataSub(ops);
-            save(fullfile(rootH, expName),'rezPreProc')
+            save(tmpSaveFile,'rezPreProc')
             
             rezShift                = datashift2(rezPreProc, 1);
-            save(fullfile(rootH, expName),'rezShift','-append')
+            save(tmpSaveFile,'rezShift','-append')
             
             try
                 [rezSpk, st3, tF]     = extract_spikes(rezShift);
             catch ME
-                tgprintf("There was some problem, come check!");
+                [rezSpk, st3, tF]     = extract_spikes(rezShift);
                 rethrow(ME);
             end
-            save(fullfile(rootH, expName),'rezSpk','-append')
+            save(tmpSaveFile,'rezSpk','-append')
             
             rez                = template_learning(rezSpk, tF, st3);
             
@@ -330,9 +333,9 @@ classdef (Abstract) dataRecording < handle
             
             % correct times for the deleted batches
             rez=correct_time(rez);
-            save(fullfile(rootH, expName),'rez','-append')
+            save(tmpSaveFile,'rez','-append')
             
-            save(fullfile(rootH, expName),'rez','-append')
+            save(tmpSaveFile,'rez','-append')
 
             % rewrite temp_wh to the original length
             rewrite_temp_wh(ops)
@@ -342,6 +345,7 @@ classdef (Abstract) dataRecording < handle
             mkdir(outFolder)
             save(outFolder,'rez');
             rezToPhy2(rez, outFolder);
+            delete(tmpSaveFile);
         end
         
         function []=convertLayoutKSort(obj,outputFile,badChannels)
