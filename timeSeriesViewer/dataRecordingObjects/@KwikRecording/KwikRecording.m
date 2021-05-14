@@ -225,9 +225,9 @@ classdef KwikRecording < dataRecording
       
       if exist([obj.recordingDir filesep obj.recordingName '_metaData.mat'],'file') && ~obj.overwriteMetaData
 %     if exist([obj.recordingDir filesep 'metaData.mat'],'file') && ~obj.overwriteMetaData
-          obj = loadMetaData(obj); %needs recNameHD5
+          obj = obj.loadMetaData; %needs recNameHD5
       else
-          obj = extractMetaData(obj);
+          obj = obj.extractMetaData;
       end
       
       obj.numRecordings = length(obj.info.Groups);

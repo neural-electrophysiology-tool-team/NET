@@ -1432,7 +1432,6 @@ classdef sleepAnalysis < recAnalysis
                 videoReader.CurrentTime = startTime; 
                 initFrame = rgb2gray(videoReader.readFrame);
                 startFrame = videoReader.FrameRate*videoReader.CurrentTime;
-                %initFrame = rgb2gray(read(videoReader,frameForEyePosExtraction));% videoReader.CurrentTime=(1/videoReader.FrameRate)*(pFrames(1)-1);
             end
             
             if isempty(initialFrameSubregion) %to manually select region for extracting eye movements
@@ -1452,14 +1451,10 @@ classdef sleepAnalysis < recAnalysis
                 yInd=round(initialFrameSubregion(2):(initialFrameSubregion(2)+initialFrameSubregion(4)));
             end
             
-            if isempty(nFramesVideo)
-                nFramesVideo=videoReader.NumberOfFrames;
+            if isinf(endTime) %analyze the complete video
+                endTime=videoDuration;
             end
-            
-            parEyeTracking.nFramesVideo=nFramesVideo;
-            if isinf(endFrame) %analyze the complete video
-                endFrame=nFramesVideo;
-            end
+            endFrame=round((endTime/videoDuration)*nFramesVideo);
             pFrames=startFrame:skipFrames:endFrame;
             nFrames=numel(pFrames);
             delete(videoReader);
@@ -1487,10 +1482,11 @@ classdef sleepAnalysis < recAnalysis
                 videoReader = vision.VideoFileReader(videoFile,'ImageColorSpace','Intensity','VideoOutputDataType','uint8'); % create required video objects
                 nonConsecutiveVideo=false;
             end
+            videoReader.CurrentTime = startTime; 
+
             
             % optic flow definitions
             opticFlow = opticalFlowLK;
-
             
             bboxPoints=[initialFrameSubregion(1) initialFrameSubregion(2);initialFrameSubregion(1) initialFrameSubregion(2)+initialFrameSubregion(4);initialFrameSubregion(1)+initialFrameSubregion(3) initialFrameSubregion(2)+initialFrameSubregion(4);initialFrameSubregion(1)+initialFrameSubregion(3) initialFrameSubregion(2)];                
             bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2];
@@ -1543,7 +1539,8 @@ classdef sleepAnalysis < recAnalysis
             for i=1:nFrames
                 %frame = step(videoReader); this is faster but cant start from an arbitrary frame or jump frames
                 if nonConsecutiveVideo
-                    videoFrame=rgb2gray(videoReader.read(pFrames(i))); %read will be replaced by readFrame in future versions but it is not possible to skip frames with readframes
+                    videoReader.CurrentTime = (pFrames(i)/nFramesVideo)*videoDuration;
+                    videoFrame = rgb2gray(videoReader.readFrame);
                 else
                     videoFrame = step(videoReader);
                     for j=1:numel(pFrames(i+1)-pFrames(i)-1)

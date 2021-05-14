@@ -239,9 +239,13 @@ classdef (Abstract) dataRecording < handle
             
         end
         
-        function []=getKiloSort(obj)
+        function []=getKiloSort(obj,overwrite)
             % generate config structure
-            rootH = '/home/mark/tempKilosort' %where to save temp files for spike sorting (should be a fast drive) 
+            if nargin<2
+                overwrite=false;
+            end
+            useKiloSort3=true;
+            rootH = '/home/mark/tempKilosort' %where to save temp files for spike sorting (should be a fast drive)
             
             ops.trange    = [0 Inf]; % time range to sort
             ops.NchanTOT  = numel(obj.channelNumbers); % total number of channels in your recording
@@ -279,7 +283,7 @@ classdef (Abstract) dataRecording < handle
             ops.useRAM              = 0; % not yet available
 
             if ~strcmp(class(obj),'binaryRecording') %check if this is a binary recording.
-                fprintf('\nKilosort can only run on binary files, use the export2Binary method to first convert the data.\n Then switch to the binaryRecording object and run again');return;
+                fprintf('\nKilosort can only run on binary files, use the export2Binary method to first convert the data.\n Then switch to the binaryRecording object and run again\n');return;
             end
             
             fprintf('\nConverting layout to kilosort format');
@@ -298,53 +302,99 @@ classdef (Abstract) dataRecording < handle
                 %addpath(genpath('/media/sil2/Data/Lizard/Stellagama/Kilosort')) % for kilosort
             end
             
-            rez2PhyPath=which('rezToPhy2.m');
-            if isempty(rez2PhyPath)
-                fprintf('rez2Phy was not found, please add it to the matlab path and run again');return;
-                %addpath(genpath('/media/sil2/Data/Lizard/Stellagama/Kilosort')) % for kilosort
+            if useKiloSort3
+                rez2PhyPath2=which('rezToPhy2.m');
+                if isempty(rez2PhyPath2)
+                    fprintf('\nrez2Phy2 (kilosort3) was not found. Trying to look for rez2Phy (kilosort2.5 or lower)');
+                    fprintf('\nrez2Phy (kilosort2) was not found as well, please add it to the matlab path and run again\nTrying to look for rez2Phy (kilosort2.5 or lower)');
+                    return;
+                end
+            else
+                rez2PhyPath=which('rezToPhy.m');
+                
+                if isempty(rez2PhyPath)
+                    fprintf('\nrez2Phy (kilosort2) was not found as well, please add it to the matlab path and run again\nTrying to look for rez2Phy (kilosort2.5 or lower)');
+                    return;
+                end
             end
             %ch2Remove=[18 22 23 30 31]
-            [~,recFolder]=fileparts(obj.recordingDir)
+            [~,recFolder]=fileparts(obj.recordingDir);
             expName=['kilosortRez_' recFolder];
             tmpSaveFile=fullfile(rootH, expName);
             
             mkdir(rootH);
-            rezPreProc = preprocessDataSub(ops);
-            save(tmpSaveFile,'rezPreProc')
-            
-            rezShift                = datashift2(rezPreProc, 1);
-            save(tmpSaveFile,'rezShift','-append')
-            
-            try
-                [rezSpk, st3, tF]     = extract_spikes(rezShift);
-            catch ME
-                [rezSpk, st3, tF]     = extract_spikes(rezShift);
-                rethrow(ME);
+            if exist([tmpSaveFile '.mat'],'file')
+                load([tmpSaveFile '.mat'])
             end
-            save(tmpSaveFile,'rezSpk','-append')
-            
-            rez                = template_learning(rezSpk, tF, st3);
-            
-            [rez, st3, tF]     = trackAndSort(rez);
-            
-            rez                = final_clustering(rez, tF, st3);
-            
-            rez                = find_merges(rez, 1);
-            
-            % correct times for the deleted batches
-            rez=correct_time(rez);
-            save(tmpSaveFile,'rez','-append')
-            
-            save(tmpSaveFile,'rez','-append')
 
-            % rewrite temp_wh to the original length
-            rewrite_temp_wh(ops)
+            
+            if ~exist('rezPreProc','var') || overwrite==true
+                rezPreProc = preprocessDataSub(ops);
+                save(tmpSaveFile,'rezPreProc')
+            end
+            if ~exist('rezShift','var') || overwrite==true
+                rezShift                = datashift2(rezPreProc, 1);
+                save(tmpSaveFile,'rezShift','-append')
+            end
+            
+            if useKiloSort3
+                if ~exist('rezSpk','var') || overwrite==true
+                    [rezSpk, st3, tF]     = extract_spikes(rezShift);
+                    %{
+                    Adding the following lines instead of st(5,:) = cF; in
+                    the function extract_spikes in the folder clustering of
+                    kilosort seems to solve the problem
+                        try %Mark Shein-Idelson 4/3/21 - prevent wierd bug in which running "st(5,:) = cF;" results in an error
+                            st(5,:) = cF;
+                        catch
+                            st(5,:) = cF;
+                        end
+                    %}
+                        
+                end
+                save(tmpSaveFile,'rezSpk','st3','tF','-append')
+                
+                if ~exist('rez','var') || overwrite==true
+                    rez                = template_learning(rezSpk, tF, st3);
+                    [rez, st3, tF]     = trackAndSort(rez);
+                    rez                = final_clustering(rez, tF, st3);
+                    rez                = find_merges(rez, 1);
+                    
+                    % correct times for the deleted batches
+                    %rez=correct_time(rez);
+                    save(tmpSaveFile,'rez','-append')
+                end
+                % rewrite temp_wh to the original length
+                rewrite_temp_wh(ops)
+            else
+                % ORDER OF BATCHES IS NOW RANDOM, controlled by random number generator
+                iseed = 1;
+                
+                % main tracking and template matching algorithm
+                rez = learnAndSolve8b(rezShift, iseed);
+                % final merges
+                rez = find_merges(rez, 1);
+                
+                % final splits by SVD
+                rez = splitAllClusters(rez, 1);
+                
+                % decide on cutoff
+                rez = set_cutoff(rez);
+                % eliminate widely spread waveforms (likely noise)
+                rez.good = get_good_units(rez);
+                
+                save(tmpSaveFile,'rez','-append')
+            end
             
             outFolder=fullfile(obj.recordingDir,'kiloSortResults');
             fprintf('Done kilosort\nSaving results and exporting Phy templates to %s',outFolder);
             mkdir(outFolder)
             save(outFolder,'rez');
-            rezToPhy2(rez, outFolder);
+            if useKiloSort3
+                rezToPhy2(rez, outFolder);
+            else
+                rezToPhy(rez, outFolder);
+            end
             delete(tmpSaveFile);
         end
         
@@ -460,10 +510,10 @@ classdef (Abstract) dataRecording < handle
             fclose(fid);
         end
         
-        function convert2Binary(obj,targetFile,dataChannels,medianFilterGroup)
+        function convert2Binary(obj,targetFile,dataChannels,newChannelNumbers,medianFilterGroup)
             tic;
             targetDataType='int16';
-            if nargin<4
+            if nargin<5
                 medianFilterGroup=[];
             else
                 for i=1:numel(medianFilterGroup)
@@ -522,6 +572,10 @@ classdef (Abstract) dataRecording < handle
             if nargin<3
                 dataChannels=obj.channelNumbers;
             end
+            if nargin<4
+                newChannelNumbers=dataChannels;
+            end
+
             if nargin<2 || isempty(targetFile)
                 targetFile=[recordingDir filesep recordingName '.bin'];
                 disp(['File name for binary is:' targetFile]);
@@ -580,7 +634,7 @@ classdef (Abstract) dataRecording < handle
                             data(pGroup{i},:)=bsxfun(@minus,data(pGroup{i},:),median(data(pGroup{i},:)));
                         end
                     end
-                    pause(0.001);
+                    pause(0.0001);
                     fwrite(fid, data, ['*' targetDataType]);
                 end
                 fclose(fid);
@@ -616,6 +670,8 @@ classdef (Abstract) dataRecording < handle
                 fprintf(fid,'nSavedChans = %d\n',numel(dataChannels));
                 fprintf(fid,'sRateHz = %d\n',obj.samplingFrequency(1));
                 fprintf(fid,'nChans = %d\n',numel(dataChannels));
+                outputstr = ['%d,' repmat(',%d ', 1, numel(newChannelNumbers)-1)]; % replicate it to match the number of columns
+                fprintf(fid,['channelNumbers = ', outputstr, '\n'], newChannelNumbers);
                 fprintf(fid,'nTriggerChans = %d\n',numel(nT));
                 fprintf(fid,'nAnalogChans = %d\n',numel(obj.analogChannelNumbers));
                 fprintf(fid,'vcDataType = %s\n',targetDataType);

@@ -192,9 +192,8 @@ classdef binaryRecording < dataRecording
             fullMetaFileName=[obj.recordingDir filesep metaFileName '.meta'];
             if exist(fullMetaFileName,'file')
                 fidMeta=fopen(fullMetaFileName,'r');
-                metaData = textscan(fidMeta,'%s = %s');
+                metaData = textscan(fidMeta,'%s = %s','TextType','string','Delimiter',' = ');  %'Whitespace','',
                 fclose(fidMeta);
-                
                 for i=1:size(metaData{1},1)
                     T.(metaData{1}{i})=str2num(metaData{2}{i});
                 end
@@ -204,11 +203,10 @@ classdef binaryRecording < dataRecording
                 obj.totalAnalogChannels=T.nAnalogChans;
                 obj.triggerNames=mat2cell(1:T.nTriggerChans,1,ones(1,T.nTriggerChans));
                 obj.analogChannelNumbers=1:T.nAnalogChans;
-                
             else
                 error('could not read meta data file (.meta) for recording, data object not created!!!');
             end
-            obj.channelNumbers=1:obj.totalChannels;
+            obj.channelNumbers=T.channelNumbers;
             obj.channelNames=cellfun(@(x) num2str(x),mat2cell(obj.channelNumbers,1,ones(1,numel(obj.channelNumbers))),'UniformOutput',0);
             
             fid=fopen([obj.recordingDir filesep obj.dataFileNames{1}],'r');
