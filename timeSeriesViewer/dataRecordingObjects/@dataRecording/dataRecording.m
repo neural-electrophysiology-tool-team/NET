@@ -386,7 +386,7 @@ classdef (Abstract) dataRecording < handle
                 save(tmpSaveFile,'rez','-append')
             end
             
-            outFolder=fullfile(obj.recordingDir,'kiloSortResults');
+           outFolder=fullfile(obj.recordingDir,'kiloSortResults');
             fprintf('Done kilosort\nSaving results and exporting Phy templates to %s',outFolder);
             mkdir(outFolder)
             save(outFolder,'rez');
