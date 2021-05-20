@@ -1362,7 +1362,7 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'saveTrackingVideo',false,@isnumeric);
             addParameter(parseObj,'overwrite',false,@isnumeric);
             addParameter(parseObj,'savedFileName',[]);
-            addParameter(parseObj,'minTrackingPoints',50,@isnumeric);
+            addParameter(parseObj,'minTrackingPoints',40,@isnumeric);
             addParameter(parseObj,'inputParams',false,@isnumeric);
             parseObj.parse(varargin{:});
             if parseObj.Results.inputParams
@@ -1492,6 +1492,7 @@ classdef sleepAnalysis < recAnalysis
             bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2];
             bboxCenterOld=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2]; 
             bboxPointsOld=bboxPoints;
+            OFBox=bboxPointsOld;
 
             bboxShiftDistanceThreshold=round(min(initialFrameSubregion(3)*fractionOfBoxJumpThreshold,initialFrameSubregion(4)*fractionOfBoxJumpThreshold));
             
@@ -1547,7 +1548,9 @@ classdef sleepAnalysis < recAnalysis
                         step(videoReader);
                     end
                 end
-                
+                %{
+                figure;imshow(videoFrame);hold on;plot(bboxCenter(1),bboxCenter(2),'or','markersize',20,'linewidth',3);plot(bboxPoints(:,1),bboxPoints(:,2),'.g','markersize',10);plot(points(:,1),points(:,2),'*b')
+                %}
                 if mod(i,skipBoundingBoxInSkip)==0
                     waitbar(i/nFrames,hWB);
                     
@@ -1566,56 +1569,42 @@ classdef sleepAnalysis < recAnalysis
                         
                         % Reset the points
                         if size(oldInliers,1)<minTrackingPoints
-                            newBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
-                            newPoints = detectMinEigenFeatures(videoFrame, 'ROI', newBox );
+                            contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
+                            newPoints = detectMinEigenFeatures(videoFrame, 'ROI', contourBox ); %this function can not receive a polygon only a rectangle along the main axes
                             newPoints = newPoints.Location;
                             in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
                             points=newPoints(in,:);
                             setPoints(pointTracker,points);
                             %initialize(pointTracker, points, initFrame);
-                            oldPoints = points;
+                            oldPoints = points; %all new added points are tracked
+                            visiblePoints = points; %all new added points are tracked
                         else
                             oldPoints = visiblePoints;
                             setPoints(pointTracker, oldPoints);
                         end
-                        %update Bounding box
-                        bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2];
-                        if sqrt((bboxCenter(1)-bboxCenterOld(1)).^2+(bboxCenter(2)-bboxCenterOld(2)).^2) > bboxShiftDistanceThreshold
-                            %xInd=round(bboxPoints(1,1):bboxPoints(3,1));
-                            %yInd=round(bboxPoints(1,2):bboxPoints(3,2));
-                            
-                            xyShift=round(bboxCenter-bboxCenterOld);
-                            yInd=round(yInd-(xyShift(1)));
-                            xInd=xInd-(xyShift(2));
-                            if any(yInd<1)
-                                yInd=1:numel(yInd);
-                            end
-                            if any(xInd<1)
-                                xInd=1:numel(xInd);
-                            end
-                            if any(yInd>frameHeight)
-                                yInd=(frameHeight-numel(yInd)+1):frameHeight;
-                            end
-                            if any(xInd>frameWidth)
-                                xInd=(frameWidth-numel(xInd)+1):frameWidth;
-                            end
-                            
-                            bboxPointsOld=bboxPoints;
-                            bboxCenterOld=bboxCenter;
+                        %update Bounding box - check if box position was moved considerably and update accordingly
+                        bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2]; %calculate center
+                        if sqrt((bboxCenter(1)-bboxCenterOld(1)).^2+(bboxCenter(2)-bboxCenterOld(2)).^2) > bboxShiftDistanceThreshold %check if box moved too much such that its position should be updated
+                            bboxPointsOld=bboxPoints; %update old (current) box to new box
+                            %update the indices to be used for optic flow extraction
+                            bboxCenterOld=bboxCenter; %update old box center
                             pbboxUpdate=[pbboxUpdate i];
+                            [xInd,yInd,OFBox]=obj.recalculateSampledImageArea4OpticFlow(xInd,yInd,bboxCenter,frameWidth,frameHeight);
+                            %opticFlow.reset;
                         end
                         
                         if plotTracking
-                            
                             % Insert a bounding box around the object being tracked
                             bboxPolygon = reshape(bboxPoints', 1, []);
                             bboxPolygonOld = reshape(bboxPointsOld', 1, []);
+                            OFboxPolygon = reshape(OFBox', 1, []);
                             
                             videoFramePlot = insertShape(videoFrame, 'Polygon', bboxPolygon,'LineWidth', 2);
                             videoFramePlot = insertShape(videoFramePlot, 'Polygon', bboxPolygonOld,'LineWidth', 2,'color','r');
+                            videoFramePlot = insertShape(videoFramePlot, 'Polygon', OFboxPolygon,'LineWidth', 2,'color','g');
                             
                             % Display tracked points
-                            %videoFramePlot = insertMarker(videoFramePlot, visiblePoints, '+','Color', 'white');
+                            videoFramePlot = insertMarker(videoFramePlot, visiblePoints, '+','Color', 'white');
                             
                             % Display the annotated video frame using the video player object
                             step(videoPlayer, videoFramePlot);
@@ -1631,40 +1620,30 @@ classdef sleepAnalysis < recAnalysis
                             [xi, yi] = ginput(1);
                             
                             %recalculate the area of the bounding box accroding to the center defined by the user.
-                            bboxCenter=[bboxCenter(1)-xi,bboxCenter(2)-yi];
-                            xyShift=round(bboxCenter-bboxCenterOld);
-                            yInd=round(yInd-(xyShift(1)));
-                            xInd=xInd-(xyShift(2));
-                            if any(yInd<1)
-                                yInd=1:numel(yInd);
-                            end
-                            if any(xInd<1)
-                                xInd=1:numel(xInd);
-                            end
-                            if any(yInd>frameHeight)
-                                yInd=(frameHeight-numel(yInd)+1):frameHeight;
-                            end
-                            if any(xInd>frameWidth)
-                                xInd=(frameWidth-numel(xInd)+1):frameWidth;
-                            end
+                            bboxCenter=[xi,yi]; %bboxCenter=[bboxCenter(1)-xi,bboxCenter(2)-yi];
                             
                             bboxPointsOld=bboxPoints;
                             bboxCenterOld=bboxCenter;
                             pbboxUpdate=[pbboxUpdate i];
+                            %recalculate position of rectangle
+                            [xInd,yInd,OFBox]=obj.recalculateSampledImageArea4OpticFlow(xInd,yInd,bboxCenter,frameWidth,frameHeight);
+                            %opticFlow.reset;
                             
-                            subplot(1,3,3);imshow(videoFrame(yInd,xInd,:));
-                            title('Points lost. Selected region - press any key');
-                            pause;
-                            close(f);
-                            newBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  initialFrameSubregion(3:4)]);
-                            %newBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
-                            newPoints = detectMinEigenFeatures(videoFrame, 'ROI', newBox );
+                            contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
+                            newPoints = detectMinEigenFeatures(videoFrame, 'ROI', contourBox ); %this function can not receive a polygon only a rectangle along the main axes
                             newPoints = newPoints.Location;
                             in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
                             points=newPoints(in,:);
                             setPoints(pointTracker,points);
                             %initialize(pointTracker, points, initFrame);
-                            oldPoints = points;
+                            oldPoints = points; %all new added points are tracked
+                            visiblePoints = points; %all new added points are tracked
+                            
+                            subplot(1,3,3);imshow(videoFrame(yInd,xInd,:));
+                            title('Points lost. Selected region - press any key');
+                            pause;
+                            close(f);
+
                         else
                             disp(['Tracking analysis stopped at ' num2str(i) '/' num2str(nFrames) ' since all tracking points were lost']);
                             parEyeTracking.pStopDue2LostPoints=i;
@@ -1713,10 +1692,7 @@ classdef sleepAnalysis < recAnalysis
             
         end
         
-        function [points]=reselectPoints()
-            
-        end
-        
+
         %% getDelta2BetaRatio
         function data=getDelta2BetaRatio(obj,varargin)
             obj.checkFileRecording;
@@ -3405,6 +3381,30 @@ classdef sleepAnalysis < recAnalysis
             obj.filt.FH2.padding=true;
         end
 
+    end
+    
+    methods (Static)
+        
+        function [xInd,yInd,OFBox]=recalculateSampledImageArea4OpticFlow(xInd,yInd,bboxCenter,frameWidth,frameHeight)
+            %set coordinates on image to the new box
+            xInd=round(xInd-xInd(round(numel(xInd)/2))+bboxCenter(1));
+            yInd=round(yInd-yInd(round(numel(yInd)/2))+bboxCenter(2));
+            
+            if any(yInd<1)
+                yInd=1:numel(yInd);
+            end
+            if any(xInd<1)
+                xInd=1:numel(xInd);
+            end
+            if any(yInd>frameHeight)
+                yInd=(frameHeight-numel(yInd)+1):frameHeight;
+            end
+            if any(xInd>frameWidth)
+                xInd=(frameWidth-numel(xInd)+1):frameWidth;
+            end
+            OFBox=[min(xInd),min(yInd);min(xInd),max(yInd);max(xInd),max(yInd);max(xInd),min(yInd)];
+        end
+        
     end
     
 end

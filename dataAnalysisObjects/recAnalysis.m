@@ -391,7 +391,7 @@ classdef (Abstract) recAnalysis < handle
                         elseif strcmp(allFullFiles{1}(end-3:end),'.rhd') %Intan recording
                             obj.currentDataObj=Intan(obj.currentDataFiles);
                         elseif strcmp(allFullFiles{1}(end-3:end),'.bin') %Intan recording
-                            obj.currentDataObj=Recording(obj.currentDataFiles);
+                            obj.currentDataObj=binaryRecording(obj.currentDataFiles);
                         elseif strcmp(allFullFiles{1}(end-3:end),'.kwd')
                             obj.currentDataObj=KwikRecording(obj.currentDataFiles);
                         elseif strcmp(allFullFiles{1}(end-2:end),'.h5')
