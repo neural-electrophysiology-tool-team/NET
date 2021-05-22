@@ -18,7 +18,7 @@ toPlotBinaryTree=0;
 figureHandle=[];
 linkMethod='ward';
 maxClusters=6;
-cMap=lines(64);
+cMap=autumn(64);
 cLim=[];
 treeDepth=2;
 clusteringCriterion='inconsistent'; %or 'distance'
@@ -114,6 +114,7 @@ if ~plotOrderLabels
     hDendro(1).YTickLabel=[];
 end
 
+
 if change2SequentialColorOrder
     hLines=findobj(hDendro,'Type','Line');
     lineColors=cell2mat(get(hLines,'color'));
@@ -138,8 +139,6 @@ if change2SequentialColorOrder
         clusters(tmpClusters==clusterOrder(i))=i;
     end
 end
-
-
 
 if nonSquareMatrix
     DC=C(order,:);
@@ -173,7 +172,7 @@ else
         pStart=[1 find(diff(ordClu)==1)'+1];
         pEnd=[pStart(2:end)-1 numel(clusters)];
         for i=1:finalClusters
-            hRect(i)=rectangle('position',[pStart(i) pStart(i) pEnd(i)-pStart(i) pEnd(i)-pStart(i)],'edgeColor',cMap(i,:),'lineWidth',3);
+            hRect(i)=rectangle('position',[pStart(i) pStart(i) pEnd(i)-pStart(i) pEnd(i)-pStart(i)],'edgeColor',cMap(i,:));
         end
     end
     %linkaxes(hDendro,'y');

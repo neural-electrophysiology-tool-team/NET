@@ -111,7 +111,7 @@ ops.root                = sortingDir; % 'openEphys' only: where raw files are
 ops.chanMap             = fullfile(sortingDir, channelMapFile); % make this file using createChannelMapFile.m		
 % ops.chanMap = 1:ops.Nchan; % treated as linear probe if unavailable chanMap file		
 
-ops.nt0 = 25;
+ops.nt0 = 25; % times around the peak to consider (from get_SpikeSample)
 ops.fig = 0;
 %% Overwrite with input values
 for i=1:2:length(varargin)
