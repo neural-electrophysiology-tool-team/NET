@@ -503,7 +503,7 @@ classdef (Abstract) dataRecording < handle
             elseif ~exist(electrodeName,'var')
                 [layoutDir]=fileparts(which('layout_40_16x2_FlexLin.mat'));
                 [layoutFile] = uigetfile([layoutDir filesep 'layout_*.mat'],'Select the electrode layout file');
-                electrodeName=layoutFile(1:end-4);
+                electrodeName=layoutFile(8:end-4);
             end
             fid=fopen([obj.recordingDir filesep 'electrode.chMap'],'w');
             fprintf(fid,electrodeName);
@@ -670,7 +670,7 @@ classdef (Abstract) dataRecording < handle
                 fprintf(fid,'nSavedChans = %d\n',numel(dataChannels));
                 fprintf(fid,'sRateHz = %d\n',obj.samplingFrequency(1));
                 fprintf(fid,'nChans = %d\n',numel(dataChannels));
-                outputstr = ['%d,' repmat(',%d ', 1, numel(newChannelNumbers)-1)]; % replicate it to match the number of columns
+                outputstr = ['%d' repmat(',%d', 1, numel(newChannelNumbers)-1)]; % replicate it to match the number of columns
                 fprintf(fid,['channelNumbers = ', outputstr, '\n'], newChannelNumbers);
                 fprintf(fid,'nTriggerChans = %d\n',numel(nT));
                 fprintf(fid,'nAnalogChans = %d\n',numel(obj.analogChannelNumbers));
