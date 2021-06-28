@@ -1897,6 +1897,7 @@ classdef sleepAnalysis < recAnalysis
             mAngle=zeros(1,nFrames);
             skipBoundingBoxInSkip=round(skipFramesBoundingBox/skipFrames);
             parChestTracking.skipBoundingBoxInSkip=skipBoundingBoxInSkip;
+            allATrans=zeros(3,3,ceil(nFrames/skipBoundingBoxInSkip),'single');
             
             hWB=waitbar(0,'Calculating optic flow');
             for i=1:nFrames
@@ -1925,7 +1926,7 @@ classdef sleepAnalysis < recAnalysis
                         
                         % Estimate the geometric transformation between the old points and the new points and eliminate outliers
                         [xform, oldInliers, visiblePoints] = estimateGeometricTransform(oldInliers, visiblePoints, 'similarity', 'MaxDistance', 4);
-                        
+                        allATrans(:,:,i/skipBoundingBoxInSkip)=xform.T;
                         % Apply the transformation to the bounding box points
                         bboxPoints = transformPointsForward(xform, bboxPoints);
                         
@@ -2037,7 +2038,7 @@ classdef sleepAnalysis < recAnalysis
             end
             close(hWB);
             
-            save(obj.files.chestTracking,'mAngle','allVx','allVy','allIm','pbboxUpdate','parChestTracking','pFrames','bboxCenterAll','initialFrameSubregion','frameRate','nFramesVideo');
+            save(obj.files.chestTracking,'allATrans','mAngle','allVx','allVy','allIm','pbboxUpdate','parChestTracking','pFrames','bboxCenterAll','initialFrameSubregion','frameRate','nFramesVideo');
             
             % Clean uprelease(videoReader);
             release(pointTracker);
@@ -3275,7 +3276,7 @@ classdef sleepAnalysis < recAnalysis
             
             %check if analysis was already done done
             obj.files.respirationAutocorr=[obj.currentAnalysisFolder filesep 'getRespirationAC.mat'];
-            if exist(obj.files.respAutocorr,'file') & ~overwrite
+            if exist(obj.files.respirationAutocorr,'file') & ~overwrite
                 if nargout==1
                     data=load(obj.files.respirationAutocorr);
                 else
@@ -3288,7 +3289,7 @@ classdef sleepAnalysis < recAnalysis
             
             chestTrackingFile=[obj.currentAnalysisFolder filesep 'chestTracking_' videoFileName '.mat'];
             obj.checkFileRecording(chestTrackingFile,'Chest tracking analysis missing, please first run getRespirationMovement');
-            load(chestTrackingFile,'parChestTracking','nFramesVideo','pFrames','mAngle','pbboxUpdate','bboxCenterAll'); %load data
+            load(chestTrackingFile,'parChestTracking','nFramesVideo','pFrames','mAngle','pbboxUpdate','bboxCenterAll','allATrans'); %load data
             
             digiTrigFile=[obj.currentAnalysisFolder filesep 'getDigitalTriggers.mat'];
             obj.checkFileRecording(digiTrigFile,'digital trigger file missing, please first run getDigitalTriggers');
@@ -3315,12 +3316,19 @@ classdef sleepAnalysis < recAnalysis
             else
                 disp('Number of frames in video and in triggers is equal, proceeding with analysis');
             end
-            tRespFrames=tFrames(pFrames);
+            
+            useAffineTrasform=true;
+            if useAffineTrasform
+                tRespFrames=tFrames(pFrames);
+            else %use optical flow
+                tRespFrames=tFrames(pFrames(parChestTracking.skipBoundingBoxInSkip:parChestTracking.skipBoundingBoxInSkip:end));
+            end
             
             %cross correlation analysis
             timeBin=mean(diff(tRespFrames));
             XCFLagSamples=ceil(XCFLag/timeBin);
-            [xcf,xcf_lags,xcf_bounds]=crosscorr(mAngle,mAngle,XCFLagSamples);
+            %[xcf,xcf_lags,xcf_bounds]=crosscorr(mAngle,mAngle,XCFLagSamples);
+            [xcf,xcf_lags,xcf_bounds]=crosscorr(squeeze(allATrans(1,1,:)),squeeze(allATrans(1,1,:)),XCFLagSamples);
             
             xcf_lags=xcf_lags*1000;
             %calculate periodicity
@@ -3379,7 +3387,6 @@ classdef sleepAnalysis < recAnalysis
             edgeSamples=tSlidingAC<=(tSlidingAC(1)+smoothingDuration/2) | tSlidingAC>=(tSlidingAC(end)-smoothingDuration/2);
             filteredSlidingPeriod(edgeSamples)=[];
             tFilteredSlidingPeriod=tSlidingAC(~edgeSamples)';
-            plot(tFilteredSlidingPeriod,filteredSlidingPeriod);
             %save data
             save(obj.files.respirationAutocorr,'parRespirationAutocorr','xcf','xcf_lags','xcf_bounds','respirationForSlidingAutocorr','autoCorrTimeBin','autocorrTimes','timeBin',...
                 'pPeriod','period','acf','vallyPeriod','peak2VallyDiff','acfPeakAll','acfVallyAll','tSlidingAC','acfPeriodAll','videoFile',...

@@ -320,7 +320,7 @@ classdef (Abstract) dataRecording < handle
             %ch2Remove=[18 22 23 30 31]
             [~,recFolder]=fileparts(obj.recordingDir);
             expName=['kilosortRez_' recFolder];
-            tmpSaveFile=fullfile(rootH, expName);
+            tmpSaveFile=[rootH filesep expName '_' num2str(sum(outFolder))]; %create a unique name for every experiment
             
             mkdir(rootH);
             if exist([tmpSaveFile '.mat'],'file')
@@ -350,9 +350,9 @@ classdef (Abstract) dataRecording < handle
                             st(5,:) = cF;
                         end
                     %}
-                        
+                    save(tmpSaveFile,'rezSpk','st3','tF','-append')  
                 end
-                save(tmpSaveFile,'rezSpk','st3','tF','-append')
+                
                 
                 if ~exist('rez','var') || overwrite==true
                     rez                = template_learning(rezSpk, tF, st3);
