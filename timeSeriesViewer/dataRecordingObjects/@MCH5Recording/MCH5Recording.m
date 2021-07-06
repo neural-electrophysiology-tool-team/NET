@@ -7,7 +7,7 @@ classdef MCH5Recording < dataRecording
   % .h5 file specification can be found in the link:
   % https://mcspydatatools.readthedocs.io/en/latest/mcs_hdf5_protocol.html
 
-  % AUTHOR: stefano.masneri@brain.mpg.de & Mark Shein-Idelson
+  % AUTHOR: Yuval Orsher
   % DATE: 18.04.2017
   % 
   % TODO:
