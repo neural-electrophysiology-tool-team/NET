@@ -3393,8 +3393,103 @@ classdef sleepAnalysis < recAnalysis
                 'filteredSlidingPeriod','tFilteredSlidingPeriod');
         end
         
+        %% getRespirationDBCycle
+        function [data]=getRespirationDBCycle(obj,varargin)
+            %sleepAnalysis.getRespirationAC - input parameters: ch,tStart,win,movOLWin,XCFLag,movingAutoCorrWin,movingAutoCorrOL
+            parseObj = inputParser;
+            parseObj.FunctionName='sleepAnalysis\getRespirationDBCycle';
+            addParameter(parseObj,'videoFile',[obj.recTable.VideoFiles{obj.currentPRec}],@(x) exist(x,'file'));
+            addParameter(parseObj,'digitalVideoSyncCh',5,@isnumeric);
+            addParameter(parseObj,'maxPeriodBand',1000,@isnumeric);%band width arround xcf peak to look for correlations [ms]
+            addParameter(parseObj,'movOLWin',400,@isnumeric);
+            addParameter(parseObj,'XCFLag',20000,@isnumeric);
+            addParameter(parseObj,'movingAutoCorrWin',40*1000,@isnumeric);
+            addParameter(parseObj,'movingAutoCorrOL',36*1000,@isnumeric);
+            addParameter(parseObj,'smoothingDuration',60*1000,@isnumeric);
+            addParameter(parseObj,'pixelMoveThresh',10,@isnumeric);
+            addParameter(parseObj,'nFramesRemoveAfterROIShift',3,@isnumeric);            
+            addParameter(parseObj,'overwrite',0,@isnumeric);
+            
+            addParameter(parseObj,'inputParams',false,@isnumeric);
+            parseObj.parse(varargin{:});
+            if parseObj.Results.inputParams
+                disp(parseObj.Results);
+                return;
+            end
+            
+            %evaluate all input parameters in workspace
+            for i=1:numel(parseObj.Parameters)
+                eval([parseObj.Parameters{i} '=' 'parseObj.Results.(parseObj.Parameters{i});']);
+            end
+            
+            %make parameter structure
+            parRespirationDBCycle=parseObj.Results;
+            
+            %check if analysis was already done done
+            obj.files.respirationAutocorr=[obj.currentAnalysisFolder filesep 'getRespirationDBCycle.mat'];
+            if exist(obj.files.respirationAutocorr,'file') & ~overwrite
+                if nargout==1
+                    data=load(obj.files.respirationDBCycle);
+                else
+                    disp('Respiration delta to beta cycle analysis already exists for this recording');
+                end
+                return;
+            end
+            
+            [~,videoFileName]=fileparts(videoFile);
+            
+            chestTrackingFile=[obj.currentAnalysisFolder filesep 'chestTracking_' videoFileName '.mat'];
+            obj.checkFileRecording(chestTrackingFile,'Chest tracking analysis missing, please first run getRespirationMovement');
+            load(chestTrackingFile,'parChestTracking','nFramesVideo','pFrames','mAngle','pbboxUpdate','bboxCenterAll','allATrans'); %load data
+            
+            digiTrigFile=[obj.currentAnalysisFolder filesep 'getDigitalTriggers.mat'];
+            obj.checkFileRecording(digiTrigFile,'digital trigger file missing, please first run getDigitalTriggers');
+            load(digiTrigFile); %load data
+            
+            slowCyclesFile=[obj.currentAnalysisFolder filesep 'slowCycles_ch' num2str(ch) '.mat'];
+            obj.checkFileRecording(slowCyclesFile,'slow cycles file missing, please first run getSlowCycles');
+            load(slowCyclesFile); %load data
+            
+            %calculate phase in db
+            for i=1:numel(TcycleOnset)
+                cycleDuration=TcycleOffset(i)-TcycleOnset(i);
+                pTmp=find(t_mov_ms>(TcycleMid(i)-cycleDuration/2) & t_mov_ms<(TcycleMid(i)+cycleDuration/2));
+                phaseAll{i}=(t_mov_ms(pTmp)-(TcycleMid(i)-cycleDuration/2))/cycleDuration;
+                
+                shufTimes=rand(1,numel(pTmp))*cycleDuration;
+                phaseAllRand{i}=shufTimes/cycleDuration;
+                
+                pTmp=find(t_ms>(TcycleMid(i)-cycleDuration/2) & t_ms<(TcycleMid(i)+cycleDuration/2));
+                resampledTemplate(i,:) = interp1((0:(numel(pTmp)-1))./(numel(pTmp)-1),bufferedDelta2BetaRatio(pTmp)',(0:(nBins-1))/(nBins-1),'spline');
+            end
+            mResampledTemplate=mean(resampledTemplate);
+
+            phaseMov=cell2mat(phaseAll);
+            phaseRand=cell2mat(phaseAllRand);
+            
+            mPhaseMov=angle(mean(exp(1i*phaseMov*2*pi))); %Mean of circular quantities - wiki
+            binCenters=(0:(nBins))/(nBins);binCenters=(binCenters(1:end-1)+binCenters(2:end))/2;
+            mPhaseDB=angle(mean(mean(resampledTemplate).*exp(1i.*binCenters*2*pi))); %Mean of circular quantities - wiki
+
+            tFrames=tTrig{digitalVideoSyncCh};
+            if numel(tFrames)~=nFramesVideo
+                error(['Number of frames in video and in trigger ' num2str(digitalVideoSyncCh) 'not equal, check recording!!!']);
+            else
+                disp('Number of frames in video and in triggers is equal, proceeding with analysis');
+            end
+            
+            useAffineTrasform=true;
+            if useAffineTrasform
+                tRespFrames=tFrames(pFrames);
+            else %use optical flow
+                tRespFrames=tFrames(pFrames(parChestTracking.skipBoundingBoxInSkip:parChestTracking.skipBoundingBoxInSkip:end));
+            end
+            
+            %save data
+            save(obj.files.getRespirationDBCycle);
+        end
         %% plotFreqBandDetection
-        function [h]=plotFreqBandDetection(obj,varargin)
+        function [h,Z]=plotFreqBandDetection(obj,varargin)
             
             parseObj = inputParser;
             addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
@@ -3423,7 +3518,7 @@ classdef sleepAnalysis < recAnalysis
             else
                 spectralClusteringFile=freqBandFile;
             end
-            obj.checkFileRecording(spectralClusteringFile,'Spectral band analysis missing, please first run getDelta2BetaRatio');
+            obj.checkFileRecording(spectralClusteringFile,'Spectral band analysis missing, please first run getFreqBandDetection');
             load(spectralClusteringFile);
             
             if plotDendrogram
@@ -3437,7 +3532,7 @@ classdef sleepAnalysis < recAnalysis
                 else
                     savePlots=[];
                 end
-                [DC,order,clusters,h]=DendrogramMatrix(corrMat,'linkMetric','euclidean','linkMethod','ward','maxClusters',maxDendroClusters,...
+                [DC,order,clusters,h,Z]=DendrogramMatrix(corrMat,'linkMetric','euclidean','linkMethod','ward','maxClusters',maxDendroClusters,...
                     'toPlotBinaryTree',1,'cLim',cLim,'hDendro',hDendro,'plotOrderLabels',0);
                 %h(3).Position=[0.9149    0.7595    0.0137    0.1667];
                 ylabel(h(3),'Corr.');
@@ -3493,7 +3588,7 @@ classdef sleepAnalysis < recAnalysis
         
         %% getHPSegments 
         function data=getAwakeVsSleepFreq(obj,varargin)
-            %% parameter and settings
+            % parameter and settings
             obj.checkFileRecording;
             
             parseObj = inputParser;
@@ -3983,11 +4078,37 @@ classdef sleepAnalysis < recAnalysis
             obj.filt.FH2=obj.filt.FH2.designBandPass;
             obj.filt.FH2.padding=true;
         end
+        
+                
+        function [loggerData]=getTemperatureLoggerData(obj,timeCorrectionMs)
+            if nargin==1
+                timeCorrectionMs=0;
+            end
+                
+            filename=obj.recTable.TempLogger_file(obj.currentPRec);
+            filename=[obj.currentExpFolder filesep filename{1}];
+            if isfile(filename)
+                loggerData0 = readtable(filename,'Range','A1:G2');
+                loggerData = readtable(filename);
+                loggerData.Properties.VariableNames=loggerData0.Properties.VariableNames(1:5);
+                loggerData = [loggerData0(1,1:5);loggerData];
+                
+                if iscell(obj.currentDataObj.startDate)
+                    loggerData.loggerTimeStampsMs=seconds(loggerData.Timestamp-datetime(obj.currentDataObj.startDate{1}))*1000+timeCorrectionMs;
+                else
+                    loggerData.loggerTimeStampsMs=seconds(loggerData.Timestamp-datetime(obj.currentDataObj.startDate))*1000+timeCorrectionMs;
+                end
+            else
+                disp('Logger data file not found!!!!!');
+                loggerData=[];
+            end
+        end
 
     end
     
     methods (Static)
         
+        %Helper methods for video analysis functions
         function [xInd,yInd,OFBox]=recalculateSampledImageArea4OpticFlow(xInd,yInd,bboxCenter,frameWidth,frameHeight)
             %set coordinates on image to the new box
             xInd=round(xInd-xInd(round(numel(xInd)/2))+bboxCenter(1));
@@ -4007,7 +4128,6 @@ classdef sleepAnalysis < recAnalysis
             end
             OFBox=[min(xInd),min(yInd);min(xInd),max(yInd);max(xInd),max(yInd);max(xInd),min(yInd)];
         end
-        
     end
     
 end

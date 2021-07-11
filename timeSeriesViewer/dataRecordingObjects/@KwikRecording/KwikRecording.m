@@ -309,6 +309,10 @@ classdef KwikRecording < dataRecording
         obj.datatype = ['int' num2str(obj.bitDepth)];
       end
       
+      %get data from open ephys xml settings
+      c=xml2struct([obj.recordingDir filesep 'settings.xml']);
+      obj.startDate=datetime(c.SETTINGS.INFO.DATE.Text,'InputFormat','dd MMM yyyy HH:mm:ss');
+      
       disp('saving meta data');
       obj.saveMetaData;
     end

@@ -79,7 +79,7 @@ classdef binaryRecording < dataRecording
                     data = fread(obj.fid,(endSampleRec-startSampleRec)*obj.totalChannels,['*' obj.datatype]);
                     data = reshape(data, obj.totalChannels,endSampleRec-startSampleRec);
                     
-                    V_uV(:,i,1-startSampleTmp:endSampleTmp)=data;
+                    V_uV(:,i,1-startSampleTmp:endSampleTmp)=data(channels,:);
                     disp('Recording at edge');
                 end
             end

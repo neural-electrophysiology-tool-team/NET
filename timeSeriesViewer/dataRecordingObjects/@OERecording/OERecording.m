@@ -443,7 +443,7 @@ classdef OERecording < dataRecording
             end
             obj.recordingDir=[pathstr filesep name];
             obj.recordingName = name;
-            obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
+            obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData.mat'];
             %obj.dataFileNames=dir([pathstr filesep name filesep '*.' obj.fileExtension]);
         end
         

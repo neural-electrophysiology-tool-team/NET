@@ -1,4 +1,4 @@
-% [DC,order,clusters,h]=DendrogramMatrix(C,varargin);
+% [DC,order,clusters,h,Z]=DendrogramMatrix(C,varargin);
 %
 % Function purpose : Order matrix according to the hierarchical dendrogram algorithm (Euclidean distance)
 %
@@ -9,6 +9,8 @@
 % Function give back : DC - Ordered Correlation matrix
 %                      order - the new ordering of rows in the ordered matrix, DC=C(order,order);
 %                      clusters - the clusters associated with dendrogram devision (cluster numbers go from top to bottom on the tree)
+%                      h - figure axes
+%                      Z - linkage in dendrogram
 %
 % Recommended usage: [DC,order]=DendrogramMatrix(C);
 % To show matrix use : imagesc(DC); or pcolor(DC); - to show grid

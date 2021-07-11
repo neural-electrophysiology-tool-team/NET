@@ -194,6 +194,11 @@ classdef (Abstract) dataRecording < handle
             
             chMapFiles=dir([recordingDir filesep '*.chMap']);
             chMapFiles={chMapFiles.name};
+            if numel(chMapFiles)>1
+                disp('Found more than one channel map files!!!!! Using one of them');
+                chMapFiles=chMapFiles(1);
+            end
+            
             switch numel(chMapFiles)
                 case 0 %not channel map file found
                     disp('No .chMap files were found for this recording');
@@ -212,29 +217,36 @@ classdef (Abstract) dataRecording < handle
             end
             
             A = importdata(chMapFiles);
-            elecString=regexp(A{1},'_','split');
-            obj.electrodePitch=str2num(elecString{1});
-            if numel(A)==1
-                obj.layoutName=['layout_' A{1}];
-                load(obj.layoutName);
-                obj.chLayoutNumbers=En;
-                obj.chLayoutNames=Ena;
-                obj.chLayoutPositions=Enp;
-            else
-                for i=1:numel(A)
-                    obj.layoutName{i}=['layout_' A{i}];
-                    load(obj.layoutName{i});
-                    obj.chLayoutNumbers{i}=En;
-                    obj.chLayoutNames{i}=Ena;
-                    obj.chLayoutPositions{i}=Enp;
-                end
-                
+            if isempty(A)
+                error('channel map file was not extracted successfully, check file name!');
             end
-            fprintf('Channel map with pitch %d and layout %s extracted from %s\n',obj.electrodePitch,elecString{2},chMapFiles);
-            
-            %check that all recorded channels are contained within the layout
-            if numel(obj.channelNumbers)>numel(intersect(obj.channelNumbers,En(:)))
-                warning('Notice that some of the recorded channels are not contained in the layout file, this may result in errors in further analysis!');
+            try
+                elecString=regexp(A{1},'_','split');
+                obj.electrodePitch=str2num(elecString{1});
+                if numel(A)==1
+                    obj.layoutName=['layout_' A{1}];
+                    load(obj.layoutName);
+                    obj.chLayoutNumbers=En;
+                    obj.chLayoutNames=Ena;
+                    obj.chLayoutPositions=Enp;
+                else
+                    for i=1:numel(A)
+                        obj.layoutName{i}=['layout_' A{i}];
+                        load(obj.layoutName{i});
+                        obj.chLayoutNumbers{i}=En;
+                        obj.chLayoutNames{i}=Ena;
+                        obj.chLayoutPositions{i}=Enp;
+                    end
+                    
+                end
+                fprintf('Channel map with pitch %d and layout %s extracted from %s\n',obj.electrodePitch,elecString{2},chMapFiles);
+                
+                %check that all recorded channels are contained within the layout
+                if numel(obj.channelNumbers)>numel(intersect(obj.channelNumbers,En(:)))
+                    warning('Notice that some of the recorded channels are not contained in the layout file, this may result in errors in further analysis!');
+                end
+            catch
+                fprintf('Failed to extract channel map!!!! check that the name was entered correctly');
             end
             
         end
