@@ -3098,7 +3098,7 @@ classdef sleepAnalysis < recAnalysis
             
             acfSamples=floor(movingAutoCorrWinSamples/2);
             acf=zeros(size(BetaRatioForSlidingAutocorr,1)+1,size(BetaRatioForSlidingAutocorr,2));
-            peak2VallyDiff=zeros(1,size(BetaRatioForSlidingAutocorr,2));
+            peak2VallyDiffSliding=zeros(1,size(BetaRatioForSlidingAutocorr,2));
             for i=1:size(BetaRatioForSlidingAutocorr,2)
                 [acf(:,i),autoCorrSamples] = crosscorr(BetaRatioForSlidingAutocorr(:,i),BetaRatioForSlidingAutocorr(:,i),acfSamples);
                 %calculate peak2VallyDiff for different times
@@ -3106,7 +3106,7 @@ classdef sleepAnalysis < recAnalysis
                 
                 [acfPeakAll(i),acfPeriodAll(i)]=max(acf((acfSamples+pPeak(1)-maxPeriodBand):(acfSamples+pPeak(1)+maxPeriodBand),i));
                 [acfVallyAll(i),acfAntiPeriodAll(i)]=min(acf((acfSamples+pVally(1)-maxPeriodBand):(acfSamples+pVally(1)+maxPeriodBand),i));
-                peak2VallyDiff(i)=acfPeakAll(i)-acfVallyAll(i);
+                peak2VallyDiffSliding(i)=acfPeakAll(i)-acfVallyAll(i);
                 
                 %{
                 [~,pPeak] = findpeaks(acf(acfSamples+1:end,i),'MinPeakProminence',0.1);
@@ -3126,7 +3126,7 @@ classdef sleepAnalysis < recAnalysis
             acfPeriodAll=autocorrTimes((acfPeriodAll+acfSamples+pPeak(1)-maxPeriodBand-1));
             
             oscilDurationMovingSamples=oscilDurationMovingWin/autoCorrTimeBin;
-            tmpOscDuration=peak2VallyDiff>oscilDurationThresh;
+            tmpOscDuration=peak2VallyDiffSliding>oscilDurationThresh;
             filtOscilDuration = medfilt1(double(tmpOscDuration),oscilDurationMovingSamples);
             pSleepSlidingAC=filtOscilDuration>=0.5;
             
@@ -3150,7 +3150,7 @@ classdef sleepAnalysis < recAnalysis
             
             %save data
             save(obj.files.dbAutocorr,'parDbAutocorr','xcf','xcf_lags','xcf_bounds','BetaRatioForSlidingAutocorr','autoCorrTimeBin','autocorrTimes','timeBin',...
-                'pPeriod','period','acf','vallyPeriod','peak2VallyDiff','pSleepDBRatio','pSleepSlidingAC','acfPeakAll','acfVallyAll','tSlidingAC','acfPeriodAll',...
+                'pPeriod','period','acf','vallyPeriod','peak2VallyDiff','pSleepDBRatio','pSleepSlidingAC','acfPeakAll','acfVallyAll','peak2VallyDiffSliding','tSlidingAC','acfPeriodAll',...
                 'tStartSleep','tEndSleep','filteredSlidingPeriod','tFilteredSlidingPeriod','pSleepSlidingAC');
         end
 
