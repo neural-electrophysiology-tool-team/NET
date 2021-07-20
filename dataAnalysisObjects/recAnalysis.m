@@ -148,19 +148,20 @@ classdef (Abstract) recAnalysis < handle
                         newVarargin(1:2:numel(varargin))=varargin(1:2:end);
                         newVarargin(2:2:numel(varargin))=tmpVaragrin;
                         if nOut>0
-                            [varargout{1:nargout}]=tmpObj.(method)(varargin{:});
+                            [outArgs]=tmpObj.(method)(varargin{:});
                         else
                             tmpObj.(method)(newVarargin{:});
                         end
                     else
                         if nOut>0
-                            [varargout{1:nargout}]=tmpObj.(method)(varargin{:});
+                            %[varargout{1:nargout}]=tmpObj.(method)(varargin{:}); %not working in some cases
+                            [outArgs]=tmpObj.(method)(varargin{:});
                         else
                             tmpObj.(method)(varargin{:});
                         end
                     end
                     for j=1:nargout
-                        outArgAll{j}{i}=varargout{j};
+                        outArgAll{j}{i}=outArgs;
                     end
                     %return all non object variables
                 end

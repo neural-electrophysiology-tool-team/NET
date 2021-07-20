@@ -78,6 +78,13 @@ classdef sleepAnalysis < recAnalysis
             binCenters=(0:(nBins))/(nBins);binCenters=(binCenters(1:end-1)+binCenters(2:end))/2;
             mPhaseDB=angle(mean(mean(resampledTemplate).*exp(1i.*binCenters*2*pi))); %Mean of circular quantities - wiki
 
+            if nargout>0
+                hOut.phaseMov=phaseMov;
+                hOut.phaseRand=phaseRand;
+                hOut.mPhaseMov=mPhaseMov;
+                hOut.mPhaseDB = mPhaseDB;
+            end
+            
             if h==0
                 fH=figure;
                 h=axes;
@@ -1777,7 +1784,7 @@ classdef sleepAnalysis < recAnalysis
             frameHeight=videoReader.Height;
             frameRate=videoReader.FrameRate;
             videoDuration=videoReader.Duration;
-            nFramesVideo=videoDuration*frameRate;
+            nFramesVideo=round(videoDuration*frameRate);
             
             parChestTracking.frameWidth=frameWidth;
             parChestTracking.frameHeight=frameHeight;
@@ -2362,8 +2369,8 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'medianFiltWin',1000*20,@isnumeric);
             addParameter(parseObj,'longOrdFiltWin',1000*1000,@isnumeric);
             addParameter(parseObj,'longOrdFiltOrd',0.6,@isnumeric);
-            addParameter(parseObj,'maxCycle',1000*140,@isnumeric); %for excluding cycles which do not have a regular duration
-            addParameter(parseObj,'minCycle',1000*5,@isnumeric); %for merging cycles with gaps less than these
+            addParameter(parseObj,'estimateFilterValuesFromPeriod',1,@isnumeric);
+            addParameter(parseObj,'excludeIrregularCycles',1,@isnumeric); %for excluding cycles which do not have a regular duration
             addParameter(parseObj,'overwrite',0,@isnumeric);
             
             addParameter(parseObj,'inputParams',false,@isnumeric);
@@ -2393,60 +2400,98 @@ classdef sleepAnalysis < recAnalysis
             end
             
             dbRatioFile=[obj.currentAnalysisFolder filesep 'dbRatio_ch' num2str(ch) '.mat'];
-            dbAutocorrFile=[obj.currentAnalysisFolder filesep 'dbAutocorr_ch' num2str(ch) '.mat'];
-            
             obj.checkFileRecording(dbRatioFile,'Delta to beta analysis missing, please first run getDelta2BetaRatio');
             load(dbRatioFile,'t_ms','bufferedDelta2BetaRatio','parDBRatio'); %load data  
             
+            dbAutocorrFile=[obj.currentAnalysisFolder filesep 'dbAutocorr_ch' num2str(ch) '.mat'];
             obj.checkFileRecording(dbAutocorrFile,'Delta to beta autocorr analysis missing, please first run getDelta2BetaAC');
-            load(dbAutocorrFile,'pSleepDBRatio'); %load data
+            load(dbAutocorrFile,'pSleepDBRatio','period'); %load data
                 
             timeBin=(parDBRatio.movWin-parDBRatio.movOLWin);
+            bufferedDelta2BetaRatio(isnan(bufferedDelta2BetaRatio))=0;
+            
+            %calculate filter values based on oscillation period
+            band=2;
+            if estimateFilterValuesFromPeriod
+                medianFiltWin=round(period*0.25);
+                maxCycleSamples=round((period*band)/timeBin);
+                minCycleSamples=round(period/band/timeBin);
+            else
+                maxCycleSamples=round(140/timeBin);
+                minCycleSamples=round(10/timeBin);
+            end
             
             %smooth with median filter
             medianFiltSamples=medianFiltWin/timeBin;
             DBRatioMedFilt = fastmedfilt1d(bufferedDelta2BetaRatio, medianFiltSamples);
-            
-            %long order filter to determine edges of DB fluctuation 
-            longOrdFiltSamples=longOrdFiltWin/timeBin;
-            longOrdFiltOrdSamples=longOrdFiltOrd*longOrdFiltSamples;
-            DBLongOrdFilt = ordfilt2(DBRatioMedFilt, longOrdFiltOrdSamples, ones(longOrdFiltSamples,1));
 
             %plot(t_ms/1000/60/60,DBRatioMedFilt);hold on;plot(t_ms/1000/60/60,DBLongOrdFilt);
+            %{
+            h(1)=subplot(2,1,1);plot(t_ms/1000/60/60,DBRatioMedFilt);hold on;plot(t_ms/1000/60/60,DBLongOrdFilt);
+            h(2)=subplot(2,1,2);plot(t_ms/1000/60/60,HAng);line(xlim,[0 0],'color','r');
+            linkaxes(h,'x');
+            %}
+            Th=[];
+            hilbertPhaseCycleAnalysis=1;
+            if hilbertPhaseCycleAnalysis
+                HAng=phase(hilbert(DBRatioMedFilt));
+                %the peaks in this analysis are the end of the delta period and the troughs are the 
+                [cycleOnsetPeaks,pTcycleOnset]=findpeaks(HAng,'MinPeakProminence',pi/4,'MinPeakDistance',minCycleSamples,'MinPeakHeight',0,'MinPeakWidth',minCycleSamples/3);
+                cycleOnset=t_ms(pTcycleOnset);
+                %plot(t_ms/1000/60/60,HAng);hold on;plot(cycleOnset/1000/60/60,cycleOnsetPeaks,'or');
+            else
+                edgeSamples=100;
+                %long order filter to determine edges of DB fluctuation
+                longOrdFiltSamples=round(longOrdFiltWin/timeBin);
+                longOrdFiltOrdSamples=round(longOrdFiltOrd*longOrdFiltSamples);
+                DBLongOrdFilt = ordfilt2(DBRatioMedFilt, longOrdFiltOrdSamples, ones(longOrdFiltSamples,1));
+                sortDBLongOrdFilt=sort(DBLongOrdFilt);
+                sortDBLongOrdFilt(isnan(sortDBLongOrdFilt))=[];
+                Th=mean(sortDBLongOrdFilt(1:edgeSamples))+(mean(sortDBLongOrdFilt((end-edgeSamples):end))-mean(sortDBLongOrdFilt(1:edgeSamples)))/2;
+                %Th=min(DBLongOrdFilt)+(max(DBLongOrdFilt)-min(DBLongOrdFilt))/2;
+                pTcycleOnset=find((DBRatioMedFilt(2:end)>=Th & DBRatioMedFilt(1:end-1)<Th) & pSleepDBRatio(1:end-1));
+            end
             
-            edgeSamples=100;
-            sortDBLongOrdFilt=sort(DBLongOrdFilt);
-            sortDBLongOrdFilt(isnan(sortDBLongOrdFilt))=[];
-            Th=mean(sortDBLongOrdFilt(1:edgeSamples))+(mean(sortDBLongOrdFilt((end-edgeSamples):end))-mean(sortDBLongOrdFilt(1:edgeSamples)))/2;
-            %Th=min(DBLongOrdFilt)+(max(DBLongOrdFilt)-min(DBLongOrdFilt))/2;
-
-            maxCycleSamples=maxCycle/timeBin;
-            minCycleSamples=minCycle/timeBin;
+            removeNonSignificatACSegments=1;
+            if removeNonSignificatACSegments
+                pTcycleOnset=intersect(pTcycleOnset, find(pSleepDBRatio));
+            end
             
-            pTcycleOnset=find((DBRatioMedFilt(2:end)>=Th & DBRatioMedFilt(1:end-1)<Th) & pSleepDBRatio(1:end-1));
-            pTcycleOnset(1+diff(pTcycleOnset)<minCycleSamples)=[];
-            pTcycleOffset=pTcycleOnset(2:end);
-            pTcycleOnset=pTcycleOnset(1:end-1);
-            ppRemove=(pTcycleOffset-pTcycleOnset)>maxCycleSamples;
+            if excludeIrregularCycles %check if cycles are within the range of band and if not remove them
+                pTcycleOnset(1+diff(pTcycleOnset)<minCycleSamples)=[];
+                pTcycleOffset=pTcycleOnset(2:end);
+                pTcycleOnset=pTcycleOnset(1:end-1);
+                ppRemove=(pTcycleOffset-pTcycleOnset)>maxCycleSamples;
+                pTcycleOffset(ppRemove)=[];
+                pTcycleOnset(ppRemove)=[];
+            else
+                pTcycleOffset=pTcycleOnset(2:end);
+                pTcycleOnset=pTcycleOnset(1:end-1);
+            end
             
-            pTcycleOffset(ppRemove)=[];
-            pTcycleOnset(ppRemove)=[];
+            %calculate the middle state transition
             
+            pTcycleMid=zeros(numel(pTcycleOnset),1);
+            %edgesSamples=10;
+            for i=1:numel(pTcycleOnset)
+                [~,pTmp]=min(HAng(pTcycleOnset(i):pTcycleOffset(i)));
+                pTcycleMid(i)=pTmp+pTcycleOnset(i)-1;
+            %    pTmp=find(DBRatioMedFilt((pTcycleOnset(i)+edgesSamples):(pTcycleOffset(i)-edgesSamples))<Th,1,'first');
+            %    if ~isempty(pTmp)
+            %        pTcycleMid(i)=pTmp;
+            %    end
+            end
+            TcycleMid=t_ms(pTcycleMid);
             TcycleOnset=t_ms(pTcycleOnset);
             TcycleOffset=t_ms(pTcycleOffset);
+            %switch between onset/offset and mid to adhere to previous function.
+            tmp=TcycleOffset;
+            TcycleOnset=TcycleMid(1:end-1);
+            TcycleOffset=TcycleMid(2:end);
+            TcycleMid=tmp(1:end-1);
             
-            edgesSamples=10;
-            pTcycleMid=zeros(numel(TcycleOnset),1);
-            for i=1:numel(TcycleOnset)
-                pTmp=find(DBRatioMedFilt((pTcycleOnset(i)+edgesSamples):(pTcycleOffset(i)-edgesSamples))<Th,1,'first');
-                if ~isempty(pTmp)
-                    pTcycleMid(i)=pTmp;
-                end
-            end
-            pTcycleMid=pTcycleMid+pTcycleOnset+edgesSamples+1;
-            TcycleMid=t_ms(pTcycleMid);
-            
-            save(obj.files.slowCycles,'parSlowCycles','TcycleOnset','TcycleOffset','TcycleMid','pSleepDBRatio','t_ms','DBRatioMedFilt');
+            %plot(t_ms/1000/60/60,HAng);hold on;plot(TcycleMid/1000/60/60,HAng(pTcycleMid),'or');plot(TcycleOnset/1000/60/60,HAng(pTcycleOnset),'og');
+            save(obj.files.slowCycles,'parSlowCycles','TcycleOnset','TcycleOffset','TcycleMid','pSleepDBRatio','t_ms','DBRatioMedFilt','Th');
         end
         
         %% plotDelta2BetaRatio
@@ -2506,7 +2551,11 @@ classdef sleepAnalysis < recAnalysis
             l.Box='off';l.Location='northeastoutside';l.Position=[0.8881    0.6787    0.1015    0.0979];
             
             axes(h(3));
-            plot(t_ms/1000/60/60,bufferedDelta2BetaRatio);
+            plot(t_ms/1000/60/60,bufferedDelta2BetaRatio);hold on;
+            plot(t_ms/1000/60/60,DBRatioMedFilt);
+            if ~isempty(Th)
+                plot(t_ms([1 end])/1000/60/60,[Th Th]);
+            end
             ylabel('\delta/\beta ratio');
             xlabel('Time [h]');
             
@@ -3250,11 +3299,13 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'videoFile',[obj.recTable.VideoFiles{obj.currentPRec}],@(x) exist(x,'file'));
             addParameter(parseObj,'digitalVideoSyncCh',5,@isnumeric);
             addParameter(parseObj,'maxPeriodBand',1000,@isnumeric);%band width arround xcf peak to look for correlations [ms]
+            addParameter(parseObj,'respResampleRate',5,@isnumeric); % the resampled respiration signal sampling freq for further analysis
             addParameter(parseObj,'movOLWin',400,@isnumeric);
             addParameter(parseObj,'XCFLag',20000,@isnumeric);
             addParameter(parseObj,'movingAutoCorrWin',40*1000,@isnumeric);
             addParameter(parseObj,'movingAutoCorrOL',36*1000,@isnumeric);
             addParameter(parseObj,'smoothingDuration',60*1000,@isnumeric);
+            addParameter(parseObj,'respirationMedianFilterDuration',2*1000,@isnumeric);
             addParameter(parseObj,'pixelMoveThresh',10,@isnumeric);
             addParameter(parseObj,'nFramesRemoveAfterROIShift',3,@isnumeric);            
             addParameter(parseObj,'overwrite',0,@isnumeric);
@@ -3275,7 +3326,8 @@ classdef sleepAnalysis < recAnalysis
             parRespirationAutocorr=parseObj.Results;
             
             %check if analysis was already done done
-            obj.files.respirationAutocorr=[obj.currentAnalysisFolder filesep 'getRespirationAC.mat'];
+            [~,videoFileName]=fileparts(videoFile);
+            obj.files.respirationAutocorr=[obj.currentAnalysisFolder filesep 'respirationAC_' videoFileName '.mat'];
             if exist(obj.files.respirationAutocorr,'file') & ~overwrite
                 if nargout==1
                     data=load(obj.files.respirationAutocorr);
@@ -3284,9 +3336,7 @@ classdef sleepAnalysis < recAnalysis
                 end
                 return;
             end
-            
-            [~,videoFileName]=fileparts(videoFile);
-            
+                        
             chestTrackingFile=[obj.currentAnalysisFolder filesep 'chestTracking_' videoFileName '.mat'];
             obj.checkFileRecording(chestTrackingFile,'Chest tracking analysis missing, please first run getRespirationMovement');
             load(chestTrackingFile,'parChestTracking','nFramesVideo','pFrames','mAngle','pbboxUpdate','bboxCenterAll','allATrans'); %load data
@@ -3311,8 +3361,8 @@ classdef sleepAnalysis < recAnalysis
             end
             
             tFrames=tTrig{digitalVideoSyncCh};
-            if numel(tFrames)~=nFramesVideo
-                error(['Number of frames in video and in trigger ' num2str(digitalVideoSyncCh) 'not equal, check recording!!!']);
+            if numel(tFrames)~=round(nFramesVideo)
+                error(['Number of frames in video and in trigger (' num2str(digitalVideoSyncCh) ') not equal, check recording!!!']);
             else
                 disp('Number of frames in video and in triggers is equal, proceeding with analysis');
             end
@@ -3324,23 +3374,29 @@ classdef sleepAnalysis < recAnalysis
                 tRespFrames=tFrames(pFrames(parChestTracking.skipBoundingBoxInSkip:parChestTracking.skipBoundingBoxInSkip:end));
             end
             
+            %Choose best direction for movement
+            [~,score] = pca(reshape(allATrans,[size(allATrans,1)*size(allATrans,2),size(allATrans,3)])','NumComponents',1);
+            
             %cross correlation analysis
-            timeBin=mean(diff(tRespFrames));
+            %timeBin=mean(diff(tRespFrames));
+            respResampleRate=5; %Hz
+            timeBin=1/respResampleRate*1000;
+            respirationMedianFilterBin=ceil(respirationMedianFilterDuration/timeBin);
+            respirationSignal=medfilt1(score,respirationMedianFilterBin)';
+            respirationSignal(1)=respirationSignal(2);
+            
+
+            [respirationSignal,tRespFrames]=resample(double(respirationSignal),tRespFrames,respResampleRate/1000);
+            %respirationSignal=medfilt1(mAngle,respirationMedianFilterBin);            
             XCFLagSamples=ceil(XCFLag/timeBin);
             %[xcf,xcf_lags,xcf_bounds]=crosscorr(mAngle,mAngle,XCFLagSamples);
-            [xcf,xcf_lags,xcf_bounds]=crosscorr(squeeze(allATrans(1,1,:)),squeeze(allATrans(1,1,:)),XCFLagSamples);
-            
+            [xcf,xcf_lags,xcf_bounds]=crosscorr(respirationSignal,respirationSignal,XCFLagSamples);
             xcf_lags=xcf_lags*1000;
             %calculate periodicity
             
             %find first vally and peak in the autocorrelation function
-            [~,pPeak] = findpeaks(xcf(XCFLagSamples+1:end),'MinPeakProminence',0.1);
-            [~,pVally] = findpeaks(-xcf(XCFLagSamples+1:end),'MinPeakProminence',0.1);
-            if isempty(pPeak) %if peak is weak, try a different value
-                [~,pPeak] = findpeaks(xcf(XCFLagSamples+1:end),'MinPeakProminence',0.05);
-                [~,pVally] = findpeaks(-xcf(XCFLagSamples+1:end),'MinPeakProminence',0.05);
-                disp('Prominance for peak detection was reduced to 0.05 due to low periodicity values!!!');
-            end
+            [~,pPeak] = findpeaks(xcf(XCFLagSamples+1:end));pPeak=pPeak(1);
+            [~,pVally] = findpeaks(-xcf(XCFLagSamples+1:end));pVally=pVally(1);
             
             if isempty(pPeak) | isempty(pVally)
                 pPeriod=NaN;
@@ -3361,15 +3417,17 @@ classdef sleepAnalysis < recAnalysis
             %sliding autocorr analysis
             movingAutoCorrWinSamples=ceil(movingAutoCorrWin/timeBin);
             movingAutoCorrOLSamples=ceil(movingAutoCorrOL/timeBin);
+            step=(movingAutoCorrWin-movingAutoCorrOL);
             autoCorrTimeBin=(movingAutoCorrWin-movingAutoCorrOL);
-            respirationForSlidingAutocorr = buffer(mAngle,movingAutoCorrWinSamples,movingAutoCorrOLSamples,'nodelay');
-            tSlidingAC=tRespFrames(1)-(movingAutoCorrWin/2)+((movingAutoCorrWin/2):(movingAutoCorrWin-movingAutoCorrOL):(tRespFrames(end)-tRespFrames(1)+movingAutoCorrWin/2-movingAutoCorrOL));
+            respirationForSlidingAutocorr = buffer(respirationSignal,movingAutoCorrWinSamples,movingAutoCorrOLSamples,'nodelay');
+            tSlidingAC=tRespFrames(1)+movingAutoCorrWin/2+(1:size(respirationForSlidingAutocorr,2))*step;
            
             %R=xcorrmat(respirationForSlidingAutocorr,respirationForSlidingAutocorr,autoCorrSamples);
             maxPeriodBandSamples=ceil(maxPeriodBand/timeBin);
             acfSamples=floor(movingAutoCorrWinSamples/2);
             acf=zeros(size(respirationForSlidingAutocorr,1)+1,size(respirationForSlidingAutocorr,2));
             peak2VallyDiff=zeros(1,size(respirationForSlidingAutocorr,2));
+            acfPeriodAll=zeros(1,size(respirationForSlidingAutocorr,2));
             for i=1:size(respirationForSlidingAutocorr,2)
                 [acf(:,i),autoCorrSamples] = crosscorr(respirationForSlidingAutocorr(:,i),respirationForSlidingAutocorr(:,i),acfSamples);
                 %calculate peak2VallyDiff for different times
@@ -3388,7 +3446,7 @@ classdef sleepAnalysis < recAnalysis
             filteredSlidingPeriod(edgeSamples)=[];
             tFilteredSlidingPeriod=tSlidingAC(~edgeSamples)';
             %save data
-            save(obj.files.respirationAutocorr,'parRespirationAutocorr','xcf','xcf_lags','xcf_bounds','respirationForSlidingAutocorr','autoCorrTimeBin','autocorrTimes','timeBin',...
+            save(obj.files.respirationAutocorr,'parRespirationAutocorr','respirationSignal','tRespFrames','xcf','xcf_lags','xcf_bounds','respirationForSlidingAutocorr','autoCorrTimeBin','autocorrTimes','timeBin',...
                 'pPeriod','period','acf','vallyPeriod','peak2VallyDiff','acfPeakAll','acfVallyAll','tSlidingAC','acfPeriodAll','videoFile',...
                 'filteredSlidingPeriod','tFilteredSlidingPeriod');
         end
@@ -3399,17 +3457,11 @@ classdef sleepAnalysis < recAnalysis
             parseObj = inputParser;
             parseObj.FunctionName='sleepAnalysis\getRespirationDBCycle';
             addParameter(parseObj,'videoFile',[obj.recTable.VideoFiles{obj.currentPRec}],@(x) exist(x,'file'));
-            addParameter(parseObj,'digitalVideoSyncCh',5,@isnumeric);
-            addParameter(parseObj,'maxPeriodBand',1000,@isnumeric);%band width arround xcf peak to look for correlations [ms]
-            addParameter(parseObj,'movOLWin',400,@isnumeric);
-            addParameter(parseObj,'XCFLag',20000,@isnumeric);
-            addParameter(parseObj,'movingAutoCorrWin',40*1000,@isnumeric);
-            addParameter(parseObj,'movingAutoCorrOL',36*1000,@isnumeric);
-            addParameter(parseObj,'smoothingDuration',60*1000,@isnumeric);
-            addParameter(parseObj,'pixelMoveThresh',10,@isnumeric);
-            addParameter(parseObj,'nFramesRemoveAfterROIShift',3,@isnumeric);            
+            addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
+            addParameter(parseObj,'padding',1.5,@isnumeric); %padd the data to avoid extrapolation
+            addParameter(parseObj,'nBins',25,@isnumeric);
+            addParameter(parseObj,'interpolationMethod','linear');
             addParameter(parseObj,'overwrite',0,@isnumeric);
-            
             addParameter(parseObj,'inputParams',false,@isnumeric);
             parseObj.parse(varargin{:});
             if parseObj.Results.inputParams
@@ -3426,7 +3478,7 @@ classdef sleepAnalysis < recAnalysis
             parRespirationDBCycle=parseObj.Results;
             
             %check if analysis was already done done
-            obj.files.respirationAutocorr=[obj.currentAnalysisFolder filesep 'getRespirationDBCycle.mat'];
+            obj.files.respirationDBCycle=[obj.currentAnalysisFolder filesep 'getRespirationDBCycle.mat'];
             if exist(obj.files.respirationAutocorr,'file') & ~overwrite
                 if nargout==1
                     data=load(obj.files.respirationDBCycle);
@@ -3438,55 +3490,94 @@ classdef sleepAnalysis < recAnalysis
             
             [~,videoFileName]=fileparts(videoFile);
             
-            chestTrackingFile=[obj.currentAnalysisFolder filesep 'chestTracking_' videoFileName '.mat'];
-            obj.checkFileRecording(chestTrackingFile,'Chest tracking analysis missing, please first run getRespirationMovement');
-            load(chestTrackingFile,'parChestTracking','nFramesVideo','pFrames','mAngle','pbboxUpdate','bboxCenterAll','allATrans'); %load data
+            respirationACFile=[obj.currentAnalysisFolder filesep 'respirationAC_' videoFileName '.mat'];
+            obj.checkFileRecording(respirationACFile,'RespirationAC analysis missing, please first run getRespirationAC');
+            load(respirationACFile,'parRespirationAutocorr','respirationSignal','tRespFrames','period'); %load data
             
-            digiTrigFile=[obj.currentAnalysisFolder filesep 'getDigitalTriggers.mat'];
-            obj.checkFileRecording(digiTrigFile,'digital trigger file missing, please first run getDigitalTriggers');
-            load(digiTrigFile); %load data
+            dbRatioFile=[obj.currentAnalysisFolder filesep 'dbRatio_ch' num2str(ch) '.mat'];
+            obj.checkFileRecording(dbRatioFile,'delta to beta file missing, please first run getDBRatio');
+            load(dbRatioFile); %load data
             
             slowCyclesFile=[obj.currentAnalysisFolder filesep 'slowCycles_ch' num2str(ch) '.mat'];
             obj.checkFileRecording(slowCyclesFile,'slow cycles file missing, please first run getSlowCycles');
             load(slowCyclesFile); %load data
             
+            [pks,locs] =findpeaks(respirationSignal,tRespFrames,'MinPeakProminence',0.5,'MinPeakDistance',2*1000);
+            [pksLow,locsLow] =findpeaks(-respirationSignal,tRespFrames,'MinPeakProminence',0.4,'MinPeakDistance',2*1000);
+            pksLow=-pksLow;
+                        
+            % smoothly connect the maxima via a spline.
+            yupper = interp1(locs,pks,locs,'spline');
+            ylower = interp1(locsLow,pksLow,locs,'spline');
+            
+            %locs(pks<0)=[];pks(pks<0)=[]; %remove negative peaks.
+            breathingIntervals=diff(locs);
+            tBreathingIntervals=(locs(2:end)+locs(1:end-1))/2;
+            resampledTemplateBI=nan(numel(TcycleOnset),nBins);
+            resampledTemplateDB=nan(numel(TcycleOnset),nBins);
+            resampledTemplateAmp=nan(numel(TcycleOnset),nBins);
+            cycleDuration=TcycleOffset-TcycleOnset;
+            cycleStartPadded=TcycleMid-cycleDuration/2*padding;
+            cycleEndPadded=TcycleMid+cycleDuration/2*padding;
+            cycleStart=TcycleMid-cycleDuration/2;
+            cycleEnd=TcycleMid+cycleDuration/2;
             %calculate phase in db
+            minPoints=4;
             for i=1:numel(TcycleOnset)
-                cycleDuration=TcycleOffset(i)-TcycleOnset(i);
-                pTmp=find(t_mov_ms>(TcycleMid(i)-cycleDuration/2) & t_mov_ms<(TcycleMid(i)+cycleDuration/2));
-                phaseAll{i}=(t_mov_ms(pTmp)-(TcycleMid(i)-cycleDuration/2))/cycleDuration;
                 
-                shufTimes=rand(1,numel(pTmp))*cycleDuration;
-                phaseAllRand{i}=shufTimes/cycleDuration;
-                
-                pTmp=find(t_ms>(TcycleMid(i)-cycleDuration/2) & t_ms<(TcycleMid(i)+cycleDuration/2));
-                resampledTemplate(i,:) = interp1((0:(numel(pTmp)-1))./(numel(pTmp)-1),bufferedDelta2BetaRatio(pTmp)',(0:(nBins-1))/(nBins-1),'spline');
+                pTmpB=find(tBreathingIntervals>cycleStartPadded(i) & tBreathingIntervals<cycleEndPadded(i));
+                if numel(pTmpB)>minPoints
+                    if tBreathingIntervals(pTmpB(1))<=cycleStart(i) && tBreathingIntervals(pTmpB(end))>=cycleEnd(i)
+                        resampledTemplateBI(i,:) = interp1((tBreathingIntervals(pTmpB)-cycleStart(i))/cycleDuration(i),breathingIntervals(pTmpB)',(0:(nBins-1))/(nBins-1),interpolationMethod);
+                        
+                        pTmp=find(t_ms>cycleStartPadded(i) & t_ms<cycleEndPadded(i));
+                        resampledTemplateDB(i,:) = interp1((t_ms(pTmp)-cycleStart(i))/cycleDuration(i),bufferedDelta2BetaRatio(pTmp)',(0:(nBins-1))/(nBins-1),interpolationMethod);
+                        
+                        pTmpEnv=find(locs>cycleStartPadded(i) & locs<cycleEndPadded(i));
+                        resampledTemplateAmp(i,:) = interp1((locs(pTmpEnv)-cycleStart(i))/cycleDuration(i),(yupper(pTmpEnv)-ylower(pTmpEnv)),(0:(nBins-1))/(nBins-1),interpolationMethod);
+                        
+                        %phaseAll{i}=(t_mov_ms(pTmp)-(TcycleMid(i)-cycleDuration/2))/cycleDuration;
+                        
+                        %shufTimes=rand(1,numel(pTmp))*cycleDuration;
+                        %phaseAllRand{i}=shufTimes/cycleDuration;
+                     %{ 
+                    pTmpR=find(tRespFrames>cycleStart(i) & tRespFrames<cycleEnd(i));
+                    h(1)=subplot(3,1,1);plot((t_ms(pTmp)-cycleStart(i))/1000,bufferedDelta2BetaRatio(pTmp),'b');hold on;
+                    plot((0:(nBins-1))/(nBins-1)*cycleDuration(i)/1000,resampledTemplateDB(i,:),'b');
+                    h(2)=subplot(3,1,2);plot((tRespFrames(pTmpR)-cycleStart(i))/1000,respirationSignal(pTmpR),'k');hold on;plot((locs(pTmpB+1)-cycleStart(i))/1000,pks(pTmpB+1),'or');
+                    plot((locs(pTmpEnv)-cycleStart(i))/1000,yupper(pTmpEnv),'g');plot((locs(pTmpEnv)-cycleStart(i))/1000,ylower(pTmpEnv),'g');
+                    plot((0:(nBins-1))/(nBins-1)*cycleDuration(i)/1000,resampledTemplateAmp(i,:),'g');
+                    
+                    h(3)=subplot(3,1,3);plot((tBreathingIntervals(pTmpB)-cycleStart(i))/1000,breathingIntervals(pTmpB),'.m-');hold on;
+                    plot((0:(nBins-1))/(nBins-1)*cycleDuration(i)/1000,resampledTemplateBR(i,:),'m');
+                    xlabel('Time [s]');
+                    linkaxes(h,'x');
+                    xlim([0 cycleDuration(i)/1000])
+                    
+                    pause;
+                    delete(h);
+                        %}
+                    end
+                end
             end
-            mResampledTemplate=mean(resampledTemplate);
+            mResampledTemplateBI=nanmean(resampledTemplateBI);
+            mResampledTemplateBR=nanmean(1./resampledTemplateBI);
+            mResampledTemplateDB=nanmean(resampledTemplateDB);
+            mResampledTemplateAmp=nanmean(resampledTemplateAmp);
+            
+            sResampledTemplateBI=nanstd(resampledTemplateBI);
+            sResampledTemplateBR=nanstd(1./resampledTemplateBI);
+            sResampledTemplateDB=nanstd(resampledTemplateDB);
+            sResampledTemplateAmp=nanstd(resampledTemplateAmp);
+            
+            nAvgCycles=numel(~isnan(resampledTemplateAmp));
+            
+            %figure;plot(normZeroOne(1./mResampledTemplateBI));hold on;plot(normZeroOne(mResampledTemplateDB));plot(normZeroOne(mResampledTemplateAmp));legend({'Breathing rate','\delta/\beta','Env'});
 
-            phaseMov=cell2mat(phaseAll);
-            phaseRand=cell2mat(phaseAllRand);
-            
-            mPhaseMov=angle(mean(exp(1i*phaseMov*2*pi))); %Mean of circular quantities - wiki
-            binCenters=(0:(nBins))/(nBins);binCenters=(binCenters(1:end-1)+binCenters(2:end))/2;
-            mPhaseDB=angle(mean(mean(resampledTemplate).*exp(1i.*binCenters*2*pi))); %Mean of circular quantities - wiki
-
-            tFrames=tTrig{digitalVideoSyncCh};
-            if numel(tFrames)~=nFramesVideo
-                error(['Number of frames in video and in trigger ' num2str(digitalVideoSyncCh) 'not equal, check recording!!!']);
-            else
-                disp('Number of frames in video and in triggers is equal, proceeding with analysis');
-            end
-            
-            useAffineTrasform=true;
-            if useAffineTrasform
-                tRespFrames=tFrames(pFrames);
-            else %use optical flow
-                tRespFrames=tFrames(pFrames(parChestTracking.skipBoundingBoxInSkip:parChestTracking.skipBoundingBoxInSkip:end));
-            end
-            
             %save data
-            save(obj.files.getRespirationDBCycle);
+            save(obj.files.respirationDBCycle,'yupper','ylower','breathingIntervals','tBreathingIntervals','resampledTemplateBI',...
+            'resampledTemplateDB','resampledTemplateAmp','mResampledTemplateBI','mResampledTemplateBR','mResampledTemplateDB','mResampledTemplateAmp',...
+            'sResampledTemplateBI','sResampledTemplateBR','sResampledTemplateDB','sResampledTemplateAmp','nAvgCycles');
         end
         %% plotFreqBandDetection
         function [h,Z]=plotFreqBandDetection(obj,varargin)
