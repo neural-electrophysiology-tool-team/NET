@@ -676,7 +676,7 @@ classdef (Abstract) dataRecording < handle
                 disp('No triggers found! Trigger file not created.\n');
             end
             
-            metaDataFile=[targetFile(1:end-4) '.meta'];
+            metaDataFile=[targetFile(1:end) '.meta'];
             if ~exist(metaDataFile,'file')
                 fid=fopen(metaDataFile,'w');
                 fprintf(fid,'nSavedChans = %d\n',numel(dataChannels));

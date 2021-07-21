@@ -1724,7 +1724,7 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'manuallyUpdatePoints',true,@isnumeric);
             addParameter(parseObj,'saveFullOFMatrices',false,@isnumeric);
             addParameter(parseObj,'loadInitialConditions',true,@isnumeric);
-            addParameter(parseObj,'skipFramesBoundingBox',30,@isnumeric);
+            addParameter(parseObj,'skipFramesBoundingBox',10,@isnumeric);
             addParameter(parseObj,'removeBorderOF',true);
             addParameter(parseObj,'borderPix',5);
             addParameter(parseObj,'skipFrames',10,@isnumeric);
