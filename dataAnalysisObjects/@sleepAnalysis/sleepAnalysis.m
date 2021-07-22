@@ -3344,8 +3344,19 @@ classdef sleepAnalysis < recAnalysis
             digiTrigFile=[obj.currentAnalysisFolder filesep 'getDigitalTriggers.mat'];
             obj.checkFileRecording(digiTrigFile,'digital trigger file missing, please first run getDigitalTriggers');
             load(digiTrigFile); %load data
-         
-            %The below analysis is currently not used in the code!!!!
+
+            tFrames=tTrig{digitalVideoSyncCh};
+            diffFrames=abs(numel(tFrames)-round(nFramesVideo));
+            if diffFrames==0
+                disp('Number of frames in video and in triggers is equal, proceeding with analysis');
+            elseif diffFrames<50
+                fprintf('\n\nNumber of frames in video and in triggers differs by %d, \nproceeding with analysis assuming uniform distribution of lost frames in video\n',diffFrames);
+                tFrames(round((1:diffFrames)/diffFrames*numel(tFrames)))=[];
+            else
+                error(['Number of frames in video and in trigger (' num2str(digitalVideoSyncCh) ') differs by ' num2str(diffFrames) ', check recording!!!']);
+            end
+            
+               %The below analysis is currently not used in the code!!!!
             %remove frames that are close to a ROI shift and frames with large shifts
             p2RemoveShifts=find(sqrt(diff(bboxCenterAll(:,1)).^2+diff(bboxCenterAll(:,2)).^2)>pixelMoveThresh)+1;
             pFramesValid=pFrames;
@@ -3358,13 +3369,6 @@ classdef sleepAnalysis < recAnalysis
                 validmAngle(p2Remove)=[];
                 pFramesValid(p2Remove)=[];
                 bboxCenterAll(p2Remove,:)=[];
-            end
-            
-            tFrames=tTrig{digitalVideoSyncCh};
-            if numel(tFrames)~=round(nFramesVideo)
-                error(['Number of frames in video and in trigger (' num2str(digitalVideoSyncCh) ') not equal, check recording!!!']);
-            else
-                disp('Number of frames in video and in triggers is equal, proceeding with analysis');
             end
             
             useAffineTrasform=true;
@@ -3479,7 +3483,7 @@ classdef sleepAnalysis < recAnalysis
             
             %check if analysis was already done done
             obj.files.respirationDBCycle=[obj.currentAnalysisFolder filesep 'getRespirationDBCycle.mat'];
-            if exist(obj.files.respirationAutocorr,'file') & ~overwrite
+            if isfile(obj.files.respirationDBCycle) & ~overwrite
                 if nargout==1
                     data=load(obj.files.respirationDBCycle);
                 else
