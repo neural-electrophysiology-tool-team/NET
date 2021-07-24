@@ -310,7 +310,7 @@ classdef (Abstract) dataRecording < handle
             
             [kilosortPath]=which('kilosort');
             if isempty(kilosortPath)
-                fprintf('Kilosort was not found, please add it to the matlab path and run again');return;
+                fprintf('Kilosort was not found, please add it to the matlab path and run again.\n');return;
                 %addpath(genpath('/media/sil2/Data/Lizard/Stellagama/Kilosort')) % for kilosort
             end
             
@@ -330,6 +330,8 @@ classdef (Abstract) dataRecording < handle
                 end
             end
             %ch2Remove=[18 22 23 30 31]
+            
+            outFolder=fullfile(obj.recordingDir,'kiloSortResults');
             [~,recFolder]=fileparts(obj.recordingDir);
             expName=['kilosortRez_' recFolder];
             tmpSaveFile=[rootH filesep expName '_' num2str(sum(outFolder))]; %create a unique name for every experiment
@@ -398,7 +400,7 @@ classdef (Abstract) dataRecording < handle
                 save(tmpSaveFile,'rez','-append')
             end
             
-           outFolder=fullfile(obj.recordingDir,'kiloSortResults');
+            
             fprintf('Done kilosort\nSaving results and exporting Phy templates to %s',outFolder);
             mkdir(outFolder)
             save(outFolder,'rez');
