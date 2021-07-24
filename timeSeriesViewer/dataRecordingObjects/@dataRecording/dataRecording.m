@@ -508,18 +508,23 @@ classdef (Abstract) dataRecording < handle
         end
         
         function generateChannelMapFile(obj,electrodeName)
-            layoutFile=dir([obj.recordingDir filesep '*.chMap']); 
+            layoutFile=dir([obj.recordingDir filesep '*.chMap']);
+            [layoutDir]=fileparts(which('layout_40_16x2_FlexLin.mat')); %an example of a file
             if ~isempty(layoutFile)
                 fprintf('\nLayout file already exists - %s\n',layoutFile.name);
                 return;
-            elseif ~exist(electrodeName,'var')
-                [layoutDir]=fileparts(which('layout_40_16x2_FlexLin.mat'));
+            elseif ~exist('electrodeName','var')
                 [layoutFile] = uigetfile([layoutDir filesep 'layout_*.mat'],'Select the electrode layout file');
                 electrodeName=layoutFile(8:end-4);
             end
-            fid=fopen([obj.recordingDir filesep 'electrode.chMap'],'w');
-            fprintf(fid,electrodeName);
-            fclose(fid);
+            fullFile=[layoutDir filesep 'layout_' electrodeName '.mat'];
+            if isfile(fullFile)
+                fid=fopen([obj.recordingDir filesep 'electrode.chMap'],'w');
+                fprintf(fid,electrodeName);
+                fclose(fid);
+            else
+                fprintf('Could not find %s!\n, check that electrode name was entered correctly or run without an electrode name and choose from the list.\n',fullFile);
+            end
         end
         
         function convert2Binary(obj,targetFile,dataChannels,newChannelNumbers,medianFilterGroup)
@@ -676,7 +681,7 @@ classdef (Abstract) dataRecording < handle
                 disp('No triggers found! Trigger file not created.\n');
             end
             
-            metaDataFile=[targetFile(1:end) '.meta'];
+            metaDataFile=[targetFile(1:end) '_meta.txt'];
             if ~exist(metaDataFile,'file')
                 fid=fopen(metaDataFile,'w');
                 fprintf(fid,'nSavedChans = %d\n',numel(dataChannels));

@@ -189,7 +189,7 @@ classdef binaryRecording < dataRecording
             %get data from meta file (jrclust fields)
             %The following fields are required: 'sRateHz','scale','nChans'
             metaFileName=obj.recordingName;
-            fullMetaFileName=[obj.recordingDir filesep metaFileName '.meta'];
+            fullMetaFileName=[obj.recordingDir filesep metaFileName '_meta.txt'];
             if exist(fullMetaFileName,'file')
                 fidMeta=fopen(fullMetaFileName,'r');
                 metaData = textscan(fidMeta,'%s = %s','TextType','string','Delimiter',' = ');  %'Whitespace','',
