@@ -409,7 +409,45 @@ classdef (Abstract) dataRecording < handle
             else
                 rezToPhy(rez, outFolder);
             end
-            delete(tmpSaveFile);
+            delete([tmpSaveFile '.mat']);
+        end
+        
+        function [t,ic]=convertPhySorting2tIc(obj,pathToPhyResults)
+            if nargin==1
+                pathToPhyResults=[obj.recordingDir filesep 'kiloSortResults'];
+                fprintf('Sorting results path not provided, using this path:\n%s\n',pathToPhyResults);
+            end
+            if ~isfile([pathToPhyResults filesep 'cluster_info.tsv'])
+                fprintf('Manual annotation phase with phy not completed! Please run again after completing!!!\n');
+            end
+            clusterTable=readtable([pathToPhyResults filesep 'cluster_info.tsv'],'FileType','delimitedtext');
+            clusterTable=sortrows(clusterTable,'ch');
+            spike_clusters = readNPY([pathToPhyResults filesep 'spike_clusters.npy']);
+            spike_times = readNPY([pathToPhyResults filesep 'spike_times.npy']);
+            label = clusterTable.KSLabel;
+           % spikeShapes=readNPY([pathToPhyResults filesep 'templates.npy']); check if this needs to be sorted 
+            %check for clusters on the same electrode
+            [uab,a,b]=unique(clusterTable.ch);
+            ic=zeros(4,numel(uab));
+            t=cell(1,numel(uab));
+            currentIdx=0;prevCh=-1;
+            for i=1:numel(clusterTable.ch)
+                t{i}=spike_times(spike_clusters==clusterTable.id(i))';
+                ic(1,i)=clusterTable.ch(i);
+                ic(3,i)=currentIdx+1;
+                ic(4,i)=currentIdx+numel(t{i});
+                if prevCh==ic(1,i)
+                    ic(2,i)=ic(2,i-1)+1;
+                else
+                    ic(2,i)=1;
+                end
+                prevCh=ic(1,i);
+                currentIdx=ic(4,i);
+            end
+            t=double(cell2mat(t))/(obj.samplingFrequency(1)/1000);
+            saveFile=[pathToPhyResults filesep 'sorting_tIc.mat'];
+            fprintf('Saving results to %s\n',saveFile);
+            save(saveFile,'t','ic','label');
         end
         
         function []=convertLayoutKSort(obj,outputFile,badChannels)

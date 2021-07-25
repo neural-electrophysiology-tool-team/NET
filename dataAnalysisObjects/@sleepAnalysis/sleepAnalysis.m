@@ -1929,7 +1929,7 @@ classdef sleepAnalysis < recAnalysis
                     visiblePoints = points(isFound, :);
                     oldInliers = oldPoints(isFound, :);
                     
-                    if size(visiblePoints, 1) >= 2 % need at least 2 points to ensure we are still reliably tracking the object
+                    if size(visiblePoints, 1) >= 3 % need at least 2 points to ensure we are still reliably tracking the object
                         
                         % Estimate the geometric transformation between the old points and the new points and eliminate outliers
                         [xform, oldInliers, visiblePoints] = estimateGeometricTransform(oldInliers, visiblePoints, 'similarity', 'MaxDistance', 4);
@@ -1986,17 +1986,31 @@ classdef sleepAnalysis < recAnalysis
                     else
                         if manuallyUpdatePoints
                             f=figure('position',[100 100 1200 600]);
-                            subplot(1,3,1:2);imshow(videoFrame);
-                            [xi, yi] = ginput(1);
                             
-                            %recalculate the area of the bounding box accroding to the center defined by the user.
-                            bboxCenter=[xi,yi]; %bboxCenter=[bboxCenter(1)-xi,bboxCenter(2)-yi];
+                            confirm=0;
+                            while ~confirm
+                                subplot(1,3,1:2);imshow(videoFrame);
+                                title('Points lost. Selected One point in the center of the region and press any key');
+                                [xi, yi] = ginput(1);
+                                %recalculate the area of the bounding box accroding to the center defined by the user.
+                                bboxCenter=[xi,yi]; %bboxCenter=[bboxCenter(1)-xi,bboxCenter(2)-yi];
+                                
+                                bboxPointsOld=bboxPoints;
+                                bboxCenterOld=bboxCenter;
+                                pbboxUpdate=[pbboxUpdate i];
+                                %recalculate position of rectangle
+                                [xInd,yInd,OFBox]=obj.recalculateSampledImageArea4OpticFlow(xInd,yInd,bboxCenter,frameWidth,frameHeight);
+                                
+                                subplot(1,3,3);imshow(videoFrame(yInd,xInd,:));
+                                title('If region selected well, press 1 (other wise press another number)');
+                                x = input('If region selected well, press 1 (other wise press another number):')
+                                if x==1
+                                    confirm=1;
+                                end
+                            end
+                            close(f);
                             
-                            bboxPointsOld=bboxPoints;
-                            bboxCenterOld=bboxCenter;
-                            pbboxUpdate=[pbboxUpdate i];
-                            %recalculate position of rectangle
-                            [xInd,yInd,OFBox]=obj.recalculateSampledImageArea4OpticFlow(xInd,yInd,bboxCenter,frameWidth,frameHeight);
+
                             %opticFlow.reset;
                             
                             contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
@@ -2008,12 +2022,6 @@ classdef sleepAnalysis < recAnalysis
                             %initialize(pointTracker, points, initFrame);
                             oldPoints = points; %all new added points are tracked
                             visiblePoints = points; %all new added points are tracked
-                            
-                            subplot(1,3,3);imshow(videoFrame(yInd,xInd,:));
-                            title('Points lost. Selected region - press any key');
-                            pause;
-                            close(f);
-
                         else
                             disp(['Tracking analysis stopped at ' num2str(i) '/' num2str(nFrames) ' since all tracking points were lost']);
                             parChestTracking.pStopDue2LostPoints=i;

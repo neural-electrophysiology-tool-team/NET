@@ -13,7 +13,9 @@ else %use the sampling frequency as the time bin
 end
 obj.plotParams.plotChannelNumbers=1;
 
-obj.plotParams.colormap=parula(252);
+obj.plotParams.colorMapDisplayOptions={'parula(252)','flipud(gray(8)'};
+obj.plotParams.colorMapDisplayCurrentOption=1;
+obj.plotParams.colormap=obj.plotParams.colorMapDisplayOptions(obj.plotParams.colorMapDisplayCurrentOption);
 obj.plotParams.colormap=obj.plotParams.colormap;
 
 colormap(obj.hPlotAxis,obj.plotParams.colormap);
@@ -35,6 +37,8 @@ obj.hPlotControls.constantBinNumberCheck=uicontrol('Parent', obj.hPlotControls.p
     'Callback',@CallbackConstantBinNumberCheck,'Style','check','value',obj.plotParams.constantBinNumber,'String','const. bin num.');
 obj.hPlotControls.plotChannelNumbersCheckbox=uicontrol('Parent', obj.hPlotControls.plotPropGrid,...
     'Callback',@CallbackPlotChannelNumbersCheckbox, 'Style','checkbox','value',obj.plotParams.plotChannelNumbers,'String','plot channel numbers');
+obj.hPlotControls.changeColormapPush=uicontrol('Parent', obj.hPlotControls.plotPropGrid,...
+    'Callback',@CallbackColormapSelectionPush, 'Style','push', 'String',obj.plotParams.colorMapDisplayOptions{obj.plotParams.colorMapDisplayCurrentOption});
 
 set(obj.hPlotControls.plotPropGrid, 'Widths',-1,'Heights', [25 25 25 25 25 25 25] );
         
@@ -64,5 +68,16 @@ obj.hPlotBackground.hGrid=[];
     end
     function CallbackConstantBinNumberCheck(hObj,event)
         obj.plotParams.constantBinNumber=get(hObj,'value');
-    end 
+    end
+
+    function CallbackColormapSelectionPush(hObj,event)
+        if obj.plotParams.colorMapDisplayCurrentOption==1
+            obj.plotParams.colorMapDisplayCurrentOption=2;
+            text=obj.plotParams.colorMapDisplayOptions()
+        else
+            obj.plotParams.colorMapDisplayCurrentOption=1;
+        end
+        set(obj.hPlotControls.channelNumberNameSelectionPush,'string',obj.plotParams.channelDisplayOptions{obj.plotParams.channelDisplayCurrentOption});
+    end
+
 end %EOF
