@@ -13,12 +13,10 @@ else %use the sampling frequency as the time bin
 end
 obj.plotParams.plotChannelNumbers=1;
 
-obj.plotParams.colorMapDisplayOptions={'parula(252)','flipud(gray(8)'};
-obj.plotParams.colorMapDisplayCurrentOption=1;
-obj.plotParams.colormap=obj.plotParams.colorMapDisplayOptions(obj.plotParams.colorMapDisplayCurrentOption);
-obj.plotParams.colormap=obj.plotParams.colormap;
-
-colormap(obj.hPlotAxis,obj.plotParams.colormap);
+obj.plotParams.colorMapDisplayOptions={'parula(252)','gray(8)'};
+obj.plotParams.colormap={parula(252),flipud(gray(8))};
+obj.plotParams.colorMapDisplayCurrentOption=2;
+colormap(obj.hPlotAxis,obj.plotParams.colormap{obj.plotParams.colorMapDisplayCurrentOption});
 
 %create the GUI plot controls
 obj.hPlotControls.plotPropGrid=uix.Grid('Parent', obj.hControlPanel, 'Padding', 5, 'Spacing', 10);
@@ -40,7 +38,7 @@ obj.hPlotControls.plotChannelNumbersCheckbox=uicontrol('Parent', obj.hPlotContro
 obj.hPlotControls.changeColormapPush=uicontrol('Parent', obj.hPlotControls.plotPropGrid,...
     'Callback',@CallbackColormapSelectionPush, 'Style','push', 'String',obj.plotParams.colorMapDisplayOptions{obj.plotParams.colorMapDisplayCurrentOption});
 
-set(obj.hPlotControls.plotPropGrid, 'Widths',-1,'Heights', [25 25 25 25 25 25 25] );
+set(obj.hPlotControls.plotPropGrid, 'Widths',-1,'Heights', [25 25 25 25 25 25 25 25] );
         
 obj.hPlotBackground.hGrid=[];
 
@@ -73,11 +71,16 @@ obj.hPlotBackground.hGrid=[];
     function CallbackColormapSelectionPush(hObj,event)
         if obj.plotParams.colorMapDisplayCurrentOption==1
             obj.plotParams.colorMapDisplayCurrentOption=2;
-            text=obj.plotParams.colorMapDisplayOptions()
+            cmap=obj.plotParams.colormap{obj.plotParams.colorMapDisplayCurrentOption};
+            text=obj.plotParams.colorMapDisplayOptions{1};
         else
             obj.plotParams.colorMapDisplayCurrentOption=1;
+            cmap=obj.plotParams.colormap{obj.plotParams.colorMapDisplayCurrentOption};
+            text=obj.plotParams.colorMapDisplayOptions{2};
         end
-        set(obj.hPlotControls.channelNumberNameSelectionPush,'string',obj.plotParams.channelDisplayOptions{obj.plotParams.channelDisplayCurrentOption});
+        cmap=obj.plotParams.colormap{obj.plotParams.colorMapDisplayCurrentOption};
+        set(obj.hPlotControls.changeColormapPush,'string',text);
+        colormap(obj.hPlotAxis,cmap);
     end
 
 end %EOF
