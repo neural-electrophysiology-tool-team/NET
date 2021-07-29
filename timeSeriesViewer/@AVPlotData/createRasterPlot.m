@@ -13,8 +13,8 @@ else %use the sampling frequency as the time bin
 end
 obj.plotParams.plotChannelNumbers=1;
 
-obj.plotParams.colorMapDisplayOptions={'parula(252)','gray(8)'};
-obj.plotParams.colormap={parula(252),flipud(gray(8))};
+obj.plotParams.colorMapDisplayOptions={'parula(252)','gray(64)'};
+obj.plotParams.colormap={parula(252),flipud(gray(64))};
 obj.plotParams.colorMapDisplayCurrentOption=2;
 colormap(obj.hPlotAxis,obj.plotParams.colormap{obj.plotParams.colorMapDisplayCurrentOption});
 

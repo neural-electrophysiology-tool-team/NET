@@ -2898,6 +2898,10 @@ classdef sleepAnalysis < recAnalysis
             if ~isempty(startEnds)
                 %Not written yet - for awake states, selection needs to be done.
             else
+                if nCycles<nTestSegments
+                    fprintf('The number of cycles is very low (%d)! changing the number of tested segments to be the same\n',nCycles);
+                    nTestSegments=nCycles;
+                end
                 pCycle=sort(randperm(nCycles,nTestSegments));
             end
             

@@ -218,7 +218,7 @@ classdef (Abstract) dataRecording < handle
             
             A = importdata(chMapFiles);
             if isempty(A)
-                error('channel map file was not extracted successfully, check file name!');
+                error('Channel layout was not extracted successfully from channel map file (*.chMap) ,check file name and content!');
             end
             try
                 elecString=regexp(A{1},'_','split');
