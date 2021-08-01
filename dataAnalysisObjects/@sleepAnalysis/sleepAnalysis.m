@@ -2930,6 +2930,7 @@ classdef sleepAnalysis < recAnalysis
             nTemplate=numel(template);
             ccEdge=floor(nTemplate/2);
             [~,pTemplatePeak]=min(template);
+            peakLagSamples=ccEdge-pTemplatePeak;
             
             if detectOnlyDuringSWS
                 TOn=TcycleOnset;
@@ -2940,10 +2941,11 @@ classdef sleepAnalysis < recAnalysis
                 TWin=seg*ones(1,numel(TOn));
                 nCycles=numel(TOn);
             end
-            
+            fprintf('Detecting sharp waves on section (/%d): ',nCycles);
             if isempty(startEnds)
                 absolutePeakTimes=cell(nCycles,1);
                 for i=1:nCycles
+                    fprintf([repmat('\b',[1 strlength(num2str(i-1))]),'%d'],i);
                     [tmpM,tmpT]=obj.currentDataObj.getData(ch,TOn(i),TWin(i));
                     [tmpFM,tmpFT]=obj.filt.DS4Hz.getFilteredData(tmpM);
                     
@@ -2953,9 +2955,13 @@ classdef sleepAnalysis < recAnalysis
                     
                     [~,peakTime]=findpeaks(C,'MinPeakHeight',crossCorrAmp,'MinPeakProminence',crossCorrProminence,'WidthReference','halfprom');
                     peakTime(peakTime<=pTemplatePeak)=[]; %remove peaks at the edges where templates is not complete
-                    absolutePeakTimes{i}=tmpFT(peakTime-pTemplatePeak)'+TOn(i);
+                    absolutePeakTimes{i}=tmpFT(peakTime-peakLagSamples)'+TOn(i);
                     
-                    %h(1)=subplot(2,1,1);plot(squeeze(tmpFM));h(2)=subplot(2,1,2);plot((1:numel(C))-pTemplatePeak,C);linkaxes(h,'x');
+                    %{
+                        h(1)=subplot(3,1,1);plot(tmpFT,squeeze(tmpFM));hold on;plot(absolutePeakTimes{i}-TOn(i),zeros(1,numel(absolutePeakTimes{i})),'or');
+                        h(2)=subplot(3,1,2);plot(1:numel(tmpFM),squeeze(tmpFM));hold on;plot(peakTime-peakLagSamples,zeros(1,numel(peakTime)),'or');
+                        h(3)=subplot(3,1,3);plot((1:numel(C)),C);hold on;plot(peakTime,zeros(numel(peakTime),1),'or');linkaxes(h(2:3),'x');
+                    %}
                 end
                 tSW=cell2mat(absolutePeakTimes);
             else
@@ -2963,6 +2969,7 @@ classdef sleepAnalysis < recAnalysis
                 nCycles=size(startEnds,2);
                 absolutePeakTimes=cell(nCycles);
                 for i=1:nCycles
+                    fprintf([repmat('\b',[1 strlength(num2str(i-1))]),'%d'],i);
                     [tmpM,tmpT]=obj.currentDataObj.getData(ch,startEnds(1,i),startEnds(2,i)-startEnds(1,i));
                     [tmpFM,tmpFT]=obj.filt.DS4Hz.getFilteredData(tmpM);
                     
@@ -2976,7 +2983,7 @@ classdef sleepAnalysis < recAnalysis
                 end
             end
             tSW=cell2mat(absolutePeakTimes);
-            
+            fprintf('Done!\n');
             save(obj.files.sharpWaves,'tSW','parSharpWaves');
         end
         

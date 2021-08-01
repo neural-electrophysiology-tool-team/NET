@@ -1,10 +1,9 @@
 %[BS,BP,BE,BI,BCM]=eventLocator(I,t,ic,minSBInterval,varargin)
 % Function purpose : Removes single spikes from CAI data by removing isolated spikes with low activity around them
 %
-% Function recives :    I - activity intensity file
+% Function recives :    I - activity intensity file (if spiking data, leave empty)
 %                       t [ms] - firing times
 %                       ic - index channel
-%                       minSBWnd - the window length on which activity is examined [ms]
 %                       minSBInterval - collapses SB with intervals less than minSBInterval into one SB
 %                       	varargin: 'property name',property value (see list of properties in default values)
 %                           sigma=5; %gaussian width in convolution
@@ -21,7 +20,7 @@
 %                       BI [input votage units] - the total intensity of the SB
 %                       BCM [ms] - the time of the event center of mass
 %
-% Last updated : 29/03/17
+% Last updated : 01/08/21
 function [BS,BP,BE,BI,BCM,Act,mAct,sAct]=eventLocator(I,t,ic,minSBInterval,varargin)
 %default variables
 sigma=5; %[bins of res] gaussian width in convolution
@@ -53,13 +52,13 @@ end
 
 %sanity checks
 BP=[];BS=[];BE=[];BI=[];
-if isempty(t) || isempty(I) || isempty(ic)
-    BP=[];BS=[];BE=[];BI=[];
+if isempty(t) || isempty(ic)
+    BP=[];BS=[];BE=[];BI=[];BCM=[];
     disp('One of the input vectors is empty');
     return;
 end
 if any(isnan(t)) || any(isnan(I))
-    BP=[];BS=[];BE=[];
+    BP=[];BS=[];BE=[];BI=[];BCM=[];
     disp('Input arrays have NaNs');
     return;
 end
@@ -83,13 +82,19 @@ NChannels=size(ic,2);
 
 MaxT=max(t);
 
-[t,p]=sort(t);
-I=I(p);
-ic=[1;1;1;numel(t)];
-clear p;
-
-Act=squeeze(BuildBurstMatrixA(ic,round(t/res),I,0,round(MaxT/res)))';
+if ~isempty(I)
+    [t,p]=sort(t);
+    I=I(p);
+    ic=[1;1;1;numel(t)];
+    clear p;
+    Act=squeeze(BuildBurstMatrixA(ic,round(t/res),I,0,round(MaxT/res)))';
+else
+    [t]=sort(t);
+    ic=[1;1;1;numel(t)];
+    Act=squeeze(BuildBurstMatrix(ic,round(t/res),0,round(MaxT/res)))';
+end
 Act=convn(Act,SmoothFunc,'same');
+%these median filters are the slowest part of the function to increase speed reduce medianWindowRes or increase res
 mAct = fastmedfilt1d(Act,medianWindowRes)';
 sAct = fastmedfilt1d(abs(Act-mAct),medianWindowRes)' / 0.6745;
 nSamples=numel(Act);

@@ -251,13 +251,23 @@ classdef (Abstract) dataRecording < handle
             
         end
         
-        function []=getKiloSort(obj,overwrite)
-            % generate config structure
-            if nargin<2
-                overwrite=false;
+        function []=getKiloSort(obj,varargin)
+            parseObj = inputParser;
+            parseObj.FunctionName='getKiloSort';
+            addParameter(parseObj,'tempFilesFolder','/home/mark/tempKilosort',@ischar);
+            addParameter(parseObj,'useKiloSort3',1,@isnumeric);
+            addParameter(parseObj,'overwrite',0,@isnumeric);
+            addParameter(parseObj,'outFolder',fullfile(obj.recordingDir,'kiloSortResults'),@ischar);
+            if numel(varargin)==1
+                disp(parseObj.Results);
+                return;
             end
-            useKiloSort3=true;
-            rootH = '/home/mark/tempKilosort' %where to save temp files for spike sorting (should be a fast drive)
+            parseObj.parse(varargin{:});
+            %make parameter structure
+            par=parseObj.Results;
+            
+            % generate config structure
+            rootH = par.tempFilesFolder; %where to save temp files for spike sorting (should be a fast drive)
             
             ops.trange    = [0 Inf]; % time range to sort
             ops.NchanTOT  = numel(obj.channelNumbers); % total number of channels in your recording
@@ -314,7 +324,7 @@ classdef (Abstract) dataRecording < handle
                 %addpath(genpath('/media/sil2/Data/Lizard/Stellagama/Kilosort')) % for kilosort
             end
             
-            if useKiloSort3
+            if par.useKiloSort3
                 rez2PhyPath2=which('rezToPhy2.m');
                 if isempty(rez2PhyPath2)
                     fprintf('\nrez2Phy2 (kilosort3) was not found. Trying to look for rez2Phy (kilosort2.5 or lower)');
@@ -331,28 +341,28 @@ classdef (Abstract) dataRecording < handle
             end
             %ch2Remove=[18 22 23 30 31]
             
-            outFolder=fullfile(obj.recordingDir,'kiloSortResults');
             [~,recFolder]=fileparts(obj.recordingDir);
             expName=['kilosortRez_' recFolder];
-            tmpSaveFile=[rootH filesep expName '_' num2str(sum(outFolder))]; %create a unique name for every experiment
+            tmpSaveFile=[rootH filesep expName '_' num2str(sum(par.outFolder))]; %create a unique name for every experiment
             
+            %loads previously processes data
             mkdir(rootH);
-            if exist([tmpSaveFile '.mat'],'file')
+            if isfile([tmpSaveFile '.mat'])
                 load([tmpSaveFile '.mat'])
             end
-
             
-            if ~exist('rezPreProc','var') || overwrite==true
+            %check existance of preprocessing in previously saved data
+            if ~exist('rezPreProc','var') || par.overwrite==true
                 rezPreProc = preprocessDataSub(ops);
                 save(tmpSaveFile,'rezPreProc')
             end
-            if ~exist('rezShift','var') || overwrite==true
+            if ~exist('rezShift','var') || par.overwrite==true
                 rezShift                = datashift2(rezPreProc, 1);
                 save(tmpSaveFile,'rezShift','-append')
             end
             
-            if useKiloSort3
-                if ~exist('rezSpk','var') || overwrite==true
+            if par.useKiloSort3
+                if ~exist('rezSpk','var') || par.overwrite==true
                     [rezSpk, st3, tF]     = extract_spikes(rezShift);
                     %{
                     Adding the following lines instead of st(5,:) = cF; in
@@ -368,7 +378,7 @@ classdef (Abstract) dataRecording < handle
                 end
                 
                 
-                if ~exist('rez','var') || overwrite==true
+                if ~exist('rez','var') || par.overwrite==true
                     rez                = template_learning(rezSpk, tF, st3);
                     [rez, st3, tF]     = trackAndSort(rez);
                     rez                = final_clustering(rez, tF, st3);
@@ -381,33 +391,42 @@ classdef (Abstract) dataRecording < handle
                 % rewrite temp_wh to the original length
                 %rewrite_temp_wh(ops)
             else
-                % ORDER OF BATCHES IS NOW RANDOM, controlled by random number generator
-                iseed = 1;
-                
-                % main tracking and template matching algorithm
-                rez = learnAndSolve8b(rezShift, iseed);
-                % final merges
-                rez = find_merges(rez, 1);
-                
-                % final splits by SVD
-                rez = splitAllClusters(rez, 1);
-                
-                % decide on cutoff
-                rez = set_cutoff(rez);
-                % eliminate widely spread waveforms (likely noise)
-                rez.good = get_good_units(rez);
-                
-                save(tmpSaveFile,'rez','-append')
+                if ~exist('rezSpk','var') || par.overwrite==true
+                    % ORDER OF BATCHES IS NOW RANDOM, controlled by random number generator
+                    iseed = 1;
+                    
+                    % main tracking and template matching algorithm
+                    rez = learnAndSolve8b(rezShift, iseed);
+                    % final merges
+                    rez = find_merges(rez, 1);
+                    
+                    % final splits by SVD
+                    rez = splitAllClusters(rez, 1);
+                    
+                    % decide on cutoff
+                    rez = set_cutoff(rez);
+                    % eliminate widely spread waveforms (likely noise)
+                    rez.good = get_good_units(rez);
+                    fprintf('found %d good units \n', sum(rez.good>0))
+                    
+                    % correct times for the deleted batches
+                    rez=correct_time(rez);
+                    
+                    % rewrite temp_wh to the original length
+                    rewrite_temp_wh(ops)
+                    
+                    save(tmpSaveFile,'rez','-append')
+                end
             end
             
             
-            fprintf('Done kilosort\nSaving results and exporting Phy templates to %s',outFolder);
-            mkdir(outFolder)
-            save(outFolder,'rez');
-            if useKiloSort3
-                rezToPhy2(rez, outFolder);
+            fprintf('Done kilosort\nSaving results and exporting Phy templates to %s',par.outFolder);
+            mkdir(par.outFolder)
+            save(par.outFolder,'rez');
+            if par.useKiloSort3
+                rezToPhy2(rez, par.outFolder);
             else
-                rezToPhy(rez, outFolder);
+                rezToPhy(rez, par.outFolder);
             end
             delete([tmpSaveFile '.mat']);
         end
