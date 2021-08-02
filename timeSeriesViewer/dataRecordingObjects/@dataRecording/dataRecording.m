@@ -567,9 +567,10 @@ classdef (Abstract) dataRecording < handle
         end
         
         function generateChannelMapFile(obj,electrodeName)
+            overwrite=1;
             layoutFile=dir([obj.recordingDir filesep '*.chMap']);
             [layoutDir]=fileparts(which('layout_40_16x2_FlexLin.mat')); %an example of a file
-            if ~isempty(layoutFile)
+            if ~isempty(layoutFile) && ~overwrite
                 fprintf('\nLayout file already exists - %s\n',layoutFile.name);
                 return;
             elseif ~exist('electrodeName','var')
