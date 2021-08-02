@@ -443,8 +443,9 @@ classdef (Abstract) dataRecording < handle
             clusterTable=sortrows(clusterTable,'ch');
             spike_clusters = readNPY([pathToPhyResults filesep 'spike_clusters.npy']);
             spike_times = readNPY([pathToPhyResults filesep 'spike_times.npy']);
-            label = clusterTable.KSLabel;
-           % spikeShapes=readNPY([pathToPhyResults filesep 'templates.npy']); check if this needs to be sorted 
+            %labelKS = clusterTable.KSLabel;
+            label = clusterTable.group;
+            spikeShapes=readNPY([pathToPhyResults filesep 'templates.npy']); %check if this needs to be sorted 
             %check for clusters on the same electrode
             [uab,a,b]=unique(clusterTable.ch);
             ic=zeros(4,numel(uab));
@@ -466,7 +467,7 @@ classdef (Abstract) dataRecording < handle
             t=double(cell2mat(t))/(obj.samplingFrequency(1)/1000);
             saveFile=[pathToPhyResults filesep 'sorting_tIc.mat'];
             fprintf('Saving results to %s\n',saveFile);
-            save(saveFile,'t','ic','label');
+            save(saveFile,'t','ic','label','spikeShapes');
         end
         
         function []=convertLayoutKSort(obj,outputFile,badChannels)

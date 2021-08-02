@@ -1,4 +1,5 @@
 /*function to calculate the correlation of a convoluted burst matrix:
+ *compile function using: mex -largeArrayDims StimCrossCorr.c;
 [R]=StimCrossCorr(convM);*/
 
 #include <stdio.h>
