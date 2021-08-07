@@ -2653,6 +2653,7 @@ classdef sleepAnalysis < recAnalysis
             slowCyclesFile=[obj.currentAnalysisFolder filesep 'slowCycles_ch' num2str(ch) '.mat'];
             dbRatioFile=[obj.currentAnalysisFolder filesep 'dbRatio_ch' num2str(ch) '.mat'];
             
+            Th=[];
             obj.checkFileRecording(slowCyclesFile,'Delta to beta analysis missing, please first run getSlowCycles');
             obj.checkFileRecording(dbRatioFile,'Delta to beta analysis missing, please first run getDBRatio');
             load(slowCyclesFile); %load data

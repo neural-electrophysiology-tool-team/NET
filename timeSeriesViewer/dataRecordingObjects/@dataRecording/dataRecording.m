@@ -324,18 +324,17 @@ classdef (Abstract) dataRecording < handle
                 %addpath(genpath('/media/sil2/Data/Lizard/Stellagama/Kilosort')) % for kilosort
             end
             
+            writeNPYPath=which('writeNPY.m');
             if par.useKiloSort3
                 rez2PhyPath2=which('rezToPhy2.m');
-                if isempty(rez2PhyPath2)
-                    fprintf('\nrez2Phy2 (kilosort3) was not found. Trying to look for rez2Phy (kilosort2.5 or lower)');
-                    fprintf('\nrez2Phy (kilosort2) was not found as well, please add it to the matlab path and run again\nTrying to look for rez2Phy (kilosort2.5 or lower)');
+                if isempty(rez2PhyPath2) || isempty(writeNPYPath)
+                    fprintf('\nrez2Phy2 (kilosort3) or writeNPY was not found, please add it to the matlab path and run again\n');
                     return;
                 end
             else
                 rez2PhyPath=which('rezToPhy.m');
-                
-                if isempty(rez2PhyPath)
-                    fprintf('\nrez2Phy (kilosort2) was not found as well, please add it to the matlab path and run again\nTrying to look for rez2Phy (kilosort2.5 or lower)');
+                if isempty(rez2PhyPath) || isempty(writeNPYPath)
+                    fprintf('\nrez2Phy (kilosort2)or writeNPY was not found, please add it to the matlab path and run again\n');
                     return;
                 end
             end
@@ -431,7 +430,7 @@ classdef (Abstract) dataRecording < handle
             delete([tmpSaveFile '.mat']);
         end
         
-        function [t,ic]=convertPhySorting2tIc(obj,pathToPhyResults)
+        function [spkData]=convertPhySorting2tIc(obj,pathToPhyResults)
             if nargin==1
                 pathToPhyResults=[obj.recordingDir filesep 'kiloSortResults'];
                 fprintf('Sorting results path not provided, using this path:\n%s\n',pathToPhyResults);
@@ -468,6 +467,12 @@ classdef (Abstract) dataRecording < handle
             saveFile=[pathToPhyResults filesep 'sorting_tIc.mat'];
             fprintf('Saving results to %s\n',saveFile);
             save(saveFile,'t','ic','label','spikeShapes');
+            if nargout>0
+                spkData.t=t;
+                spkData.ic=ic;
+                spkData.label=label;
+                spkData.spikeShapes=spikeShapes;
+            end
         end
         
         function []=convertLayoutKSort(obj,outputFile,badChannels)

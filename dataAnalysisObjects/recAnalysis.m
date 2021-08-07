@@ -318,12 +318,14 @@ classdef (Abstract) recAnalysis < handle
                 obj.recTable.MEAfiles=cellfun(@(x) char,obj.recTable.MEAfiles,'UniformOutput',0);
                 %obj.recTable.MEAfiles=cellfun(@(x) isnan(x) 
             end
-            
+            %{
             if isunix
                 for i=1:numel(obj.recTable.folder)
-                    obj.recTable.folder{i}=convertPath2LinuxMPIBR(obj.recTable.folder{i});
+                    obj.recTable.folder{i}=convertPath2Linux(obj.recTable.folder{i});
                 end
             end
+            %}
+            
             disp(['Experiment data retrieved from: ' num2str(obj.excelRecordingDataFileName)]);
         end
         
