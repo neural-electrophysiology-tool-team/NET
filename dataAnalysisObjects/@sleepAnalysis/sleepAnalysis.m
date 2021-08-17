@@ -3027,7 +3027,9 @@ classdef sleepAnalysis < recAnalysis
             
             sortedBetaRatio=sort(bufferedDelta2BetaRatio(~isnan(bufferedDelta2BetaRatio)));
             estimateColorMapMax=round(sortedBetaRatio(round(numel(sortedBetaRatio)*0.95))/100)*100;
-            
+            if estimateColorMapMax==0
+                estimateColorMapMax=max(10,round(sortedBetaRatio(round(numel(sortedBetaRatio)*0.95))/10)*10);
+            end
             if h==0
                 fDB=figure('Position',[100 100 900 500]);
                 h=axes;
@@ -3387,7 +3389,7 @@ classdef sleepAnalysis < recAnalysis
             pt=find(tSlidingAC>=tStart & tSlidingAC<=(tStart+win+parDbAutocorr.movingAutoCorrWin/2));
             tSlidingAC=tSlidingAC-tSlidingAC(pt(1));
             
-            respirationAutocorrFile=[obj.currentAnalysisFolder filesep 'getRespirationAC.mat'];
+            respirationAutocorrFile=obj.files.respirationAutocorr;%[obj.currentAnalysisFolder filesep 'getRespirationAC.mat'];
             obj.checkFileRecording(respirationAutocorrFile,'Autocorr analysis missing, please first run getRespirationAC');
             RAC=load(respirationAutocorrFile);
             
