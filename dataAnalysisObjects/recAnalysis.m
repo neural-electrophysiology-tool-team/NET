@@ -347,7 +347,7 @@ classdef (Abstract) recAnalysis < handle
             print(figureFileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
             print(figureFileName,'-dpdf');
         end
-        
+
         %% setCurrentRecording
         function [obj]=setCurrentRecording(obj,recName)
             %Function: select a subset of lines from the excel table for setting the current recording in the object

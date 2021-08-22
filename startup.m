@@ -7,4 +7,5 @@ if exist('PsychStartup'), PsychStartup; end;
 set(groot,'defaultFigureCreateFcn',@(fig,~)addToolbarExplorationButtons(fig))
 set(groot,'defaultAxesCreateFcn',@(ax,~)set(ax.Toolbar,'Visible','off'))
 
+format long g;
 %addpath(genpath('/home/mark/Documents/MATLAB/npy-matlab'))

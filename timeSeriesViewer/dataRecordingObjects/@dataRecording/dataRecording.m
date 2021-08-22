@@ -184,42 +184,48 @@ classdef (Abstract) dataRecording < handle
             end
         end
         
-        function obj=loadChLayout(obj)
-            %checks for a .chMap file with the recording name in the same folder of the recording and extract the layout information
-            %txt should correspond to layout file name on path
-            if iscell(obj.recordingDir)
-                recordingDir=obj.recordingDir{1};
-            else recordingDir=obj.recordingDir;
-            end
-            
-            chMapFiles=dir([recordingDir filesep '*.chMap']);
-            chMapFiles={chMapFiles.name};
-            if numel(chMapFiles)>1
-                disp('Found more than one channel map files!!!!! Using one of them');
-                chMapFiles=chMapFiles(1);
-            end
-            
-            switch numel(chMapFiles)
-                case 0 %not channel map file found
-                    disp('No .chMap files were found for this recording');
-                    return;
-                case 1 %there is only one channel map file, this file will apply to all the recordings
-                    chMapFiles=[recordingDir filesep chMapFiles{1}];
-                otherwise %there are several files, in which case each recording should have its own channel map file with the appropriate name
-                    chMapFiles=dir([recordingDir filesep obj.recordingName(1:end-numel(obj.fileExtension)-1) '*.chMap']);
-                    chMapFiles={chMapFiles.name};
-                    if numel(chMapFiles)~=1
-                        disp('Channel map file name (*.chMap) does not correspond to the recording file name');
+        function obj=loadChLayout(obj,layoutName)
+            if nargin==1
+                %checks for a .chMap file with the recording name in the same folder of the recording and extract the layout information
+                %txt should correspond to layout file name on path
+                if iscell(obj.recordingDir)
+                    recordingDir=obj.recordingDir{1};
+                else recordingDir=obj.recordingDir;
+                end
+                
+                chMapFiles=dir([recordingDir filesep '*.chMap']);
+                chMapFiles={chMapFiles.name};
+                if numel(chMapFiles)>1
+                    disp('Found more than one channel map files!!!!! Using one of them');
+                    chMapFiles=chMapFiles(1);
+                end
+                
+                switch numel(chMapFiles)
+                    case 0 %not channel map file found
+                        disp('No .chMap files were found for this recording');
                         return;
-                    else
+                    case 1 %there is only one channel map file, this file will apply to all the recordings
                         chMapFiles=[recordingDir filesep chMapFiles{1}];
-                    end
+                    otherwise %there are several files, in which case each recording should have its own channel map file with the appropriate name
+                        chMapFiles=dir([recordingDir filesep obj.recordingName(1:end-numel(obj.fileExtension)-1) '*.chMap']);
+                        chMapFiles={chMapFiles.name};
+                        if numel(chMapFiles)~=1
+                            disp('Channel map file name (*.chMap) does not correspond to the recording file name');
+                            return;
+                        else
+                            chMapFiles=[recordingDir filesep chMapFiles{1}];
+                        end
+                end
+                
+                A = importdata(chMapFiles);
+                if isempty(A)
+                    error('Channel layout was not extracted successfully from channel map file (*.chMap) ,check file name and content!');
+                end
+                fprintf('Using the file %s for extracting channel map\n',chMapFiles);
+            else
+                A={layoutName};
             end
             
-            A = importdata(chMapFiles);
-            if isempty(A)
-                error('Channel layout was not extracted successfully from channel map file (*.chMap) ,check file name and content!');
-            end
             try
                 elecString=regexp(A{1},'_','split');
                 obj.electrodePitch=str2num(elecString{1});
@@ -239,7 +245,7 @@ classdef (Abstract) dataRecording < handle
                     end
                     
                 end
-                fprintf('Channel map with pitch %d and layout %s extracted from %s\n',obj.electrodePitch,elecString{2},chMapFiles);
+                fprintf('Channel map with pitch %d and layout %s extracted\n',obj.electrodePitch,elecString{2});
                 
                 %check that all recorded channels are contained within the layout
                 if numel(obj.channelNumbers)>numel(intersect(obj.channelNumbers,En(:)))
@@ -419,7 +425,7 @@ classdef (Abstract) dataRecording < handle
             end
             
             
-            fprintf('Done kilosort\nSaving results and exporting Phy templates to %s',par.outFolder);
+            fprintf('Done kilosort\nSaving results and exporting Phy templates to %s\n',par.outFolder);
             mkdir(par.outFolder)
             save(par.outFolder,'rez');
             if par.useKiloSort3
@@ -437,6 +443,10 @@ classdef (Abstract) dataRecording < handle
             end
             if ~isfile([pathToPhyResults filesep 'cluster_info.tsv'])
                 fprintf('Manual annotation phase with phy not completed! Please run again after completing!!!\n');
+            end
+            if ~isfile([pathToPhyResults filesep 'cluster_info.tsv'])
+                disp('cluster_info.tsv not found! Please first perform manual annotation using phy and try again.');
+                return;
             end
             clusterTable=readtable([pathToPhyResults filesep 'cluster_info.tsv'],'FileType','delimitedtext');
             clusterTable=sortrows(clusterTable,'ch');
