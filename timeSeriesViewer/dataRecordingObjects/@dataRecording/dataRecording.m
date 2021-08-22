@@ -263,7 +263,7 @@ classdef (Abstract) dataRecording < handle
             addParameter(parseObj,'tempFilesFolder','/home/mark/tempKilosort',@ischar);
             addParameter(parseObj,'useKiloSort3',1,@isnumeric);
             addParameter(parseObj,'overwrite',0,@isnumeric);
-            addParameter(parseObj,'outFolder',fullfile(obj.recordingDir,'kiloSortResults'),@ischar);
+            addParameter(parseObj,'outFolder',fullfile(obj.recordingDir,['kiloSortResults_',SA.currentDataObj.recordingName]),@ischar);
             if numel(varargin)==1
                 disp(parseObj.Results);
                 return;
@@ -757,7 +757,7 @@ classdef (Abstract) dataRecording < handle
                 disp('No triggers found! Trigger file not created.\n');
             end
             
-            metaDataFile=[targetFile(1:end) '_meta.txt'];
+            metaDataFile=[targetFile(1:end-4) '_meta.txt'];
             if ~exist(metaDataFile,'file')
                 fid=fopen(metaDataFile,'w');
                 fprintf(fid,'nSavedChans = %d\n',numel(dataChannels));
