@@ -79,7 +79,7 @@ classdef binaryRecording < dataRecording
                     data = fread(obj.fid,(endSampleRec-startSampleRec)*obj.totalChannels,['*' obj.datatype]);
                     data = reshape(data, obj.totalChannels,endSampleRec-startSampleRec);
                     
-                    V_uV(:,i,1-startSampleTmp:endSampleTmp)=data;
+                    V_uV(:,i,1-startSampleTmp:endSampleTmp)=data(channels,:);
                     disp('Recording at edge');
                 end
             end
@@ -189,38 +189,44 @@ classdef binaryRecording < dataRecording
             %get data from meta file (jrclust fields)
             %The following fields are required: 'sRateHz','scale','nChans'
             metaFileName=obj.recordingName;
-            fullMetaFileName=[obj.recordingDir filesep metaFileName '.meta'];
+            fullMetaFileName=[obj.recordingDir filesep metaFileName '_meta.txt'];
             if exist(fullMetaFileName,'file')
                 fidMeta=fopen(fullMetaFileName,'r');
-                metaData = textscan(fidMeta,'%s = %s');
+                metaData = textscan(fidMeta,'%s = %s','TextType','string','Delimiter',' = ');  %'Whitespace','',
                 fclose(fidMeta);
                 
                 for i=1:size(metaData{1},1)
-                    T.(metaData{1}{i})=str2num(metaData{2}{i});
+                    if isletter(metaData{2}{i}(1))
+                        T.(metaData{1}{i})=metaData{2}{i};
+                    else
+                        T.(metaData{1}{i})=str2num(metaData{2}{i});
+                    end
                 end
                 obj.samplingFrequency=T.sRateHz;
                 obj.MicrovoltsPerAD=T.scale;
                 obj.totalChannels=T.nChans;
+                obj.datatype=T.vcDataType;
                 obj.totalAnalogChannels=T.nAnalogChans;
                 obj.triggerNames=mat2cell(1:T.nTriggerChans,1,ones(1,T.nTriggerChans));
                 obj.analogChannelNumbers=1:T.nAnalogChans;
+                obj.channelNumbers=T.channelNumbers;
+                obj.channelNames=cellfun(@(x) num2str(x),mat2cell(obj.channelNumbers,1,ones(1,numel(obj.channelNumbers))),'UniformOutput',0);
+                if isfield(T,'vcProbe')
+                    obj=obj.loadChLayout(T.vcProbe(8:end));%remove the layout ending
+                end
+                %check the number of samples in the binary file
+                fid=fopen([obj.recordingDir filesep obj.dataFileNames{1}],'r');
+                fseek(fid, 0, 'eof');
+                position = ftell(fid);
+                obj.nTotSamples=floor(position/2/obj.totalChannels);
+                fclose(fid);
                 
+                obj.recordingDuration_ms=obj.nTotSamples/obj.samplingFrequency*1000;
+                disp('saving meta data');
+                obj.saveMetaData;
             else
                 error('could not read meta data file (.meta) for recording, data object not created!!!');
             end
-            obj.channelNumbers=1:obj.totalChannels;
-            obj.channelNames=cellfun(@(x) num2str(x),mat2cell(obj.channelNumbers,1,ones(1,numel(obj.channelNumbers))),'UniformOutput',0);
-            
-            fid=fopen([obj.recordingDir filesep obj.dataFileNames{1}],'r');
-            fseek(fid, 0, 'eof');
-            position = ftell(fid);
-            obj.nTotSamples=floor(position/2/obj.totalChannels);
-            fclose(fid);
-            
-            obj.recordingDuration_ms=obj.nTotSamples/obj.samplingFrequency*1000;
-            
-            disp('saving meta data');
-            obj.saveMetaData;
         end
     end
     
@@ -244,7 +250,7 @@ classdef binaryRecording < dataRecording
             end
             obj=obj.getRecordingFiles(recordingFile,obj.fileExtension);
             
-            if exist(obj.metaDataFile,'file') && ~obj.overwriteMetaData
+            if isfile([obj.metaDataFile,'.mat']) && ~obj.overwriteMetaData
                 obj=loadMetaData(obj);
             else
                 obj=extractMetaData(obj);

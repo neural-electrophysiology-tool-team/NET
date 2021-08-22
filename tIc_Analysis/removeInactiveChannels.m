@@ -31,5 +31,5 @@ if exist('Plot','var')
     hold off;
     ylim([0 minimalEventFraction*3]);
 end
-channelsToRemove=ic(1,channelEventFraction<minimalEventFraction);
+channelsToRemove=ic(1:2,channelEventFraction<minimalEventFraction);
    

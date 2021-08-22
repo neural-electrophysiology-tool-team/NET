@@ -18,6 +18,8 @@ classdef NLRecording < dataRecording
         allTimeStamps_us
         recFileOpen
         recFileClosed
+        
+        isunix
     end
     
     properties (SetAccess=protected) %these properties are not considered as meta data and have to be loaded each time
@@ -110,11 +112,21 @@ classdef NLRecording < dataRecording
             %fieldSelectionTrigger: (1): Timestamps, (2): Event IDs, (3): TTLs, (4): Extras, (5): Event Strings
             %Bits are coded as decimal integers
             if nargin>=3
+                if ~obj.isunix
                 [timeStampsTrig, TTLsTrig,eventString] = Nlx2MatEV...
-                    ([obj.recordingDir '\' obj.triggerFileName],[1 0 1 0 1],0,4,1e3*[startTime_ms; startTime_ms+window_ms]+obj.recordingStartTime_us);
+                    ([obj.recordingDir filesep obj.triggerFileName],[1 0 1 0 1],0,4,1e3*[startTime_ms; startTime_ms+window_ms]+obj.recordingStartTime_us);
+                else
+                [timeStampsTrig, TTLsTrig,eventString] = Nlx2MatEV_v3...
+                    ([obj.recordingDir filesep obj.triggerFileName],[1 0 1 0 1],0,4,1e3*[startTime_ms; startTime_ms+window_ms]+obj.recordingStartTime_us);
+                end
             else
+                if ~obj.isunix
                 [timeStampsTrig, TTLsTrig,eventString] = Nlx2MatEV...
-                    ([obj.recordingDir '\' obj.triggerFileName],[1 0 1 0 1],0,1,[]);
+                    ([obj.recordingDir filesep obj.triggerFileName],[1 0 1 0 1],0,1,[]);
+                else
+                [timeStampsTrig, TTLsTrig,eventString] = Nlx2MatEV_v3...
+                    ([obj.recordingDir filesep obj.triggerFileName],[1 0 1 0 1],0,1,[]);
+                end
             end
             
             %calculate bit from integer sequence
@@ -277,7 +289,7 @@ classdef NLRecording < dataRecording
             obj.multifileMode=false; %the ability to process multiple folders together was not implemented
             
             if isempty(recordingFile) %if directory with data was not entered open get directory GUI
-                [obj.recordingDir]= uigetdir(obj.defaultLocalDir,'Choose the data folder');
+                [recordingFile]= uigetdir(obj.defaultLocalDir,'Choose the data folder');
             end
             if iscell(recordingFile)
                 if numel(recordingFile)>1
@@ -312,6 +324,7 @@ classdef NLRecording < dataRecording
                 disp('Object was not constructed since too many parameters were given at construction');
                 return;
             end
+            obj.isunix=isunix;
             
             obj.datatype='int16';
             obj.folderMode=true; %neuralynx always work in folder mode - a recording is defined by a folder

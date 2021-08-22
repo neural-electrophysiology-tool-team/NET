@@ -57,10 +57,19 @@ classdef (Abstract) recAnalysis < handle
                 obj.files.(methodName)=[obj.currentAnalysisFolder filesep methodName '.mat'];
             end
         end
-                
+        
+        function [recNames]=getRecordingNames(obj,pRec)
+            for i=1:numel(pRec)
+                d=dir([obj.recTable.folder{pRec(i)} filesep 'analysis']);
+                tmpRec = d([d(:).isdir]);
+                tmpRec = tmpRec(~ismember({tmpRec(:).name},{'.','..'}));
+                recNames{i} = {tmpRec(:).name};
+            end
+            
+        end
         
         %% batchProcessData
-        function [outArgAll]=batchProcessData(obj,method,recNames,varargin)
+        function [varargout]=batchProcessData(obj,method,recNames,varargin)
             % Run batch analysis of different recordings over a given method
             % [outArgAll]=batchProcessData(method,recNames,varargin)
             % method - the method used
@@ -105,7 +114,7 @@ classdef (Abstract) recAnalysis < handle
             
             fprintf(['Performing batch analysis on method ' method '\nAnalyzing recording number:']);
             if obj.parPool4Batch & nRec>1
-                parfor i=1:nRec
+                parfor i=1:nRec %only one output argument can work with par for !!!!!
                     tmpObj=obj.setCurrentRecording(recNames{i});
                     fprintf('Analyzing recording %s...\n',recNames{i});
                     if any(pMultiParam)
@@ -114,14 +123,14 @@ classdef (Abstract) recAnalysis < handle
                         newVarargin(1:2:numel(varargin))=varargin(1:2:end);
                         newVarargin(2:2:numel(varargin))=tmpVaragrin;
                         if nOut>0
-                            [outArgs]=tmpObj.(method)(newVarargin{:});
+                            [outArgs]=tmpObj.(method)(newVarargin{:}); %only one output argument can work with par for !!!!!
                             outArgAll{i}=outArgs;
                         else
                             tmpObj.(method)(newVarargin{:});
                         end
                     else
                         if nOut>0
-                            [outArgs]=tmpObj.(method)(varargin{:});
+                            [outArgs]=tmpObj.(method)(varargin{:});%only one output argument can work with par for !!!!!
                             outArgAll{i}=outArgs;
                         else
                             tmpObj.(method)(varargin{:});
@@ -139,21 +148,26 @@ classdef (Abstract) recAnalysis < handle
                         newVarargin(1:2:numel(varargin))=varargin(1:2:end);
                         newVarargin(2:2:numel(varargin))=tmpVaragrin;
                         if nOut>0
-                            [outArgs]=tmpObj.(method)(newVarargin{:});
-                            outArgAll{i}=outArgs;
+                            [outArgs]=tmpObj.(method)(varargin{:});
                         else
                             tmpObj.(method)(newVarargin{:});
                         end
                     else
                         if nOut>0
+                            %[varargout{1:nargout}]=tmpObj.(method)(varargin{:}); %not working in some cases
                             [outArgs]=tmpObj.(method)(varargin{:});
-                            outArgAll{i}=outArgs;
                         else
                             tmpObj.(method)(varargin{:});
                         end
                     end
+                    for j=1:nargout
+                        outArgAll{j}{i}=outArgs;
+                    end
                     %return all non object variables
                 end
+            end
+            if nargout>0
+                varargout=outArgAll;
             end
         end
         
@@ -309,12 +323,14 @@ classdef (Abstract) recAnalysis < handle
                 obj.recTable.MEAfiles=cellfun(@(x) char,obj.recTable.MEAfiles,'UniformOutput',0);
                 %obj.recTable.MEAfiles=cellfun(@(x) isnan(x) 
             end
-            
+            %{
             if isunix
                 for i=1:numel(obj.recTable.folder)
-                    obj.recTable.folder{i}=convertPath2LinuxMPIBR(obj.recTable.folder{i});
+                    obj.recTable.folder{i}=convertPath2Linux(obj.recTable.folder{i});
                 end
             end
+            %}
+            
             disp(['Experiment data retrieved from: ' num2str(obj.excelRecordingDataFileName)]);
         end
         
@@ -336,12 +352,7 @@ classdef (Abstract) recAnalysis < handle
             print(figureFileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
             print(figureFileName,'-dpdf');
         end
-        
-        %% getRecordingNames
-        function getRecordingNames(obj)
-            disp(obj.recTable.recNames);
-        end
-        
+
         %% setCurrentRecording
         function [obj]=setCurrentRecording(obj,recName)
             %Function: select a subset of lines from the excel table for setting the current recording in the object
@@ -396,7 +407,7 @@ classdef (Abstract) recAnalysis < handle
                         elseif strcmp(allFullFiles{1}(end-3:end),'.rhd') %Intan recording
                             obj.currentDataObj=Intan(obj.currentDataFiles);
                         elseif strcmp(allFullFiles{1}(end-3:end),'.bin') %Intan recording
-                            obj.currentDataObj=Recording(obj.currentDataFiles);
+                            obj.currentDataObj=binaryRecording(obj.currentDataFiles);
                         elseif strcmp(allFullFiles{1}(end-3:end),'.kwd')
                             obj.currentDataObj=KwikRecording(obj.currentDataFiles);
                         elseif strcmp(allFullFiles{1}(end-2:end),'.h5')

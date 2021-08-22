@@ -132,7 +132,7 @@ classdef (Abstract) dataRecording < handle
         
         function deleteMetaData(obj)
             if ~iscell(obj.recordingDir)
-                delete([obj.recordingDir filesep 'metaData.mat']);
+                delete([obj.recordingDir filesep obj.recordingName '_metaData.mat']);
             else
                 for i=1:numel(obj.recordingDir)
                     delete([obj.recordingDir{i} filesep 'metaData.mat']);
@@ -184,59 +184,305 @@ classdef (Abstract) dataRecording < handle
             end
         end
         
-        function obj=loadChLayout(obj)
-            %checks for a .chMap file with the recording name in the same folder of the recording and extract the layout information
-            %txt should correspond to layout file name on path
-            if iscell(obj.recordingDir)
-                recordingDir=obj.recordingDir{1};
-            else recordingDir=obj.recordingDir;
-            end
-            
-            chMapFiles=dir([recordingDir filesep '*.chMap']);
-            chMapFiles={chMapFiles.name};
-            switch numel(chMapFiles)
-                case 0 %not channel map file found
-                    disp('No .chMap files were found for this recording');
-                    return;
-                case 1 %there is only one channel map file, this file will apply to all the recordings
-                    chMapFiles=[recordingDir filesep chMapFiles{1}];
-                otherwise %there are several files, in which case each recording should have its own channel map file with the appropriate name
-                    chMapFiles=dir([recordingDir filesep obj.recordingName(1:end-numel(obj.fileExtension)-1) '*.chMap']);
-                    chMapFiles={chMapFiles.name};
-                    if numel(chMapFiles)~=1
-                        disp('Channel map file name (*.chMap) does not correspond to the recording file name');
-                        return;
-                    else
-                        chMapFiles=[recordingDir filesep chMapFiles{1}];
-                    end
-            end
-            
-            A = importdata(chMapFiles);
-            elecString=regexp(A{1},'_','split');
-            obj.electrodePitch=str2num(elecString{1});
-            if numel(A)==1
-                obj.layoutName=['layout_' A{1}];
-                load(obj.layoutName);
-                obj.chLayoutNumbers=En;
-                obj.chLayoutNames=Ena;
-                obj.chLayoutPositions=Enp;
-            else
-                for i=1:numel(A)
-                    obj.layoutName{i}=['layout_' A{i}];
-                    load(obj.layoutName{i});
-                    obj.chLayoutNumbers{i}=En;
-                    obj.chLayoutNames{i}=Ena;
-                    obj.chLayoutPositions{i}=Enp;
+        function obj=loadChLayout(obj,layoutName)
+            if nargin==1
+                %checks for a .chMap file with the recording name in the same folder of the recording and extract the layout information
+                %txt should correspond to layout file name on path
+                if iscell(obj.recordingDir)
+                    recordingDir=obj.recordingDir{1};
+                else recordingDir=obj.recordingDir;
                 end
                 
+                chMapFiles=dir([recordingDir filesep '*.chMap']);
+                chMapFiles={chMapFiles.name};
+                if numel(chMapFiles)>1
+                    disp('Found more than one channel map files!!!!! Using one of them');
+                    chMapFiles=chMapFiles(1);
+                end
+                
+                switch numel(chMapFiles)
+                    case 0 %not channel map file found
+                        disp('No .chMap files were found for this recording');
+                        return;
+                    case 1 %there is only one channel map file, this file will apply to all the recordings
+                        chMapFiles=[recordingDir filesep chMapFiles{1}];
+                    otherwise %there are several files, in which case each recording should have its own channel map file with the appropriate name
+                        chMapFiles=dir([recordingDir filesep obj.recordingName(1:end-numel(obj.fileExtension)-1) '*.chMap']);
+                        chMapFiles={chMapFiles.name};
+                        if numel(chMapFiles)~=1
+                            disp('Channel map file name (*.chMap) does not correspond to the recording file name');
+                            return;
+                        else
+                            chMapFiles=[recordingDir filesep chMapFiles{1}];
+                        end
+                end
+                
+                A = importdata(chMapFiles);
+                if isempty(A)
+                    error('Channel layout was not extracted successfully from channel map file (*.chMap) ,check file name and content!');
+                end
+                fprintf('Using the file %s for extracting channel map\n',chMapFiles);
+            else
+                A={layoutName};
             end
-            fprintf('Channel map with pitch %d and layout %s extracted from %s\n',obj.electrodePitch,elecString{2},chMapFiles);
             
-            %check that all recorded channels are contained within the layout
-            if numel(obj.channelNumbers)>numel(intersect(obj.channelNumbers,En(:)))
-                warning('Notice that some of the recorded channels are not contained in the layout file, this may result in errors in further analysis!');
+            try
+                elecString=regexp(A{1},'_','split');
+                obj.electrodePitch=str2num(elecString{1});
+                if numel(A)==1
+                    obj.layoutName=['layout_' A{1}];
+                    load(obj.layoutName);
+                    obj.chLayoutNumbers=En;
+                    obj.chLayoutNames=Ena;
+                    obj.chLayoutPositions=Enp;
+                else
+                    for i=1:numel(A)
+                        obj.layoutName{i}=['layout_' A{i}];
+                        load(obj.layoutName{i});
+                        obj.chLayoutNumbers{i}=En;
+                        obj.chLayoutNames{i}=Ena;
+                        obj.chLayoutPositions{i}=Enp;
+                    end
+                    
+                end
+                fprintf('Channel map with pitch %d and layout %s extracted\n',obj.electrodePitch,elecString{2});
+                
+                %check that all recorded channels are contained within the layout
+                if numel(obj.channelNumbers)>numel(intersect(obj.channelNumbers,En(:)))
+                    warning('Notice that some of the recorded channels are not contained in the layout file, this may result in errors in further analysis!');
+                end
+            catch
+                fprintf('Failed to extract channel map!!!! check that the name was entered correctly');
             end
             
+        end
+        
+        function []=getKiloSort(obj,varargin)
+            parseObj = inputParser;
+            parseObj.FunctionName='getKiloSort';
+            addParameter(parseObj,'tempFilesFolder','/home/mark/tempKilosort',@ischar);
+            addParameter(parseObj,'useKiloSort3',1,@isnumeric);
+            addParameter(parseObj,'overwrite',0,@isnumeric);
+            addParameter(parseObj,'outFolder',fullfile(obj.recordingDir,'kiloSortResults'),@ischar);
+            if numel(varargin)==1
+                disp(parseObj.Results);
+                return;
+            end
+            parseObj.parse(varargin{:});
+            %make parameter structure
+            par=parseObj.Results;
+            
+            % generate config structure
+            rootH = par.tempFilesFolder; %where to save temp files for spike sorting (should be a fast drive)
+            
+            ops.trange    = [0 Inf]; % time range to sort
+            ops.NchanTOT  = numel(obj.channelNumbers); % total number of channels in your recording
+            ops.fproc   = fullfile(rootH, 'temp_wh.dat'); % proc file on a fast SSD
+            ops.fbinary = fullfile(obj.recordingDir, obj.dataFileNames{1});
+            ops.fs = obj.samplingFrequency(1);% sample rate
+            ops.fshigh = 200;% frequency for high pass filtering (150)
+            ops.minfr_goodchannels = 0.001; % minimum firing rate on a "good" channel (0 to skip)
+            ops.Th = [10 6];% threshold on projections (like in Kilosort1, can be different for last pass like [10 4])
+            ops.lam = 6;% how important is the amplitude penalty (like in Kilosort1, 0 means not used, 10 is average, 50 is a lot)
+            ops.AUCsplit = 0.9;% splitting a cluster at the end requires at least this much isolation for each sub-cluster (max = 1)
+            ops.minFR = 1/500;% minimum spike rate (Hz), if a cluster falls below this for too long it gets removed
+            ops.momentum = [20 400];% number of samples to average over (annealed from first to second value)
+            ops.sigmaMask = 30;% spatial constant in um for computing residual variance of spike
+            ops.ThPre = 8;% threshold crossings for pre-clustering (in PCA projection space)
+            ops.CAR=1; %median filter over channels (seems to slightly improve the spike quality).
+            ops.sig= 20;  % spatial smoothness constant for registration
+            ops.nblocks    = 5; % blocks for registration. 0 turns it off, 1 does rigid registration. Replaces "datashift" option.
+            
+            % danger, changing the settings below can lead to fatal errors!!!
+            % options for determining PCs
+            ops.spkTh           = -6;      % spike threshold in standard deviations (-6)
+            ops.reorder         = 1;       % whether to reorder batches for drift correction.
+            ops.nskip           = 25;  % how many batches to skip for determining spike PCs
+            
+            ops.GPU                 = 1; % has to be 1, no CPU version yet, sorry
+            % ops.Nfilt               = 1024; % max number of clusters
+            ops.nfilt_factor        = 4; % max number of clusters per good channel (even temporary ones)
+            ops.ntbuff              = 64;    % samples of symmetrical buffer for whitening and spike detection
+            ops.NT                  = 64*1024+ ops.ntbuff; % must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
+            ops.whiteningRange      = 32; % number of channels to use for whitening each channel
+            ops.nSkipCov            = 25; % compute whitening matrix from every N-th batch
+            ops.scaleproc           = 200;   % int16 scaling of whitened data
+            ops.nPCs                = 3; % how many PCs to project the spikes into
+            ops.useRAM              = 0; % not yet available
+
+            if ~strcmp(class(obj),'binaryRecording') %check if this is a binary recording.
+                fprintf('\nKilosort can only run on binary files, use the export2Binary method to first convert the data.\n Then switch to the binaryRecording object and run again\n');return;
+            end
+            
+            fprintf('\nConverting layout to kilosort format');
+            obj.convertLayoutKSort;
+            % is there a channel map file in this folder?
+            channelMapFile = dir(fullfile(obj.recordingDir, 'chan*.mat'));
+            if ~isempty(obj.recordingDir)
+                ops.chanMap = fullfile(obj.recordingDir, channelMapFile.name);
+            else
+                fprintf('\nThe Channel map is empty or missing. Please provide and run again!');return;
+            end
+            
+            [kilosortPath]=which('kilosort');
+            if isempty(kilosortPath)
+                fprintf('Kilosort was not found, please add it to the matlab path and run again.\n');return;
+                %addpath(genpath('/media/sil2/Data/Lizard/Stellagama/Kilosort')) % for kilosort
+            end
+            
+            writeNPYPath=which('writeNPY.m');
+            if par.useKiloSort3
+                rez2PhyPath2=which('rezToPhy2.m');
+                if isempty(rez2PhyPath2) || isempty(writeNPYPath)
+                    fprintf('\nrez2Phy2 (kilosort3) or writeNPY was not found, please add it to the matlab path and run again\n');
+                    return;
+                end
+            else
+                rez2PhyPath=which('rezToPhy.m');
+                if isempty(rez2PhyPath) || isempty(writeNPYPath)
+                    fprintf('\nrez2Phy (kilosort2)or writeNPY was not found, please add it to the matlab path and run again\n');
+                    return;
+                end
+            end
+            %ch2Remove=[18 22 23 30 31]
+            
+            [~,recFolder]=fileparts(obj.recordingDir);
+            expName=['kilosortRez_' recFolder];
+            tmpSaveFile=[rootH filesep expName '_' num2str(sum(par.outFolder))]; %create a unique name for every experiment
+            
+            %loads previously processes data
+            mkdir(rootH);
+            if isfile([tmpSaveFile '.mat'])
+                load([tmpSaveFile '.mat'])
+            end
+            
+            %check existance of preprocessing in previously saved data
+            if ~exist('rezPreProc','var') || par.overwrite==true
+                rezPreProc = preprocessDataSub(ops);
+                save(tmpSaveFile,'rezPreProc')
+            end
+            if ~exist('rezShift','var') || par.overwrite==true
+                rezShift                = datashift2(rezPreProc, 1);
+                save(tmpSaveFile,'rezShift','-append')
+            end
+            
+            if par.useKiloSort3
+                if ~exist('rezSpk','var') || par.overwrite==true
+                    [rezSpk, st3, tF]     = extract_spikes(rezShift);
+                    %{
+                    Adding the following lines instead of st(5,:) = cF; in
+                    the function extract_spikes in the folder clustering of
+                    kilosort seems to solve the problem
+                        try %Mark Shein-Idelson 4/3/21 - prevent wierd bug in which running "st(5,:) = cF;" results in an error
+                            st(5,:) = cF;
+                        catch
+                            st(5,:) = cF;
+                        end
+                    %}
+                    save(tmpSaveFile,'rezSpk','st3','tF','-append')  
+                end
+                
+                
+                if ~exist('rez','var') || par.overwrite==true
+                    rez                = template_learning(rezSpk, tF, st3);
+                    [rez, st3, tF]     = trackAndSort(rez);
+                    rez                = final_clustering(rez, tF, st3);
+                    rez                = find_merges(rez, 1);
+                    
+                    % correct times for the deleted batches
+                    %rez=correct_time(rez);
+                    save(tmpSaveFile,'rez','-append')
+                end
+                % rewrite temp_wh to the original length
+                %rewrite_temp_wh(ops)
+            else
+                if ~exist('rezSpk','var') || par.overwrite==true
+                    % ORDER OF BATCHES IS NOW RANDOM, controlled by random number generator
+                    iseed = 1;
+                    
+                    % main tracking and template matching algorithm
+                    rez = learnAndSolve8b(rezShift, iseed);
+                    % final merges
+                    rez = find_merges(rez, 1);
+                    
+                    % final splits by SVD
+                    rez = splitAllClusters(rez, 1);
+                    
+                    % decide on cutoff
+                    rez = set_cutoff(rez);
+                    % eliminate widely spread waveforms (likely noise)
+                    rez.good = get_good_units(rez);
+                    fprintf('found %d good units \n', sum(rez.good>0))
+                    
+                    % correct times for the deleted batches
+                    rez=correct_time(rez);
+                    
+                    % rewrite temp_wh to the original length
+                    rewrite_temp_wh(ops)
+                    
+                    save(tmpSaveFile,'rez','-append')
+                end
+            end
+            
+            
+            fprintf('Done kilosort\nSaving results and exporting Phy templates to %s\n',par.outFolder);
+            mkdir(par.outFolder)
+            save(par.outFolder,'rez');
+            if par.useKiloSort3
+                rezToPhy2(rez, par.outFolder);
+            else
+                rezToPhy(rez, par.outFolder);
+            end
+            delete([tmpSaveFile '.mat']);
+        end
+        
+        function [spkData]=convertPhySorting2tIc(obj,pathToPhyResults)
+            if nargin==1
+                pathToPhyResults=[obj.recordingDir filesep 'kiloSortResults'];
+                fprintf('Sorting results path not provided, using this path:\n%s\n',pathToPhyResults);
+            end
+            if ~isfile([pathToPhyResults filesep 'cluster_info.tsv'])
+                fprintf('Manual annotation phase with phy not completed! Please run again after completing!!!\n');
+            end
+            if ~isfile([pathToPhyResults filesep 'cluster_info.tsv'])
+                disp('cluster_info.tsv not found! Please first perform manual annotation using phy and try again.');
+                return;
+            end
+            clusterTable=readtable([pathToPhyResults filesep 'cluster_info.tsv'],'FileType','delimitedtext');
+            clusterTable=sortrows(clusterTable,'ch');
+            spike_clusters = readNPY([pathToPhyResults filesep 'spike_clusters.npy']);
+            spike_times = readNPY([pathToPhyResults filesep 'spike_times.npy']);
+            %labelKS = clusterTable.KSLabel;
+            label = clusterTable.group;
+            spikeShapes=readNPY([pathToPhyResults filesep 'templates.npy']); %check if this needs to be sorted 
+            %check for clusters on the same electrode
+            [uab,a,b]=unique(clusterTable.ch);
+            ic=zeros(4,numel(uab));
+            t=cell(1,numel(uab));
+            currentIdx=0;prevCh=-1;
+            for i=1:numel(clusterTable.ch)
+                t{i}=spike_times(spike_clusters==clusterTable.id(i))';
+                ic(1,i)=clusterTable.ch(i);
+                ic(3,i)=currentIdx+1;
+                ic(4,i)=currentIdx+numel(t{i});
+                if prevCh==ic(1,i)
+                    ic(2,i)=ic(2,i-1)+1;
+                else
+                    ic(2,i)=1;
+                end
+                prevCh=ic(1,i);
+                currentIdx=ic(4,i);
+            end
+            t=double(cell2mat(t))/(obj.samplingFrequency(1)/1000);
+            saveFile=[pathToPhyResults filesep 'sorting_tIc.mat'];
+            fprintf('Saving results to %s\n',saveFile);
+            save(saveFile,'t','ic','label','spikeShapes');
+            if nargout>0
+                spkData.t=t;
+                spkData.ic=ic;
+                spkData.label=label;
+                spkData.spikeShapes=spikeShapes;
+            end
         end
         
         function []=convertLayoutKSort(obj,outputFile,badChannels)
@@ -336,10 +582,31 @@ classdef (Abstract) dataRecording < handle
             fclose(fid);
         end
         
-        function export2Binary(obj,targetFile,dataChannels,medianFilterGroup)
+        function generateChannelMapFile(obj,electrodeName)
+            overwrite=1;
+            layoutFile=dir([obj.recordingDir filesep '*.chMap']);
+            [layoutDir]=fileparts(which('layout_40_16x2_FlexLin.mat')); %an example of a file
+            if ~isempty(layoutFile) && ~overwrite
+                fprintf('\nLayout file already exists - %s\n',layoutFile.name);
+                return;
+            elseif ~exist('electrodeName','var')
+                [layoutFile] = uigetfile([layoutDir filesep 'layout_*.mat'],'Select the electrode layout file');
+                electrodeName=layoutFile(8:end-4);
+            end
+            fullFile=[layoutDir filesep 'layout_' electrodeName '.mat'];
+            if isfile(fullFile)
+                fid=fopen([obj.recordingDir filesep 'electrode.chMap'],'w');
+                fprintf(fid,electrodeName);
+                fclose(fid);
+            else
+                fprintf('Could not find %s!\n, check that electrode name was entered correctly or run without an electrode name and choose from the list.\n',fullFile);
+            end
+        end
+        
+        function convert2Binary(obj,targetFile,dataChannels,newChannelNumbers,medianFilterGroup)
             tic;
             targetDataType='int16';
-            if nargin<4
+            if nargin<5
                 medianFilterGroup=[];
             else
                 for i=1:numel(medianFilterGroup)
@@ -398,6 +665,10 @@ classdef (Abstract) dataRecording < handle
             if nargin<3
                 dataChannels=obj.channelNumbers;
             end
+            if nargin<4
+                newChannelNumbers=dataChannels;
+            end
+
             if nargin<2 || isempty(targetFile)
                 targetFile=[recordingDir filesep recordingName '.bin'];
                 disp(['File name for binary is:' targetFile]);
@@ -456,7 +727,7 @@ classdef (Abstract) dataRecording < handle
                             data(pGroup{i},:)=bsxfun(@minus,data(pGroup{i},:),median(data(pGroup{i},:)));
                         end
                     end
-                    pause(0.001);
+                    pause(0.0001);
                     fwrite(fid, data, ['*' targetDataType]);
                 end
                 fclose(fid);
@@ -486,12 +757,14 @@ classdef (Abstract) dataRecording < handle
                 disp('No triggers found! Trigger file not created.\n');
             end
             
-            metaDataFile=[targetFile(1:end-4) '.meta'];
+            metaDataFile=[targetFile(1:end) '_meta.txt'];
             if ~exist(metaDataFile,'file')
                 fid=fopen(metaDataFile,'w');
                 fprintf(fid,'nSavedChans = %d\n',numel(dataChannels));
                 fprintf(fid,'sRateHz = %d\n',obj.samplingFrequency(1));
                 fprintf(fid,'nChans = %d\n',numel(dataChannels));
+                outputstr = ['%d' repmat(',%d', 1, numel(newChannelNumbers)-1)]; % replicate it to match the number of columns
+                fprintf(fid,['channelNumbers = ', outputstr, '\n'], newChannelNumbers);
                 fprintf(fid,'nTriggerChans = %d\n',numel(nT));
                 fprintf(fid,'nAnalogChans = %d\n',numel(obj.analogChannelNumbers));
                 fprintf(fid,'vcDataType = %s\n',targetDataType);

@@ -304,7 +304,7 @@ classdef OERecording < dataRecording
                 obj.samplingFrequency(i)=header.sampleRate;
                 obj.MicrovoltsPerAD(i)=header.bitVolts;
                 obj.startDate{i}=header.date_created;
-                obj.bufferSize(i)=header.bufferSize;
+                %obj.bufferSize(i)=header.bufferSize(1);
                 obj.blockLength(i)=header.blockLength;
                 obj.dataDescriptionCont{i}=header.description;
                 obj.fileHeaders{i} = header;
@@ -327,7 +327,7 @@ classdef OERecording < dataRecording
                 obj.samplingFrequencyA(i)=header.sampleRate;
                 obj.MicrovoltsPerADA(i)=header.bitVolts;
                 obj.startDateA{i}=header.date_created;
-                obj.bufferSizeA(i)=header.bufferSize;
+                %obj.bufferSizeA(i)=header.bufferSize;
                 obj.blockLengthA(i)=header.blockLength;
                 obj.dataDescriptionContA{i}=header.description;
                 obj.fileHeadersA{i} = header;
@@ -443,7 +443,7 @@ classdef OERecording < dataRecording
             end
             obj.recordingDir=[pathstr filesep name];
             obj.recordingName = name;
-            obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
+            obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData.mat'];
             %obj.dataFileNames=dir([pathstr filesep name filesep '*.' obj.fileExtension]);
         end
         
