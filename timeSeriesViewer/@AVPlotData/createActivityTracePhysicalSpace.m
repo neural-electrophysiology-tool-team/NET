@@ -70,6 +70,10 @@ obj=preparePhysicalElectrodeSpace(obj);
         obj.plotParams.nAllChannels=numel(obj.plotParams.allChannels); %changed 2.8.16 - Mark to enable gaps in channel numbers in layout
         %obj.plotParams.nAllChannels=max(obj.plotParams.allChannels);
 
+        if numel(obj.channelNumbers)~=obj.plotParams.nAllChannels
+            msgbox('The number of data channels does not fit layout channels!');
+            return;
+        end
         
         obj.plotParams.translation=NaN(obj.plotParams.nAllChannels,3);
         for i=1:obj.plotParams.nAllChannels

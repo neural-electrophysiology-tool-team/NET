@@ -226,30 +226,28 @@ classdef (Abstract) dataRecording < handle
                 A={layoutName};
             end
             
+            
             try
-                elecString=regexp(A{1},'_','split');
-                obj.electrodePitch=str2num(elecString{1});
-                if numel(A)==1
-                    obj.layoutName=['layout_' A{1}];
-                    load(obj.layoutName);
-                    obj.chLayoutNumbers=En;
-                    obj.chLayoutNames=Ena;
-                    obj.chLayoutPositions=Enp;
-                else
-                    for i=1:numel(A)
-                        obj.layoutName{i}=['layout_' A{i}];
-                        load(obj.layoutName{i});
-                        obj.chLayoutNumbers{i}=En;
-                        obj.chLayoutNames{i}=Ena;
-                        obj.chLayoutPositions{i}=Enp;
-                    end
+                allElectrodes=regexp(A{1},',','split');lastElectrode=0;
+                for i=1:numel(allElectrodes)
+                    elecString=regexp(allElectrodes{i},'_','split');
+                    obj.electrodePitch(i)=str2num(elecString{1});
                     
+                    obj.layoutName{i}=['layout_' allElectrodes{i}];
+                    load(obj.layoutName{i});
+                    obj.chLayoutNumbers=[obj.chLayoutNumbers;En+lastElectrode];
+                    obj.chLayoutNames=[obj.chLayoutNames;Ena];
+                    obj.chLayoutPositions=[obj.chLayoutPositions,[Enp(1,:);Enp(2,:)+max(Enp(2,:))+200]];
+                    lastElectrode=size(obj.chLayoutPositions,2);
+                    fprintf('Channel map with pitch %d and layout %s extracted\n',obj.electrodePitch,elecString{2});
                 end
-                fprintf('Channel map with pitch %d and layout %s extracted\n',obj.electrodePitch,elecString{2});
+                if numel(allElectrodes)>1
+                    disp('Multiple electrode detected, stacking them horizontally in display');
+                end
                 
                 %check that all recorded channels are contained within the layout
                 if numel(obj.channelNumbers)>numel(intersect(obj.channelNumbers,En(:)))
-                    warning('Notice that some of the recorded channels are not contained in the layout file, this may result in errors in further analysis!');
+                    warning('Notice that some of the recorded channels are not contained in the layout file (%d channels), this may result in errors in further analysis!\nIf more than one probe is recorded, probe names can be comma seperate in chMap file',numel(obj.channelNumbers));
                 end
             catch
                 fprintf('Failed to extract channel map!!!! check that the name was entered correctly');
@@ -260,10 +258,10 @@ classdef (Abstract) dataRecording < handle
         function []=getKiloSort(obj,varargin)
             parseObj = inputParser;
             parseObj.FunctionName='getKiloSort';
-            addParameter(parseObj,'tempFilesFolder','/home/mark/tempKilosort',@ischar);
+            addParameter(parseObj,'tempFilesFolder','',@ischar);
             addParameter(parseObj,'useKiloSort3',1,@isnumeric);
             addParameter(parseObj,'overwrite',0,@isnumeric);
-            addParameter(parseObj,'outFolder',fullfile(obj.recordingDir,['kiloSortResults_',SA.currentDataObj.recordingName]),@ischar);
+            addParameter(parseObj,'outFolder',fullfile(obj.recordingDir,['kiloSortResults_',obj.recordingName]),@ischar);
             if numel(varargin)==1
                 disp(parseObj.Results);
                 return;
@@ -438,7 +436,7 @@ classdef (Abstract) dataRecording < handle
         
         function [spkData]=convertPhySorting2tIc(obj,pathToPhyResults)
             if nargin==1
-                pathToPhyResults=[obj.recordingDir filesep 'kiloSortResults'];
+                pathToPhyResults=fullfile(obj.recordingDir,['kiloSortResults_',obj.recordingName]);
                 fprintf('Sorting results path not provided, using this path:\n%s\n',pathToPhyResults);
             end
             if ~isfile([pathToPhyResults filesep 'cluster_info.tsv'])
