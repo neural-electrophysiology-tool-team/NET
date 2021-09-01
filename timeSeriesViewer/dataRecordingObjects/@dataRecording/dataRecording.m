@@ -217,18 +217,25 @@ classdef (Abstract) dataRecording < handle
                         end
                 end
                 
-                A = importdata(chMapFiles);
-                if isempty(A)
+                layoutName = importdata(chMapFiles);
+                if isempty(layoutName)
                     error('Channel layout was not extracted successfully from channel map file (*.chMap) ,check file name and content!');
                 end
                 fprintf('Using the file %s for extracting channel map\n',chMapFiles);
             else
-                A={layoutName};
+                %Convert to cell array
+                if ~iscell(layoutName)
+                    layoutName={layoutName};
+                end
+                %remove the layout prefix if entered
+                if all(layoutName{1}(1:7)=='layout_')
+                    layoutName{1}=layoutName{1}(8:end);
+                end
             end
             
             
             try
-                allElectrodes=regexp(A{1},',','split');lastElectrode=0;
+                allElectrodes=regexp(layoutName{1},',','split');lastElectrode=0;
                 for i=1:numel(allElectrodes)
                     elecString=regexp(allElectrodes{i},'_','split');
                     obj.electrodePitch(i)=str2num(elecString{1});
@@ -250,7 +257,7 @@ classdef (Abstract) dataRecording < handle
                     warning('Notice that some of the recorded channels are not contained in the layout file (%d channels), this may result in errors in further analysis!\nIf more than one probe is recorded, probe names can be comma seperate in chMap file',numel(obj.channelNumbers));
                 end
             catch
-                fprintf('Failed to extract channel map!!!! check that the name was entered correctly');
+                fprintf('Failed to extract channel map!!!! check that the name was entered correctly\n');
             end
             
         end

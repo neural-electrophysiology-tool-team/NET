@@ -388,7 +388,9 @@ classdef (Abstract) recAnalysis < handle
                     pFormat=find(strcmp(obj.recTable.Properties.VariableNames,'recFormat'));
                     obj.currentExpFolder=obj.recTable.folder{pRec(1)};
                     %obj = getCurrentObjectMeta(obj);
-%                     obj.currentDataObj.samplingFrequency = obj.currentDataMeta.fs;
+                    %obj.currentDataObj.samplingFrequency = obj.currentDataMeta.fs;
+
+                    %Find in which recording class is the data 
                     if ~isempty(pFormat) & iscell(obj.recTable{pRec(1),pFormat})
                         recFormat=obj.recTable{pRec(1),pFormat};
                         eval(['obj.currentDataObj=' recFormat{1} '(obj.currentDataFiles);']);
@@ -416,6 +418,13 @@ classdef (Abstract) recAnalysis < handle
                         else
                             error(['dataRecording class could not be determined from the file extension: ' num2str(allFullFiles{1}) ',or directory not found']);
                         end
+                    end
+                    
+                    %check if MEA_layout field was provided and use it to define electrode layout
+                    pLayout=find(strcmp(obj.recTable.Properties.VariableNames,'MEA_Layout')); 
+                    if ~isempty(pFormat) & iscell(obj.recTable{pRec(1),pLayout})
+                        recLayout=obj.recTable{pRec(1),pLayout};
+                        obj.currentDataObj.loadChLayout(recLayout{1});
                     end
                     
                     obj.gridSorterObj=[]; %clear any existing grid sorter object from the past 
