@@ -196,7 +196,7 @@ classdef binaryRecording < dataRecording
                 fclose(fidMeta);
                 
                 for i=1:size(metaData{1},1)
-                    if isletter(metaData{2}{i}(1))
+                    if any(isletter(metaData{2}{i}))
                         T.(metaData{1}{i})=metaData{2}{i};
                     else
                         T.(metaData{1}{i})=str2num(metaData{2}{i});
@@ -212,7 +212,11 @@ classdef binaryRecording < dataRecording
                 obj.channelNumbers=T.channelNumbers;
                 obj.channelNames=cellfun(@(x) num2str(x),mat2cell(obj.channelNumbers,1,ones(1,numel(obj.channelNumbers))),'UniformOutput',0);
                 if isfield(T,'vcProbe')
-                    obj=obj.loadChLayout(T.vcProbe(8:end));%remove the layout ending
+                    if strcmp(T.vcProbe(1:7),'Layout_')
+                        obj=obj.loadChLayout(T.vcProbe(8:end));%remove the layout ending
+                    else
+                        obj=obj.loadChLayout(T.vcProbe);%remove the layout ending
+                    end
                 end
                 %check the number of samples in the binary file
                 fid=fopen([obj.recordingDir filesep obj.dataFileNames{1}],'r');

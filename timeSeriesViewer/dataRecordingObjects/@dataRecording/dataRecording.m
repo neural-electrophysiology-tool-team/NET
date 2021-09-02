@@ -235,13 +235,13 @@ classdef (Abstract) dataRecording < handle
             
             
             try
+                obj.layoutName=layoutName{1};
                 allElectrodes=regexp(layoutName{1},',','split');lastElectrode=0;
                 for i=1:numel(allElectrodes)
                     elecString=regexp(allElectrodes{i},'_','split');
                     obj.electrodePitch(i)=str2num(elecString{1});
                     
-                    obj.layoutName{i}=['layout_' allElectrodes{i}];
-                    load(obj.layoutName{i});
+                    load(['layout_' allElectrodes{i}]);
                     obj.chLayoutNumbers=[obj.chLayoutNumbers;En+lastElectrode];
                     obj.chLayoutNames=[obj.chLayoutNames;Ena];
                     obj.chLayoutPositions=[obj.chLayoutPositions,[Enp(1,:);Enp(2,:)+max(Enp(2,:))+200]];
@@ -442,6 +442,7 @@ classdef (Abstract) dataRecording < handle
         end
         
         function [spkData]=convertPhySorting2tIc(obj,pathToPhyResults)
+            spkData=[];
             if nargin==1
                 pathToPhyResults=fullfile(obj.recordingDir,['kiloSortResults_',obj.recordingName]);
                 fprintf('Sorting results path not provided, using this path:\n%s\n',pathToPhyResults);
@@ -453,19 +454,39 @@ classdef (Abstract) dataRecording < handle
                 disp('cluster_info.tsv not found! Please first perform manual annotation using phy and try again.');
                 return;
             end
+            readNPYPath=which('readNPY.m');
+            if isempty(readNPYPath)
+                fprintf('readNPY was not found, trying to add to path please add it to the matlab path and run again\n');
+                return;
+            end
+            %{
+            general info:
+            template_id - ranges from 0 n_templates-1
+            each template is the spike signature on relevant electrodes - spike template multiplied by amplitude for every spike should give ~spike shape
+            cluster - a set of spike supposedly fired by the same neuron
+            cluster have a cluster_id - 0 - n_clusters-1
+            when spikes are removed or added to a cluster the cluster id changes
+            This means that we can not use clusters to extract spike templates. We need to regenerate them
+            %}
+            
             clusterTable=readtable([pathToPhyResults filesep 'cluster_info.tsv'],'FileType','delimitedtext');
             clusterTable=sortrows(clusterTable,'ch');
             spike_clusters = readNPY([pathToPhyResults filesep 'spike_clusters.npy']);
+            %spike_templates = readNPY([pathToPhyResults filesep 'spike_templates.npy']);
             spike_times = readNPY([pathToPhyResults filesep 'spike_times.npy']);
             %labelKS = clusterTable.KSLabel;
+            clusterGroup=readtable([pathToPhyResults filesep 'cluster_group.tsv'],'FileType','delimitedtext');
             label = clusterTable.group;
-            spikeShapes=readNPY([pathToPhyResults filesep 'templates.npy']); %check if this needs to be sorted 
+            nSpks=clusterTable.n_spikes;
+            neuronAmp=clusterTable.amp;
+            %spikeShapes=readNPY([pathToPhyResults filesep 'templates.npy']); %check if this needs to be sorted
             %check for clusters on the same electrode
             [uab,a,b]=unique(clusterTable.ch);
             ic=zeros(4,numel(uab));
             t=cell(1,numel(uab));
             currentIdx=0;prevCh=-1;
-            for i=1:numel(clusterTable.ch)
+            nClusters=numel(clusterTable.ch);
+            for i=1:nClusters
                 t{i}=spike_times(spike_clusters==clusterTable.id(i))';
                 ic(1,i)=clusterTable.ch(i);
                 ic(3,i)=currentIdx+1;
@@ -479,15 +500,28 @@ classdef (Abstract) dataRecording < handle
                 currentIdx=ic(4,i);
             end
             t=double(cell2mat(t))/(obj.samplingFrequency(1)/1000);
-            saveFile=[pathToPhyResults filesep 'sorting_tIc.mat'];
-            fprintf('Saving results to %s\n',saveFile);
-            save(saveFile,'t','ic','label','spikeShapes');
+            saveFileAll=[pathToPhyResults filesep 'sorting_tIc_All.mat'];
+            saveFileValid=[pathToPhyResults filesep 'sorting_tIc.mat'];
+
+            fprintf('Saving results to %s\n',saveFileValid);
+            save(saveFileAll,'t','ic','label','neuronAmp','nSpks'); %save full spikes including noise
+
+            pValid=strcmp(label,'good')|strcmp(label,'mua');
+            label=label(pValid);
+            neuronAmp=neuronAmp(pValid);
+            nSpks=nSpks(pValid);
+            [t,ic]=RemainNeurons(t,ic,ic(1:2,pValid));
+            save(saveFileValid,'t','ic','label','neuronAmp','nSpks');
+            
             if nargout>0
                 spkData.t=t;
                 spkData.ic=ic;
                 spkData.label=label;
                 spkData.spikeShapes=spikeShapes;
+                spkData.neuronAmp=neuronAmp;
+                spkData.nSpks=nSpks;
             end
+            
         end
         
         function []=convertLayoutKSort(obj,outputFile,badChannels)
