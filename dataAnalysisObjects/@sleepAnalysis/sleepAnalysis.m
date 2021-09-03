@@ -3122,7 +3122,8 @@ classdef sleepAnalysis < recAnalysis
             ylim([yl(1)-marg,yl(2)+marg]);
             h(8:9)=line([parDbAutocorr.tStart parDbAutocorr.tStart;parDbAutocorr.tStart+parDbAutocorr.win parDbAutocorr.tStart+parDbAutocorr.win]'/1000/60/60,[yl;yl]','color',[0.8 1 0.8]);
 
-
+            linkaxes(h,'x');
+            
             if saveFigures
                 set(fSAC,'PaperPositionMode','auto');
                 fileName=[obj.currentPlotFolder filesep 'dbSAC_ch' num2str(parDbAutocorr.ch) '_t' num2str(parDbAutocorr.tStart) '_w' num2str(parDbAutocorr.win)];

@@ -420,12 +420,14 @@ classdef (Abstract) recAnalysis < handle
                         end
                     end
                     
-                    %check if MEA_layout field was provided and use it to define electrode layout
-                    pLayout=find(strcmp(obj.recTable.Properties.VariableNames,'MEA_Layout')); 
-                    if ~isempty(pFormat) & iscell(obj.recTable{pRec(1),pLayout})
-                        fprintf('Looking for layout in MEA_Layout...');
-                        recLayout=obj.recTable{pRec(1),pLayout};
-                        obj.currentDataObj.loadChLayout(recLayout{1});
+                    %check if no layout metadata exists and if not check if MEA_layout field was provided and use it to define electrode layout
+                    if isempty(obj.currentDataObj.chLayoutPositions)
+                        pLayout=find(strcmp(obj.recTable.Properties.VariableNames,'MEA_Layout'));
+                        if ~isempty(pFormat) & iscell(obj.recTable{pRec(1),pLayout})
+                            fprintf('Looking for layout in MEA_Layout...');
+                            recLayout=obj.recTable{pRec(1),pLayout};
+                            obj.currentDataObj.loadChLayout(recLayout{1});
+                        end
                     end
                     
                     obj.gridSorterObj=[]; %clear any existing grid sorter object from the past 

@@ -237,20 +237,26 @@ classdef (Abstract) dataRecording < handle
             try
                 obj.layoutName=layoutName{1};
                 allElectrodes=regexp(layoutName{1},',','split');lastElectrode=0;
-                for i=1:numel(allElectrodes)
-                    elecString=regexp(allElectrodes{i},'_','split');
-                    obj.electrodePitch(i)=str2num(elecString{1});
-                    
-                    load(['layout_' allElectrodes{i}]);
-                    obj.chLayoutNumbers=[obj.chLayoutNumbers;En+lastElectrode];
-                    obj.chLayoutNames=[obj.chLayoutNames;Ena];
-                    obj.chLayoutPositions=[obj.chLayoutPositions,[Enp(1,:);Enp(2,:)+max(Enp(2,:))+200]];
-                    lastElectrode=size(obj.chLayoutPositions,2);
-                    fprintf('Channel map with pitch %d and layout %s extracted\n',obj.electrodePitch,elecString{2});
-                end
                 if numel(allElectrodes)>1
                     disp('Multiple electrode detected, stacking them horizontally in display');
                 end
+                
+                for i=1:numel(allElectrodes)
+                    elecString=regexp(allElectrodes{i},'_','split');
+                    electrodePitch(i)=str2num(elecString{1});
+                    
+                    load(['layout_' allElectrodes{i}]);
+                    chLayoutNumbers=[obj.chLayoutNumbers;En+lastElectrode];
+                    chLayoutNames=[obj.chLayoutNames;Ena];
+                    chLayoutPositions=[obj.chLayoutPositions,[Enp(1,:);Enp(2,:)+max(Enp(2,:))+200]];
+                    lastElectrode=size(obj.chLayoutPositions,2);
+                    fprintf('Channel map with pitch %d and layout %s extracted\n',obj.electrodePitch,elecString{2});
+                end
+                %update class at the end in case there was an error and a previous layout already existed
+                obj.chLayoutNames=chLayoutNames;
+                obj.electrodePitch=electrodePitch;
+                obj.chLayoutNumbers=chLayoutNumbers;
+                obj.chLayoutPositions=chLayoutPositions;
                 
                 %check that all recorded channels are contained within the layout
                 if numel(obj.channelNumbers)>numel(intersect(obj.channelNumbers,En(:)))
@@ -267,6 +273,8 @@ classdef (Abstract) dataRecording < handle
             parseObj.FunctionName='getKiloSort';
             addParameter(parseObj,'tempFilesFolder','',@ischar);
             addParameter(parseObj,'useKiloSort3',1,@isnumeric);
+            addParameter(parseObj,'tStart',0,@isnumeric); % in milliseconds
+            addParameter(parseObj,'tEnd',Inf,@isnumeric); % in milliseconds
             addParameter(parseObj,'overwrite',0,@isnumeric);
             addParameter(parseObj,'outFolder',fullfile(obj.recordingDir,['kiloSortResults_',obj.recordingName]),@ischar);
             if numel(varargin)==1
@@ -280,7 +288,7 @@ classdef (Abstract) dataRecording < handle
             % generate config structure
             rootH = par.tempFilesFolder; %where to save temp files for spike sorting (should be a fast drive)
             
-            ops.trange    = [0 Inf]; % time range to sort
+            ops.trange    = [par.tStart par.tEnd]/1000; % time range to sort - move to time units of seconds
             ops.NchanTOT  = numel(obj.channelNumbers); % total number of channels in your recording
             ops.fproc   = fullfile(rootH, 'temp_wh.dat'); % proc file on a fast SSD
             ops.fbinary = fullfile(obj.recordingDir, obj.dataFileNames{1});
