@@ -449,11 +449,16 @@ classdef (Abstract) dataRecording < handle
             delete([tmpSaveFile '.mat']);
         end
         
-        function [spkData]=convertPhySorting2tIc(obj,pathToPhyResults)
+        function [spkData]=convertPhySorting2tIc(obj,pathToPhyResults,tStart)
             spkData=[];
             if nargin==1
                 pathToPhyResults=fullfile(obj.recordingDir,['kiloSortResults_',obj.recordingName]);
                 fprintf('Sorting results path not provided, using this path:\n%s\n',pathToPhyResults);
+            else
+                if isempty(pathToPhyResults)
+                    pathToPhyResults=fullfile(obj.recordingDir,['kiloSortResults_',obj.recordingName]);
+                    fprintf('Sorting results path not provided, using this path:\n%s\n',pathToPhyResults);
+                end
             end
             if ~isfile([pathToPhyResults filesep 'cluster_info.tsv'])
                 fprintf('Manual annotation phase with phy not completed! Please run again after completing!!!\n');
@@ -511,6 +516,9 @@ classdef (Abstract) dataRecording < handle
             saveFileAll=[pathToPhyResults filesep 'sorting_tIc_All.mat'];
             saveFileValid=[pathToPhyResults filesep 'sorting_tIc.mat'];
 
+            if nargin==3
+                t=t+tStart;
+            end
             fprintf('Saving results to %s\n',saveFileValid);
             save(saveFileAll,'t','ic','label','neuronAmp','nSpks'); %save full spikes including noise
 
