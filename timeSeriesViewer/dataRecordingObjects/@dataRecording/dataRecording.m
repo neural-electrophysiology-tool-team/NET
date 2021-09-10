@@ -268,10 +268,10 @@ classdef (Abstract) dataRecording < handle
             
         end
         
-        function []=getKiloSort(obj,varargin)
+        function []=getKiloSort(obj,tempFilesFolder,varargin)
             parseObj = inputParser;
             parseObj.FunctionName='getKiloSort';
-            addParameter(parseObj,'tempFilesFolder','',@ischar);
+            addRequired(parseObj,'tempFilesFolder',@ischar);
             addParameter(parseObj,'useKiloSort3',1,@isnumeric);
             addParameter(parseObj,'tStart',0,@isnumeric); % in milliseconds
             addParameter(parseObj,'tEnd',Inf,@isnumeric); % in milliseconds
@@ -281,7 +281,7 @@ classdef (Abstract) dataRecording < handle
                 disp(parseObj.Results);
                 return;
             end
-            parseObj.parse(varargin{:});
+            parseObj.parse(tempFilesFolder,varargin{:});
             %make parameter structure
             par=parseObj.Results;
             
@@ -290,7 +290,7 @@ classdef (Abstract) dataRecording < handle
             
             ops.trange    = [par.tStart par.tEnd]/1000; % time range to sort - move to time units of seconds
             ops.NchanTOT  = numel(obj.channelNumbers); % total number of channels in your recording
-            ops.fproc   = fullfile(rootH, 'temp_wh.dat'); % proc file on a fast SSD
+            ops.fproc   = fullfile(rootH,'temp_wh.dat'); % proc file on a fast SSD
             ops.fbinary = fullfile(obj.recordingDir, obj.dataFileNames{1});
             ops.fs = obj.samplingFrequency(1);% sample rate
             ops.fshigh = 200;% frequency for high pass filtering (150)
@@ -439,7 +439,13 @@ classdef (Abstract) dataRecording < handle
             
             
             fprintf('Done kilosort\nSaving results and exporting Phy templates to %s\n',par.outFolder);
-            mkdir(par.outFolder)
+            if isdir(par.outFolder)
+                fprintf('Deleting previous kilosort results...\n')
+                delete([par.outFolder filsep '*.npy']);
+                delete([par.outFolder filsep '*.tsv']);
+            else
+                mkdir(par.outFolder)
+            end
             save(par.outFolder,'rez');
             if par.useKiloSort3
                 rezToPhy2(rez, par.outFolder);

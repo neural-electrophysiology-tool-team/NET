@@ -398,6 +398,7 @@ classdef (Abstract) recAnalysis < handle
                     %Find in which recording class is the data 
                     if ~isempty(pFormat) & iscell(obj.recTable{pRec(1),pFormat})
                         recFormat=obj.recTable{pRec(1),pFormat};
+                        fprintf('Setting %s, pRec=%d, file=%s\n',recFormat{1},pRec(1),obj.currentDataFiles{1});
                         eval(['obj.currentDataObj=' recFormat{1} '(obj.currentDataFiles);']);
                     else
                         if strcmp(allFullFiles{1}(end-3:end),'.mcd') %MCRack recording
