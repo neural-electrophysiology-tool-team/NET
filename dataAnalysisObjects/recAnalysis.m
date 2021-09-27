@@ -7,7 +7,7 @@ classdef (Abstract) recAnalysis < handle
         excelRecordingDataFileName
         nTotalRecordings
         parPool4Batch = false;
-        currentDataMeta
+        currentRecordingMeta
         currentDataObj
         currentRecName
         currentPRec
@@ -441,6 +441,7 @@ classdef (Abstract) recAnalysis < handle
                     %create data object
                     obj.currentRecName=recName;
                     obj.currentPRec=pRec;
+                    obj.currentRecordingMeta=obj.recTable(obj.currentPRec,:);
                     
                     %define related folders and construct correspondin file names
                     obj.currentAnalysisFolder=[obj.recTable.folder{pRec(1)} filesep 'analysis' filesep recName];

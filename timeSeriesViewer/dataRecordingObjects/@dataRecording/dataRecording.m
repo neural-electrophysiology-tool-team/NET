@@ -441,8 +441,8 @@ classdef (Abstract) dataRecording < handle
             fprintf('Done kilosort\nSaving results and exporting Phy templates to %s\n',par.outFolder);
             if isdir(par.outFolder)
                 fprintf('Deleting previous kilosort results...\n')
-                delete([par.outFolder filsep '*.npy']);
-                delete([par.outFolder filsep '*.tsv']);
+                delete([par.outFolder filesep '*.npy']);
+                delete([par.outFolder filesep '*.tsv']);
             else
                 mkdir(par.outFolder)
             end
