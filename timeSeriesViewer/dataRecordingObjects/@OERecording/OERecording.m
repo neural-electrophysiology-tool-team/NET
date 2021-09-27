@@ -248,17 +248,20 @@ classdef OERecording < dataRecording
             if ~iscell(obj.recordingDir)
                 nRecordings=1;
             else
-                nRecordings=numel(obj.recordingDir)
+                nRecordings=numel(obj.recordingDir);
             end
-            for j=1:nRecordings
-                fclose(obj.fid(j));
-                fclose(obj.fidA(j));
-                fclose(obj.fidEvnt(j));
+            if ~isempty(obj.fid)
+                for j=1:nRecordings
+                    fclose(obj.fid(j));
+                    fclose(obj.fidA(j));
+                    fclose(obj.fidEvnt(j));
+                end
             end
         end
         
         function obj=extractMetaData(obj)
             
+            fprintf('Extracting meta data from: %s...\n',obj.recordingDir);
             obj.eventFiles=dir([obj.recordingDir filesep '*.' obj.eventFileExtension]);
             
             %get channel information
@@ -266,6 +269,9 @@ classdef OERecording < dataRecording
             channelFiles={channelFiles.name};
             
             channelNamesAll=cellfun(@(x) regexp(x,['[A-Z]+\d+'],'match'),channelFiles,'UniformOutput',0);
+            if all(cellfun(@(x) isempty(x),channelNamesAll))
+                error('The data filename format is not familiar to the OERecording class, please check that the files were saved in the right format or change filenames');
+            end
             channelNamesAll=cellfun(@(x) x{1},channelNamesAll,'UniformOutput',0);
             channelNumbersAll=cellfun(@(x) str2double(regexp(x,'\d+','match')),channelNamesAll,'UniformOutput',1);
             
