@@ -288,7 +288,7 @@ classdef (Abstract) dataRecording < handle
             % generate config structure
             rootH = par.tempFilesFolder; %where to save temp files for spike sorting (should be a fast drive)
             
-            ops.trange    = [par.tStart par.tEnd]/1000; % time range to sort - move to time units of seconds
+            ops.trange    = [par.tStart',par.tEnd']/1000; % time range to sort - move to time units of seconds
             ops.NchanTOT  = numel(obj.channelNumbers); % total number of channels in your recording
             ops.fproc   = fullfile(rootH,'temp_wh.dat'); % proc file on a fast SSD
             ops.fbinary = fullfile(obj.recordingDir, obj.dataFileNames{1});

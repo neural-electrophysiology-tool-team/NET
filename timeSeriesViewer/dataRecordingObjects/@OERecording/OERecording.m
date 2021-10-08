@@ -253,9 +253,15 @@ classdef OERecording < dataRecording
             if ~isempty(obj.fid)
                 for j=1:nRecordings
                     fclose(obj.fid(j));
-                    fclose(obj.fidA(j));
-                    fclose(obj.fidEvnt(j));
                 end
+            end
+            if ~isempty(obj.fidA)
+                for j=1:nRecordings
+                    fclose(obj.fidA(j));
+                end
+            end
+            if ~isempty(obj.fidEvnt)
+                fclose(obj.fidEvnt);
             end
         end
         
@@ -270,10 +276,17 @@ classdef OERecording < dataRecording
             
             channelNamesAll=cellfun(@(x) regexp(x,['[A-Z]+\d+'],'match'),channelFiles,'UniformOutput',0);
             if all(cellfun(@(x) isempty(x),channelNamesAll))
-                error('The data filename format is not familiar to the OERecording class, please check that the files were saved in the right format or change filenames');
+                fprintf('The expected file format 100_CHX.continous was not found. Trying the format 100_X.continous...\n');
+                channelNamesAll=cellfun(@(x) regexp(x,['_\d+'],'match'),channelFiles,'UniformOutput',0);
+                if all(cellfun(@(x) isempty(x),channelNamesAll))
+                    error('The data filename format is not familiar to the OERecording class, please check that the files were saved in the right format or change filenames');
+                end
+                channelNamesAll=cellfun(@(x) ['CH' x{1}(2:end)],channelNamesAll,'UniformOutput',0);
+                channelNumbersAll=cellfun(@(x) str2double(x(3:end)),channelNamesAll,'UniformOutput',1);
+            else
+                channelNamesAll=cellfun(@(x) x{1},channelNamesAll,'UniformOutput',0);
+                channelNumbersAll=cellfun(@(x) str2double(regexp(x,'+\d+','match')),channelNamesAll,'UniformOutput',1);
             end
-            channelNamesAll=cellfun(@(x) x{1},channelNamesAll,'UniformOutput',0);
-            channelNumbersAll=cellfun(@(x) str2double(regexp(x,'\d+','match')),channelNamesAll,'UniformOutput',1);
             
             %find channel types analog ch / electrode ch
             pCh=cellfun(@(x) mean(x([1 2])=='CH')==1,channelNamesAll);

@@ -189,10 +189,14 @@ classdef sleepAnalysis < recAnalysis
                 accCh=str2num(cell2mat(split(accCh{1},','))); %get accelerometer channel numbers as numerics
             end
             
-            if strcmp(class(obj.currentDataObj),'OERecording')
-                readFromAnalogCh=1;
-            else
+            %check if accelerometer data is saved in analog channels or in electrode data channels
+            if all(ismember(accCh,obj.currentDataObj.channelNumbers)) && ~all(ismember(accCh,obj.currentDataObj.analogChannelNumbers)) %strcmp(class(obj.currentDataObj),'OERecording')
                 readFromAnalogCh=0;
+                if any(accCh==1)
+                    error('Accelerometer channel numbers cant be correct since they overlab with regular channel numbers and no analog channels were found in the recording!');
+                end
+            else
+                readFromAnalogCh=1;
             end
             
             %check if analysis was already done done
@@ -1914,17 +1918,34 @@ classdef sleepAnalysis < recAnalysis
                     waitbar(i/nFrames,hWB);
                     visiblePointsOld = oldPoints(isFound, :);
                     % Estimate the geometric transformation between the old points and the new points and eliminate outliers
-                    [xform] = estimateGeometricTransform(visiblePointsOld, visiblePoints, 'similarity', 'MaxDistance', 4);
-                    bboxPoints = transformPointsForward(xform, bboxPoints);
-                    bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2]; %calculate center
-                    largeDiffInNPoints=(size(points,1)-size(oldPoints,1)*0.9)<0;
-                    oldPoints=points;
+
+
 
                     if nFoundPoints(i) > 10 % need at least 2 points to ensure we are still reliably tracking the object
+                        [xform] = estimateGeometricTransform(visiblePointsOld, visiblePoints, 'similarity', 'MaxDistance', 4);
+                        bboxPoints = transformPointsForward(xform, bboxPoints);
+                        bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2]; %calculate center
+                        largeDiffInNPoints=(size(points,1)-size(oldPoints,1)*0.9)<0;
+                        oldPoints=points;
+                        
                         % Apply the transformation to the bounding box points
                         % Reset the points
                         if size(visiblePoints,1)<minTrackingPoints || mod(i,updatePointsSkip)==0 || largeDiffInNPoints
                             contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
+                            %check if contour box does not exceed image limits 
+                            if (contourBox(1)+contourBox(3))>videoReader.Width
+                                contourBox(3)=videoReader.Width-contourBox(1);
+                            end
+                            if (contourBox(2)+contourBox(4))>videoReader.Height
+                                contourBox(4)=videoReader.Height-contourBox(2);
+                            end
+                            if contourBox(1) < 1
+                                contourBox(1)=1;
+                            end
+                            if contourBox(2) < 1
+                                contourBox(2)=1;
+                            end
+                            
                             newPoints = detectMinEigenFeatures(videoFrame, 'ROI', contourBox ); %this function can not receive a polygon only a rectangle along the main axes
                             newPoints = newPoints.Location;
                             in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
@@ -4368,6 +4389,125 @@ classdef sleepAnalysis < recAnalysis
     end
     
     methods (Static)
+        
+        function [hOut]=polarCyclePlot(histPhaseEdges,histValues,linePhases,lineValues,varargin)
+            parseObj = inputParser;
+            parseObj.FunctionName='sleepAnalysis\polarCyclePlot';
+            addOptional(parseObj,'linePhases2',[],@isnumeric);
+            addOptional(parseObj,'lineValues2',[],@isnumeric);
+            addParameter(parseObj,'plotMeanDirection',0,@isnumeric);
+            addParameter(parseObj,'graphicsHandle',[],@ishghandle);
+            addParameter(parseObj,'rLim4Rose',[],@isnumeric);
+            addParameter(parseObj,'randomHistValues',[],@isnumeric);
+            addParameter(parseObj,'RoseAlpha',0.9,@isnumeric);
+            addParameter(parseObj,'noBackground',0,@isnumeric);
+            addParameter(parseObj,'inputParams',false,@isnumeric);
+            addParameter(parseObj,'plotRandomDist',1,@isnumeric);
+            parseObj.parse(varargin{:});
+            
+            if parseObj.Results.inputParams
+                disp(parseObj.Results);
+                return;
+            end
+            
+            %evaluate all input parameters in workspace
+            for i=1:numel(parseObj.Parameters)
+                eval([parseObj.Parameters{i} '=' 'parseObj.Results.(parseObj.Parameters{i});']);
+            end
+
+            if isempty(graphicsHandle)
+                hOut.fH=figure;
+                hOut.h=polaraxes;
+            elseif isa(graphicsHandle,'matlab.ui.Figure') %if input handle is a figure
+                hOut.h=polaraxes;
+            elseif isa(graphicsHandle,'matlab.graphics.axis.PolarAxes')
+                hOut.h=graphicsHandle;
+            else
+                error('Incorrent graphics handle input provided in graphicsHandle (if axis it should be polar axis).');
+            end
+            hold(hOut.h,'on');
+
+            cMap=lines(8);
+            
+            if ~isempty(rLim4Rose)
+                hTmp = polarTight(0, rLim4Rose);
+                delete(hTmp)
+                set(h, 'Nextplot','add');
+            end
+            
+            if ~isempty(histPhaseEdges)
+                hOut.hRose=polarhistogram('BinEdges',histPhaseEdges,'BinCounts',histValues);
+                hOut.hRose.Color=[0.9 0.078 0.184];
+                XdataRose = get(hOut.hRose,'Xdata');XdataRose=reshape(XdataRose,[4,numel(XdataRose)/4]);
+                YdataRose = get(hOut.hRose,'Ydata');YdataRose=reshape(YdataRose,[4,numel(YdataRose)/4]);
+                hOut.hPatch=patch(XdataRose,YdataRose,[0.9 0.078 0.184]);
+                set(hOut.hPatch,'FaceAlpha',RoseAlpha);
+                %set(h,'color','k');
+                if plotMeanDirection
+                    mPhase=angle(mean(normLineValues.*exp(1i.*linePhases)));%Mean of circular quantities - wiki
+                    hOut.hPolarAvg=polarplot([mPhase,mPhase],[0 1],'--','color',cMap(1,:,:),'linewidth',3)
+                end
+            end
+            
+            if ~isempty(linePhases)
+                normLineValues=normZeroOne(lineValues);
+                hOut.hPolar=polarplot(hOut.h,[linePhases,linePhases(1)],[normLineValues normLineValues(1)]); %the first value is added to close the circle (0-360 deg)
+                hOut.hPolar.LineWidth=2;
+                hOut.hPolar.Color=cMap(1,:,:);
+                if plotMeanDirection
+                   mPhase=angle(mean(normLineValues.*exp(1i.*linePhases)));%Mean of circular quantities - wiki
+                   lineColor=sum([2*cMap(1,:,:);[0,0,0]])/3;
+                   hOut.hPolarAvg=polarplot([mPhase,mPhase],[0 1],':','color',lineColor,'linewidth',3);
+                end
+            end
+            
+            if ~isempty(linePhases2)
+                normLineValues2=normZeroOne(lineValues2);
+                hOut.hPolar2=polarplot([linePhases2,linePhases2(1)],[normLineValues2,normLineValues2(1)]); %the first value is added to close the circle (0-360 deg)
+                hOut.hPolar2.LineWidth=2;
+                hOut.hPolar2.Color=cMap(2,:,:);
+                if plotMeanDirection
+                   mPhase2=angle(mean(normLineValues2.*exp(1i.*linePhases2)));%Mean of circular quantities - wiki
+                   lineColor2=sum([2*cMap(2,:,:);[0,0,0]])/3;
+                   hOut.hPolarAvg2=polarplot([mPhase2,mPhase2],[0 1],':','color',lineColor2,'linewidth',3);
+                end
+            end
+            
+            if ~isempty(histPhaseEdges)
+                uistack(hOut.hPatch, 'top');
+            end
+            
+            h.ThetaTick=[0 90 180 270];
+            h.RTick=[0.5 1];
+            h.FontSize=16;
+            if ~isempty(randomHistValues)
+                hOut.hRose2=polarhistogram('BinEdges',histPhaseEdges,'BinCounts',randomHistValues);
+                hOut.hRose2.Color=[0.5 0.5 0.5];
+            end
+            
+            %Plot legend
+            hands=[];legendNames={};
+            if ~isempty(histPhaseEdges)
+                hands=[hands,hOut.hRose];
+                legendNames=[legendNames,'histParam'];
+            end
+            if ~isempty(randomHistValues)
+                hands=[hands,hOut.hRose2];
+                legendNames=[legendNames,'shuffled'];
+            end
+            if ~isempty(linePhases)
+                hands=[hands,hOut.hPolar];
+                legendNames=[legendNames,'lineParam1'];
+            end
+            if ~isempty(linePhases2)
+                hands=[hands,hOut.hPolar2];
+                legendNames=[legendNames,'lineParam2'];
+            end
+            hOut.l=legend(hands,legendNames);
+            hOut.l.Color=[1 1 1];
+            hOut.l.Box='off';
+            hOut.l.Position=[0.7133    0.8317    0.1786    0.1190];
+        end
         
         %Helper methods for video analysis functions
         function [xInd,yInd,OFBox]=recalculateSampledImageArea4OpticFlow(xInd,yInd,bboxCenter,frameWidth,frameHeight)
