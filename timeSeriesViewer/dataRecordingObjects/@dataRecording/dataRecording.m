@@ -12,6 +12,7 @@ classdef (Abstract) dataRecording < handle
         channelNumbersOrignal %check if we can remove this - not clear
         triggerNames %the names of trigger channels (not critical)
         analogChannelNumbers % (1xN) the numbers of channels containing non-electrode analog inputs
+        analogChannelNames % (1xN) the numbers of channels containing non-electrode analog inputs
         dspLowCutFrequency % (1x1) Low-pass cutoff frequency in the Neuralynx DSP (in raw data)
         dspHighCutFrequency % (1x1) High-pass cutoff frequency in the Neuralynx DSP (in raw data)
         nRecordings % (1x1) number of recording files
@@ -105,7 +106,10 @@ classdef (Abstract) dataRecording < handle
                 recordingDir=obj.recordingDir;
                 recordingName = obj.recordingName; %make sure this always work
             end
-            save([recordingDir filesep recordingName '_metaData.mat'],'metaData');
+            if isempty(obj.metaDataFile)
+                obj.metaDataFile=[recordingDir filesep recordingName '_metaData.mat'];
+            end
+            save(obj.metaDataFile,'metaData');
         end
         
         function [X,Y,Z]=getElectrodePositions(obj,electrodePitch)

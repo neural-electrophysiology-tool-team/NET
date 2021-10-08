@@ -189,16 +189,6 @@ classdef sleepAnalysis < recAnalysis
                 accCh=str2num(cell2mat(split(accCh{1},','))); %get accelerometer channel numbers as numerics
             end
             
-            %check if accelerometer data is saved in analog channels or in electrode data channels
-            if all(ismember(accCh,obj.currentDataObj.channelNumbers)) && ~all(ismember(accCh,obj.currentDataObj.analogChannelNumbers)) %strcmp(class(obj.currentDataObj),'OERecording')
-                readFromAnalogCh=0;
-                if any(accCh==1)
-                    error('Accelerometer channel numbers cant be correct since they overlab with regular channel numbers and no analog channels were found in the recording!');
-                end
-            else
-                readFromAnalogCh=1;
-            end
-            
             %check if analysis was already done done
             obj.files.lizMov=[obj.currentAnalysisFolder filesep 'lizMov.mat'];
             if exist(obj.files.lizMov,'file') & ~overwrite
@@ -210,6 +200,19 @@ classdef sleepAnalysis < recAnalysis
                 return;
             end
             obj.getFilters;
+            
+            %check if accelerometer data is saved in analog channels or in electrode data channels and verify that they exist
+            if all(ismember(accCh,obj.currentDataObj.channelNumbers)) && ~all(ismember(accCh,obj.currentDataObj.analogChannelNumbers)) %strcmp(class(obj.currentDataObj),'OERecording')
+                readFromAnalogCh=0;
+                if any(accCh==1)
+                    error('Accelerometer channel numbers cant be correct since they overlap with regular channel numbers and no analog channels were found in the recording!');
+                end
+            else
+                readFromAnalogCh=1;
+                if ~all(ismember(accCh,obj.currentDataObj.analogChannelNumbers))
+                    error('The specified accelerometer channel numbers do not exist in the recording! Check data table!');
+                end
+            end
             
             movWinSamples=movWin/1000*obj.filt.FFs;%obj.filt.FFs in Hz, movWin in samples
             movOLWinSamples=movOLWin/1000*obj.filt.FFs;

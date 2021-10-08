@@ -1,7 +1,5 @@
 classdef OERecording < dataRecording
     properties
-        channelNumbersAnalog
-        channelNamesAnalog
         channelFiles
         channelFilesAnalog
         eventFiles
@@ -148,7 +146,7 @@ classdef OERecording < dataRecording
             window_ms=windowSamples*obj.sample_ms;
             
             if isempty(channels) %if no channels are entered, get all channels
-                channels=obj.channelNumbersAnalog;
+                channels=obj.analogChannelNumbers;
             end
             nCh=numel(channels);
             
@@ -285,7 +283,7 @@ classdef OERecording < dataRecording
                 channelNumbersAll=cellfun(@(x) str2double(x(3:end)),channelNamesAll,'UniformOutput',1);
             else
                 channelNamesAll=cellfun(@(x) x{1},channelNamesAll,'UniformOutput',0);
-                channelNumbersAll=cellfun(@(x) str2double(regexp(x,'+\d+','match')),channelNamesAll,'UniformOutput',1);
+                channelNumbersAll=cellfun(@(x) str2double(regexp(x,'\d+','match')),channelNamesAll,'UniformOutput',1);
             end
             
             %find channel types analog ch / electrode ch
@@ -296,20 +294,20 @@ classdef OERecording < dataRecording
             obj.channelFiles=channelFiles(pCh);
             
             obj.channelNumbers=channelNumbersAll(pCh);
-            obj.channelNumbersAnalog=channelNumbersAll(pAnalogCh);
+            obj.analogChannelNumbers=channelNumbersAll(pAnalogCh);
             
             obj.channelNames=channelNamesAll(pCh);
-            obj.channelNamesAnalog=channelNamesAll(pAnalogCh);
+            obj.analogChannelNames=channelNamesAll(pAnalogCh);
             
             [obj.channelNumbers,pTmp]=sort(obj.channelNumbers);
             obj.channelFiles=obj.channelFiles(pTmp);
             obj.channelNames=obj.channelNames(pTmp);
             obj.n2s(obj.channelNumbers)=1:numel(obj.channelNumbers);
             
-            [obj.channelNumbersAnalog,pTmp]=sort(obj.channelNumbersAnalog);
+            [obj.analogChannelNumbers,pTmp]=sort(obj.analogChannelNumbers);
             obj.channelFilesAnalog=obj.channelFilesAnalog(pTmp);
-            obj.channelNamesAnalog=obj.channelNamesAnalog(pTmp);
-            obj.n2sA(obj.channelNumbersAnalog)=1:numel(obj.channelNumbersAnalog);
+            obj.analogChannelNames=obj.analogChannelNames(pTmp);
+            obj.n2sA(obj.analogChannelNumbers)=1:numel(obj.analogChannelNumbers);
             
             obj=obj.getFileIdentifiers;
             for i=1:numel(obj.channelFiles)
@@ -462,7 +460,7 @@ classdef OERecording < dataRecording
             end
             obj.recordingDir=[pathstr filesep name];
             obj.recordingName = name;
-            obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData.mat'];
+            obj.metaDataFile=[obj.recordingDir filesep obj.recordingName 'OE_metaData.mat'];
             %obj.dataFileNames=dir([pathstr filesep name filesep '*.' obj.fileExtension]);
         end
         
