@@ -154,7 +154,7 @@ classdef (Abstract) dataRecording < handle
                     if nargin==2
                         load(fileName);
                     else
-                        load([obj.recordingDir filesep obj.recordingName '_metaData.mat'],'metaData');
+                        load(obj.metaDataFile,'metaData');
                     end
                     fieldNames=fieldnames(metaData);
                     for i=1:numel(fieldNames)
@@ -166,7 +166,7 @@ classdef (Abstract) dataRecording < handle
                         if nargin==2
                             load(fileName{i});
                         else
-                            load([oldRecordingDir{i} filesep recordingName '_metaData'],'metaData');
+                            load(obj.metaDataFile,'metaData');
                         end
                         fieldNames=fieldnames(metaData);
                         for j=1:numel(fieldNames)
@@ -935,10 +935,12 @@ classdef (Abstract) dataRecording < handle
             else
                 obj.recordingName=name;
             end
-            if ~iscell(obj.recordingDir)
-                obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
-            else
-                obj.metaDataFile=[obj.recordingDir{1} filesep obj.recordingName '_metaData'];
+            if isempty(obj.metaDataFile) %remove this in future version ()
+                if ~iscell(obj.recordingDir)
+                    obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
+                else
+                    obj.metaDataFile=[obj.recordingDir{1} filesep obj.recordingName '_metaData'];
+                end
             end
         end
 
