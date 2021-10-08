@@ -106,9 +106,6 @@ classdef (Abstract) dataRecording < handle
                 recordingDir=obj.recordingDir;
                 recordingName = obj.recordingName; %make sure this always work
             end
-            if isempty(obj.metaDataFile)
-                obj.metaDataFile=[recordingDir filesep recordingName '_metaData.mat'];
-            end
             save(obj.metaDataFile,'metaData');
         end
         
@@ -136,10 +133,10 @@ classdef (Abstract) dataRecording < handle
         
         function deleteMetaData(obj)
             if ~iscell(obj.recordingDir)
-                delete([obj.recordingDir filesep obj.recordingName '_metaData.mat']);
+                delete(obj.metaDataFile);
             else
                 for i=1:numel(obj.recordingDir)
-                    delete([obj.recordingDir{i} filesep 'metaData.mat']);
+                    delete(obj.metaDataFile);
                 end
             end
         end
@@ -935,11 +932,12 @@ classdef (Abstract) dataRecording < handle
             else
                 obj.recordingName=name;
             end
-            if isempty(obj.metaDataFile) %remove this in future version ()
+            %for some class like OERecording a speicific metadata file name is give, if not use this name for metadata
+            if isempty(obj.metaDataFile)
                 if ~iscell(obj.recordingDir)
-                    obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
+                    obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData.mat'];
                 else
-                    obj.metaDataFile=[obj.recordingDir{1} filesep obj.recordingName '_metaData'];
+                    obj.metaDataFile=[obj.recordingDir{1} filesep obj.recordingName '_metaData.mat'];
                 end
             end
         end
