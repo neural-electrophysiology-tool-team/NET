@@ -20,6 +20,10 @@ classdef AVPlotData < handle
         plotNames=[];           %plot names extracted from plot library
         currentPlotIdx=[];
         refreshPlot=0;
+        plotAnalogChannels=0;   %whether to plot the analog channels
+        analogChannelNames=[];  %analog channel names
+        analogScaling=1;
+        yl=[];                  %the data limits used in plots
     end
     properties (Hidden)
         recordingObjReference=[]; %a handle to a recording object to modify recording properties directly
@@ -27,6 +31,7 @@ classdef AVPlotData < handle
     properties (SetObservable)
         M=[];                   %activity data [nChannels x nTrials x nSamples]
         channelNumbers=[];      %channel numbers
+        A=[];                   %analog data [nChannels x nTrials x nSamples]
     end
     methods
         %class constractor

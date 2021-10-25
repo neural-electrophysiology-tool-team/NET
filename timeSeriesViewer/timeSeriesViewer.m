@@ -176,6 +176,10 @@ end
                 end
             end
         end
+        if AVG.plotData.plotAnalogChannels
+            AVG.plotData.A=AVG.recordingObj.getAnalogData([],AVG.Params.startTime,AVG.Params.window);
+            AVG.plotData.analogChannelNames=AVG.Params.analogChannelNames;
+        end
         
         %Run the relevant plot method
         AVG.plotData.replot;
@@ -227,6 +231,9 @@ end
         %adjust channels
         AVG.Params.channelNames=AVG.recordingObj.channelNames;
         AVG.Params.channelNumbers=AVG.recordingObj.channelNumbers;
+        AVG.Params.analogChannelNames=AVG.recordingObj.analogChannelNames;
+        AVG.Params.analogChannelNumbers=AVG.recordingObj.analogChannelNumbers;
+        
         AVG.Params.activeChannelPlaces=1:numel(AVG.Params.channelNumbers);
         
         %adjust start time

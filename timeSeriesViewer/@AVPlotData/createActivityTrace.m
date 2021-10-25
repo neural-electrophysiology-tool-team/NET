@@ -5,6 +5,8 @@ obj.refreshPlot=1;
 %define default values
 obj.plotParams.verticalShift=NaN;
 obj.plotParams.plotChannelNumbers=1;
+obj.plotParams.plotAnalogData=0;
+obj.plotParams.analogScaling=1;
 
 obj.hPlotControls.plotPropGrid=uix.Grid('Parent', obj.hControlPanel, 'Padding', 5, 'Spacing', 10);
 
@@ -16,9 +18,20 @@ obj.hPlotControls.verticalShiftEdit=uicontrol('Parent', obj.hPlotControls.plotPr
     'Callback',@CallbackVerticalShiftEdit,'Style','edit', 'String','vertical shift');
 obj.hPlotControls.plotChannelNumbersCheckbox=uicontrol('Parent', obj.hPlotControls.plotPropGrid,...
     'Callback',@CallbackPlotChannelNumbersCheckbox, 'Style','checkbox','value',obj.plotParams.plotChannelNumbers,'String','plot channel numbers');
-set(obj.hPlotControls.plotPropGrid, 'Widths',-1,'Heights', [30 30 30 30] );
+obj.hPlotControls.plotChannelNumbersCheckbox=uicontrol('Parent', obj.hPlotControls.plotPropGrid,...
+    'Callback',@CallbackPlotAnalogDataCheckbox, 'Style','checkbox','value',obj.plotParams.plotAnalogData,'String','plot analog data');
+obj.hPlotControls.analogScalingEdit=uicontrol('Parent', obj.hPlotControls.plotPropGrid,...
+    'Callback',@CallbackAnalogScalingEdit,'Style','edit', 'String','analog scaling');
+set(obj.hPlotControls.plotPropGrid, 'Widths',-1,'Heights', [30 30 30 30 30 30] );
 
 %callback functions for plot controls
+    function CallbackPlotAnalogDataCheckbox(hObj,event)
+        obj.plotAnalogChannels=obj.hPlotControls.plotChannelNumbersCheckbox.Value;
+    end
+    function CallbackAnalogScalingEdit(hObj,event)
+        obj.analogScaling=str2double(obj.hPlotControls.analogScalingEdit.String);
+    end
+
     function CallbackNoOverlapPush(hObj,event)
         if obj.nCh>1 || obj.nTrials>1
             M=squeeze(obj.M);

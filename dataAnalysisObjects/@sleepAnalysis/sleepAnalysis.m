@@ -87,46 +87,34 @@ classdef sleepAnalysis < recAnalysis
             
             if h==0
                 fH=figure;
-                h=axes;
+                h=polaraxes;hold on;
             else
                 saveFigures=0;
-                axes(h);
+                polaraxes(h);hold on;
             end
             cMap=lines(8);
             
+            hOut.hRose=polarhistogram(phaseMov*2*pi-mPhaseDB,nBins,'FaceColor',[0.9 0.078 0.184],'FaceAlpha',0.7);
+            h.ThetaTick=[0 90 180 270];
             if ~isempty(rLim4Rose)
-                hTmp = polarTight(0, rLim4Rose);
-                delete(hTmp)
-                set(h, 'Nextplot','add');hold on;
+                h.RLim=[0 rLim4Rose];
             end
-
-            hOut.hRose=rose(phaseMov*2*pi-mPhaseDB,nBins);
-            hOut.hRose.Color=[0.9 0.078 0.184];
-            XdataRose = get(hOut.hRose,'Xdata');XdataRose=reshape(XdataRose,[4,numel(XdataRose)/4]);
-            YdataRose = get(hOut.hRose,'Ydata');YdataRose=reshape(YdataRose,[4,numel(YdataRose)/4]);
-            hOut.hPatch=patch(XdataRose,YdataRose,[0.9 0.078 0.184]);
-            set(hOut.hPatch,'FaceAlpha',RoseAlpha);
+            
             %set(h,'color','k');
-            maxSamplesInBin=max(max(sqrt(XdataRose.^2+YdataRose.^2)));hold on;
+            maxSamplesInBin=h.RLim*0.9;
             
-            hOut.hPolar=polar([0 (1:nBins)/nBins]*pi*2-mPhaseDB,[mResampledTemplate(end) mResampledTemplate]/(max(mResampledTemplate/maxSamplesInBin)));
-            hOut.hPolar.LineWidth=2;
-            hOut.hPolar.Color=cMap(1,:,:);
-            
-            uistack(hOut.hPatch, 'top');
-            
-            delete(findall(h, 'String', '30', '-or','String','60', '-or','String','120', '-or','String','150', '-or','String','210', '-or','String','240', '-or','String','300', '-or','String','330'));
+            hOut.hPolar=polarplot([0 (1:nBins)/nBins]*pi*2-mPhaseDB,[mResampledTemplate(end) mResampledTemplate]/(max(mResampledTemplate/maxSamplesInBin(2)))...
+                ,'LineWidth',2,'Color',cMap(1,:,:));
             
             if plotRandomDist
-                hOut.hRose2=rose(phaseRand*2*pi-mPhaseDB,nBins);
-                hOut.hRose2.Color=[0.5 0.5 0.5];
-                hOut.l=legend([hOut.hRose hOut.hPolar hOut.hRose2],'SWC','OF','shuffled');
+                hOut.hRose2=polarhistogram(phaseRand*2*pi-mPhaseDB,nBins,'FaceColor',[0.5 0.5 0.5],'FaceAlpha',0.2);
+                hOut.l=legend([hOut.hRose hOut.hPolar hOut.hRose2],'Movement','\delta/\beta','shuffled');
             else
-                hOut.l=legend([hOut.hRose hOut.hPolar],'SWC','OF');
+                hOut.l=legend([hOut.hRose hOut.hPolar],'Movement','\delta/\beta');
             end
             hOut.l.Color=[1 1 1];
             hOut.l.Box='off';
-            hOut.l.Position=[0.7133    0.8317    0.1786    0.1190];
+            hOut.l.Location='northoutside';
             
             %if ~isempty(rLim4Rose)
             %    set(h_fake,'Visible','off');
@@ -3157,7 +3145,8 @@ classdef sleepAnalysis < recAnalysis
             ylim([yl(1)-marg,yl(2)+marg]);
             h(8:9)=line([parDbAutocorr.tStart parDbAutocorr.tStart;parDbAutocorr.tStart+parDbAutocorr.win parDbAutocorr.tStart+parDbAutocorr.win]'/1000/60/60,[yl;yl]','color',[0.8 1 0.8]);
 
-            linkaxes(h,'x');
+            h(10)=line([bestSleepTime/1000/60/60,bestSleepTime/1000/60/60],yl,'color','k');
+            linkaxes(h(1:2),'x');
             
             if saveFigures
                 set(fSAC,'PaperPositionMode','auto');
@@ -3176,8 +3165,8 @@ classdef sleepAnalysis < recAnalysis
             parseObj = inputParser;
             parseObj.FunctionName='sleepAnalysis\getDelta2BetaAC';
             addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
-            addParameter(parseObj,'tStart',0,@isnumeric); 
-            addParameter(parseObj,'win',obj.currentDataObj.recordingDuration_ms,@isnumeric);
+            addParameter(parseObj,'tStart',0,@isnumeric); %ms
+            addParameter(parseObj,'win',obj.currentDataObj.recordingDuration_ms,@isnumeric);%ms
             addParameter(parseObj,'maxPeriodBand',20,@isnumeric);
             addParameter(parseObj,'movOLWin',4000,@isnumeric);
             addParameter(parseObj,'XCFLag',500000,@isnumeric);
@@ -3186,6 +3175,7 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'oscilDurationMovingWin',60*60*1000,@isnumeric);
             addParameter(parseObj,'smoothingDuration',1000*60*60,@isnumeric);
             addParameter(parseObj,'oscilDurationThresh',0.25,@isnumeric);
+            addParameter(parseObj,'bestSleepWindow',2*60*60*1000,@isnumeric);
             addParameter(parseObj,'overwrite',0,@isnumeric);
             
             addParameter(parseObj,'inputParams',false,@isnumeric);
@@ -3233,13 +3223,11 @@ classdef sleepAnalysis < recAnalysis
             [~,pPeak] = findpeaks(xcf(XCFLagSamples+1:end),'MinPeakProminence',0.1);
             [~,pVally] = findpeaks(-xcf(XCFLagSamples+1:end),'MinPeakProminence',0.1);
             if isempty(pPeak) %if peak is weak, try a different value
-                [~,pPeak] = findpeaks(xcf(XCFLagSamples+1:end),'MinPeakProminence',0.05);
-                [~,pVally] = findpeaks(-xcf(XCFLagSamples+1:end),'MinPeakProminence',0.05);
-                disp('Prominance for peak detection was reduced to 0.05 due to low periodicity values!!!');
+                [~,pPeak] = findpeaks(xcf(XCFLagSamples+1:end),'MinPeakProminence',0.04);
+                [~,pVally] = findpeaks(-xcf(XCFLagSamples+1:end),'MinPeakProminence',0.04);
+                disp('Prominance for peak detection was reduced to 0.04 due to low periodicity values!!!');
             end
-            
-            
-            
+
             if isempty(pPeak) | isempty(pVally)
                 pPeriod=NaN;
                 period=NaN;
@@ -3297,6 +3285,11 @@ classdef sleepAnalysis < recAnalysis
             oscilDurationMovingSamples=oscilDurationMovingWin/autoCorrTimeBin;
             tmpOscDuration=peak2VallyDiffSliding>oscilDurationThresh;
             filtOscilDuration = medfilt1(double(tmpOscDuration),oscilDurationMovingSamples);
+            if all(filtOscilDuration==0)
+                disp('Oscillation duration threshold too low, trying to reduce a bit!');
+                tmpOscDuration=peak2VallyDiffSliding>(oscilDurationThresh*0.8);
+                filtOscilDuration = medfilt1(double(tmpOscDuration),oscilDurationMovingSamples);
+            end
             pSleepSlidingAC=filtOscilDuration>=0.5;
             
             tmpBin=movingAutoCorrWinSamples-movingAutoCorrOLSamples;
@@ -3314,6 +3307,11 @@ classdef sleepAnalysis < recAnalysis
                 pSleepDBRatioAC(((i-1)*tmpBin+1):(i*tmpBin))=pSleepSlidingAC(i);
             end
             
+            pTmp=find(tSlidingAC>=tStartSleep & tSlidingAC<=tEndSleep);
+            [~,pMax]=max(convn(peak2VallyDiffSliding(pTmp),ones(1,round(bestSleepWindow/((movingAutoCorrWinSamples-movingAutoCorrOLSamples)*timeBin))),'same'));
+            pMax=pMax+pTmp(1);
+            bestSleepTime=tSlidingAC(pMax);
+            
             smoothingSamples=round(smoothingDuration/autoCorrTimeBin);
             filteredSlidingPeriod=smooth(tSlidingAC(pSleepSlidingAC),acfPeriodAll(pSleepSlidingAC),smoothingSamples,'moving');
             edgeSamples=tSlidingAC(pSleepSlidingAC)<=(tSlidingAC(pSleepSlidingAC(1))+smoothingDuration/2) | tSlidingAC(pSleepSlidingAC)>=(tSlidingAC(pSleepSlidingAC(end))-smoothingDuration/2);
@@ -3323,7 +3321,7 @@ classdef sleepAnalysis < recAnalysis
             %save data
             save(obj.files.dbAutocorr,'parDbAutocorr','xcf','xcf_lags','xcf_bounds','BetaRatioForSlidingAutocorr','autoCorrTimeBin','autocorrTimes','timeBin',...
                 'pPeriod','period','acf','vallyPeriod','peak2VallyDiff','pSleepDBRatio','pSleepSlidingAC','acfPeakAll','acfVallyAll','peak2VallyDiffSliding','tSlidingAC','acfPeriodAll',...
-                'tStartSleep','tEndSleep','filteredSlidingPeriod','tFilteredSlidingPeriod','pSleepSlidingAC','pSleepDBRatioAC');
+                'tStartSleep','tEndSleep','filteredSlidingPeriod','tFilteredSlidingPeriod','pSleepSlidingAC','pSleepDBRatioAC','bestSleepTime');
         end
 
         
@@ -3593,7 +3591,7 @@ classdef sleepAnalysis < recAnalysis
             tFilteredSlidingPeriod=tSlidingAC(~edgeSamples)';
             %save data
             save(obj.files.respirationAutocorr,'parRespirationAutocorr','respirationSignal','pFramesValid','tRespFrames','xcf','xcf_lags_sec','xcf_bounds','respirationForSlidingAutocorr','autoCorrTimeBin','slidingACLags_sec','timeBin',...
-                'pPeriod','period','acf','vallyPeriod','peak2VallyDiff','peak2VallyDiffAll','acfPeakAll','acfVallyAll','tSlidingAC','acfPeriodAll','acfHalfPeriodAll','videoFile',...
+                'pPeriod','period','acf','vallyPeriod','peak2VallyDiff','peak2VallyDiffAll','acfPeakAll','acfVallyAll','tSlidingAC','acfPeriodAll','acfHalfPeriodAll','videoFile','diffFrames',...
                 'filteredSlidingPeriod','tFilteredSlidingPeriod');
         end
         
@@ -3665,11 +3663,6 @@ classdef sleepAnalysis < recAnalysis
             [pksLow,locsLow,pksWidthLow] =findpeaks(-respirationSignal,tRespFrames,'MinPeakDistance',2*1000,'MinPeakProminence',stdResp); 
             pksLow=-pksLow;
                         
-            % smoothly connect the maxima via a spline.
-            yupper = interp1(locs,pks,locs,'spline');
-            ylower = interp1(locsLow,pksLow,locs,'spline');
-            %figure;plot(tRespFrames/1000/60/60,respirationSignal);hold on;plot(locs/1000/60/60,yupper);plot(locs/1000/60/60,ylower);
-            
             %determine if the minimas or maximas are sharper and choose the sharper peaks for interval estimation.
             if median(pksWidth)<median(pksWidthLow)
                 locsFinal=locs;
@@ -3681,12 +3674,17 @@ classdef sleepAnalysis < recAnalysis
             breathingIntervals=diff(locsFinal);
             tBreathingIntervals=(locsFinal(2:end)+locsFinal(1:end-1))/2;
             
+            % smoothly connect the maxima via a spline.
+            yupper = interp1(locs,pks,locsFinal,'spline');
+            ylower = interp1(locsLow,pksLow,locsFinal,'spline');
+            %figure;plot(tRespFrames/1000/60/60,respirationSignal);hold on;plot(locs/1000/60/60,yupper);plot(locs/1000/60/60,ylower);
+            
             if videoOccupancyPlot
                 f=figure;
-                h(1)=subplot(3,1,1);plot(t_ms/1000/60/60,bufferedDelta2BetaRatio);hold on;plot(t_ms/1000/60/60,DBRatioMedFilt);
-                h(2)=subplot(3,1,2);plot(tRespFrames/1000/60/60,respirationSignal);hold on;plot(locsFinal/1000/60/60,pksFinal,'.');
+                h(1)=subplot(3,1,1);plot(t_ms/1000/60/60,bufferedDelta2BetaRatio);hold on;plot(t_ms/1000/60/60,DBRatioMedFilt);ylabel('\delta/\beta');
+                h(2)=subplot(3,1,2);plot(tRespFrames/1000/60/60,respirationSignal);hold on;plot(locsFinal/1000/60/60,pksFinal,'.');ylabel('Resp. signal');
                 yl=ylim;hP=patch('XData',[TcycleOnset' TcycleOnset' TcycleMid' TcycleMid']'/1000/60/60,'YData',(ones(numel(TcycleOnset),1)*[yl(1) yl(2) yl(2) yl(1)])','faceColor','b','FaceAlpha',0.1,'lineStyle','none');
-                h(3)=subplot(3,1,3);plot(tSlidingAC/1000/60/60,acfPeriodAll,'.-');hold on;
+                h(3)=subplot(3,1,3);plot(tSlidingAC/1000/60/60,acfPeriodAll,'.-');hold on;ylabel('ACF period');
                 yl=ylim;hP=patch('XData',[TcycleOnset' TcycleOnset' TcycleMid' TcycleMid']'/1000/60/60,'YData',(ones(numel(TcycleOnset),1)*[yl(1) yl(2) yl(2) yl(1)])','faceColor','b','FaceAlpha',0.1,'lineStyle','none');
                 linkaxes(h,'x');
             end
@@ -3727,7 +3725,7 @@ classdef sleepAnalysis < recAnalysis
                 %phaseAllRand{i}=shufTimes/cycleDuration;
                 if plotSingleCycles
                     pTmpR=find(tRespFrames>cycleStart(i) & tRespFrames<cycleEnd(i));
-                    h(1)=subplot(4,1,1);plot((t_ms(pTmp)-cycleStart(i))/1000,bufferedDelta2BetaRatio(pTmp),'b');hold on;ylabel('DB');
+                    h(1)=subplot(4,1,1);plot((t_ms(pTmpR)-cycleStart(i))/1000,bufferedDelta2BetaRatio(pTmpR),'b');hold on;ylabel('DB');
                     plot((0:(nBins-1))/(nBins-1)*cycleDuration(i)/1000,resampledTemplateDB(i,:),'b');
                     
                     h(2)=subplot(4,1,2);
