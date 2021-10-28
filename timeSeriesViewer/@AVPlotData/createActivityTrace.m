@@ -43,14 +43,16 @@ set(obj.hPlotControls.plotPropGrid, 'Widths',-1,'Heights', [30 30 30 30 30 30] )
         maxM=nanmax(M,[],2);
         obj.plotParams.shifts=flipud(cumsum([0;maxM(end:-1:2)-minM(end-1:-1:1)]));
         set(obj.hPlotControls.verticalShiftEdit,'string','no overlap');
-        ylim(obj.hPlotAxis,[obj.plotParams.shifts(end)+minM(end) obj.plotParams.shifts(1)+maxM(1)]);
+        obj.plotParams.yl=[obj.plotParams.shifts(end)+minM(end) obj.plotParams.shifts(1)+maxM(1)]
+        ylim(obj.hPlotAxis,obj.plotParams.yl);
         obj.replot;
     end
     function CallbackVerticalShiftEdit(hObj,event)
         M=squeeze(obj.M);
         verticalShift=max(str2num(get(hObj,'string')),eps);
         obj.plotParams.shifts=((size(M,1)-1):-1:0)'*verticalShift;
-        ylim(obj.hPlotAxis,[obj.plotParams.shifts(end)-1*verticalShift obj.plotParams.shifts(1)+1*verticalShift]);
+        obj.plotParams.yl=[obj.plotParams.shifts(end)-1*verticalShift obj.plotParams.shifts(1)+1*verticalShift];
+        ylim(obj.hPlotAxis,obj.plotParams.yl);
         obj.replot;
     end
     function CallbackAutoScaleStdYPush(hObj,event)
@@ -58,7 +60,8 @@ set(obj.hPlotControls.plotPropGrid, 'Widths',-1,'Heights', [30 30 30 30 30 30] )
         verticalShift=nanstd(double(M(:)))*1;
         obj.plotParams.shifts=((size(M,1)-1):-1:0)'*verticalShift;
         set(obj.hPlotControls.verticalShiftEdit,'string',num2str(verticalShift));
-        ylim(obj.hPlotAxis,[obj.plotParams.shifts(end)-2*verticalShift obj.plotParams.shifts(1)+2*verticalShift]);
+        obj.plotParams.yl=[obj.plotParams.shifts(end)-2*verticalShift obj.plotParams.shifts(1)+2*verticalShift];
+        ylim(obj.hPlotAxis,obj.plotParams.yl);
         obj.replot;
     end
     function CallbackPlotChannelNumbersCheckbox(hObj,event)
