@@ -738,7 +738,10 @@ classdef (Abstract) dataRecording < handle
             if ~any(strcmp(targetFile(end-3:end),{'.dat','.bin'}))
                 error('input file should have a ''.dat/.bin'' extension');
             end
-            
+            [folderName,FileName]=fileparts(targetFile);
+            if ~isfolder(folderName)
+                disp('Notice the input folder does not exist. Please create and run again');
+            end
             chunkSize=2*60*1000; %msec
             startTimes=0:chunkSize:obj.recordingDuration_ms;
             endTimes=[startTimes(2:end) obj.recordingDuration_ms];
@@ -943,4 +946,4 @@ classdef (Abstract) dataRecording < handle
         end
 
     end
-end
+end 

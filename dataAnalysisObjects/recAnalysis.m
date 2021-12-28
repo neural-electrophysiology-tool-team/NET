@@ -45,6 +45,7 @@ classdef (Abstract) recAnalysis < handle
             %[obj,fileName]=getFileNames(obj,methodName)
             %   methodName - the name of the method
             %   fileName - the mat file name associated with the method and a specific recording
+            obj.files=[];
             if nargin==1
                 methodNames=methods(obj);
                 handleMethods=methods('handle');

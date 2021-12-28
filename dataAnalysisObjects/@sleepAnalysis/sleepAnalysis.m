@@ -95,7 +95,9 @@ classdef sleepAnalysis < recAnalysis
             cMap=lines(8);
             
             hOut.hRose=polarhistogram(phaseMov*2*pi-mPhaseDB,nBins,'FaceColor',[0.9 0.078 0.184],'FaceAlpha',0.7);
-            h.ThetaTick=[0 90 180 270];
+            h.ThetaTick=[0:30:330];
+            h.ThetaTickLabels([2 3 5 6 8 9 11 12])=cell(size([2 3 5 6 8 9 11 12]));
+
             if ~isempty(rLim4Rose)
                 h.RLim=[0 rLim4Rose];
             end
@@ -2444,7 +2446,7 @@ classdef sleepAnalysis < recAnalysis
             TcycleOffset=t_ms(pTcycleOffset);
             
             %plot(t_ms/1000/60/60,HAng);hold on;plot(TcycleMid/1000/60/60,HAng(pTcycleMid),'or');plot(TcycleOffset/1000/60/60,HAng(pTcycleOffset),'og');plot(TcycleOnset/1000/60/60,HAng(pTcycleOnset),'.m');
-            save(obj.files.slowCycles,'parSlowCycles','TcycleOnset','TcycleOffset','TcycleMid','pSleepDBRatio','t_ms','DBRatioMedFilt');
+            save(obj.files.slowCycles,'parSlowCycles','TcycleOnset','TcycleOffset','TcycleMid','pSleepDBRatio','t_ms','DBRatioMedFilt','HAng');
         end
         %{
          function data=getSlowCycles(obj,varargin)
@@ -2616,12 +2618,12 @@ classdef sleepAnalysis < recAnalysis
             load(slowCyclesFile); %load data
             load(dbRatioFile); %load data
 
-            
             if h==0
                 f=figure('Position',[200 200 900 500]);
-                h(1)=subaxis(7,1,1,'S',0.01);
-                h(2)=subaxis(7,1,2,'S',0.01);
-                h(3)=subaxis(7,1,1,3,1,5,'S',0.01);
+                h(1)=subaxis(10,1,1,'S',0.01);
+                h(2)=subaxis(10,1,2,'S',0.01);
+                h(3)=subaxis(10,1,1,3,1,5,'S',0.01);
+                h(4)=subaxis(10,1,1,8,1,3,'S',0.01);
             else
                 saveFigures=0;
             end
@@ -2651,6 +2653,13 @@ classdef sleepAnalysis < recAnalysis
                 plot(t_ms([1 end])/1000/60/60,[Th Th]);
             end
             ylabel('\delta/\beta ratio');
+            f.Children(3).XTickLabel={};
+            
+            axes(h(4));
+            plot(t_ms/1000/60/60,HAng);hold on;
+            yl=ylim;
+            line([TcycleMid;TcycleMid]/1000/60/60,yl'*ones(1,numel(TcycleMid)),'color','g');
+            line([TcycleOnset;TcycleOnset]/1000/60/60,yl'*ones(1,numel(TcycleMid)),'color','r');
             xlabel('Time [h]');
             
             linkaxes(h,'x');
@@ -3055,6 +3064,7 @@ classdef sleepAnalysis < recAnalysis
             hold('on');
             
             plot(period/1000,real(xcf(pPeriod)),'o','MarkerSize',5,'color','k');
+            text(period/1000,0.05+real(xcf(pPeriod)),num2str(period/1000));
             
             a = axis;
             plot([a(1) a(1); a(2) a(2)],[xcf_bounds([1 1]) xcf_bounds([2 2])],'-b');
@@ -3331,6 +3341,7 @@ classdef sleepAnalysis < recAnalysis
             parseObj = inputParser;
             parseObj.FunctionName='sleepAnalysis\plotRespirationSlidingAC';
             addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
+            addParameter(parseObj,'videoFile',regexp(obj.recTable.VideoFiles{obj.currentPRec},',','split'),@(x) all(isfile(x)));
             addParameter(parseObj,'tStart',0,@isnumeric);
             addParameter(parseObj,'win',obj.currentDataObj.recordingDuration_ms,@isnumeric);
             addParameter(parseObj,'saveFigures',1,@isnumeric);
@@ -3357,7 +3368,8 @@ classdef sleepAnalysis < recAnalysis
             pt=find(tSlidingAC>=tStart & tSlidingAC<=(tStart+win+parDbAutocorr.movingAutoCorrWin/2));
             tSlidingAC=tSlidingAC-tSlidingAC(pt(1));
             
-            respirationAutocorrFile=obj.files.respirationAutocorr;%[obj.currentAnalysisFolder filesep 'getRespirationAC.mat'];
+            [~,videoFileName]=fileparts(videoFile);
+            respirationAutocorrFile=[obj.currentAnalysisFolder filesep 'respirationAC_' videoFileName '.mat'];
             obj.checkFileRecording(respirationAutocorrFile,'Autocorr analysis missing, please first run getRespirationAC');
             RAC=load(respirationAutocorrFile);
             
@@ -3399,8 +3411,8 @@ classdef sleepAnalysis < recAnalysis
             marg=diff(yl)*0.02;
             ylim([yl(1)-marg,yl(2)+marg]);
             %h(8:9)=line([parDbAutocorr.tStart parDbAutocorr.tStart;parDbAutocorr.tStart+parDbAutocorr.win parDbAutocorr.tStart+parDbAutocorr.win]'/1000/60/60,[yl;yl]','color',[0.8 1 0.8]);
-
-
+            linkaxes(h(1:2),'x');
+            
             if saveFigures
                 set(fSAC,'PaperPositionMode','auto');
                 fileName=[obj.currentPlotFolder filesep 'respSAC_ch' num2str(parDbAutocorr.ch) '_t' num2str(parDbAutocorr.tStart) '_w' num2str(parDbAutocorr.win)];
@@ -3524,8 +3536,8 @@ classdef sleepAnalysis < recAnalysis
             xcf_lags_sec=xcf_lags/respResampleRate;
 
             %calculate periodicity - find first vally and peak in the autocorrelation function
-            [~,pPeak] = findpeaks(xcf(XCFLagSamples+1:end));pPeak=pPeak(1);
-            [~,pVally] = findpeaks(-xcf(XCFLagSamples+1:end));pVally=pVally(1);
+            [~,pPeak] = findpeaks(xcf(XCFLagSamples+1:end),'MinPeakProminence',1e-4);pPeak=pPeak(1);
+            [~,pVally] = findpeaks(-xcf(XCFLagSamples+1:end),'MinPeakProminence',1e-4);pVally=pVally(1);
             %figure;plot(xcf_lags_sec,xcf);xlabel('Respiration lag [s]');hold on;plot(xcf_lags_sec(pPeak+XCFLagSamples),xcf(pPeak+XCFLagSamples),'or')
             
             if isempty(pPeak) | isempty(pVally)
@@ -3553,8 +3565,9 @@ classdef sleepAnalysis < recAnalysis
             tSlidingAC=tRespFrames(1)+movingAutoCorrWin/2+(1:size(respirationForSlidingAutocorr,2))*step;
            
             %check if the band to look for peak is not too large (larger than the cross corr window)
-            maxPeriodBandSamples=ceil(maxPeriodBand/timeBin);
-            maxPeriodBandSamplesInner=ceil(maxPeriodBandSamples/2); %the band is asymettric with the short interval half the long one.
+            maxPeriodBandSamples=min(2*(pPeriod-pAntiPeriod),ceil(maxPeriodBand/timeBin)); %take the minimal band based on the autocorr function and input
+            maxPeriodBandSamplesInner=min(pPeriod-pAntiPeriod,ceil(maxPeriodBand/timeBin/2)); %the band is asymettric with the short interval half the long one.
+            
             acfSamples=floor(movingAutoCorrWinSamples/2);
             if (pPeak(1)+maxPeriodBandSamples)>acfSamples
                 error('maxPeriodBand can not be longer than acf samples! reduce maxPeriodBand and run again');
@@ -3677,7 +3690,12 @@ classdef sleepAnalysis < recAnalysis
             % smoothly connect the maxima via a spline.
             yupper = interp1(locs,pks,locsFinal,'spline');
             ylower = interp1(locsLow,pksLow,locsFinal,'spline');
-            %figure;plot(tRespFrames/1000/60/60,respirationSignal);hold on;plot(locs/1000/60/60,yupper);plot(locs/1000/60/60,ylower);
+            
+            autoCorrTimeBin=(parRespirationAutocorr.movingAutoCorrWin-parRespirationAutocorr.movingAutoCorrOL);
+            ampFilterDuration=10000;
+            ampFilterSamples=round(ampFilterDuration/autoCorrTimeBin);
+            filteredBreathAmp=fastmedfilt1d((yupper-ylower),ampFilterSamples);
+            %figure;plot(tRespFrames/1000/60/60,respirationSignal);hold on;plot(locs/1000/60/60,yupper);plot(locs/1000/60/60,ylower);plot(locs/1000/60/60,filteredBreathAmp);
             
             if videoOccupancyPlot
                 f=figure;
@@ -3711,7 +3729,9 @@ classdef sleepAnalysis < recAnalysis
                         resampledTemplateDB(i,:) = interp1((t_ms(pTmp)-cycleStart(i))/cycleDuration(i),bufferedDelta2BetaRatio(pTmp)',(0:(nBins-1))/(nBins-1),interpolationMethod);
                         
                         pTmpEnv=find(locsFinal>cycleStartPadded(i) & locsFinal<cycleEndPadded(i));
-                        resampledTemplateAmp(i,:) = interp1((locsFinal(pTmpEnv)-cycleStart(i))/cycleDuration(i),(yupper(pTmpEnv)-ylower(pTmpEnv)),(0:(nBins-1))/(nBins-1),interpolationMethod);
+                        %resampledTemplateAmp(i,:) = interp1((locsFinal(pTmpEnv)-cycleStart(i))/cycleDuration(i),(yupper(pTmpEnv)-ylower(pTmpEnv)),(0:(nBins-1))/(nBins-1),interpolationMethod);
+                        %
+                        resampledTemplateAmp(i,:) = interp1((locsFinal(pTmpEnv)-cycleStart(i))/cycleDuration(i),(filteredBreathAmp(pTmpEnv)),(0:(nBins-1))/(nBins-1),interpolationMethod);
                     end
                 end
                 
@@ -3733,7 +3753,7 @@ classdef sleepAnalysis < recAnalysis
                     plot((0:(nBins-1))/(nBins-1)*cycleDuration(i)/1000,resampledTemplateBP(i,:));
                     
                     h(3)=subplot(4,1,3);plot((tRespFrames(pTmpR)-cycleStart(i))/1000,respirationSignal(pTmpR),'k');hold on;plot((locsFinal(pTmpB+1)-cycleStart(i))/1000,pksFinal(pTmpB+1),'or');
-                    plot((locsFinal(pTmpEnv)-cycleStart(i))/1000,yupper(pTmpEnv),'g');plot((locsFinal(pTmpEnv)-cycleStart(i))/1000,ylower(pTmpEnv),'g');
+                    plot((locsFinal(pTmpEnv)-cycleStart(i))/1000,yupper(pTmpEnv),'g');plot((locsFinal(pTmpEnv)-cycleStart(i))/1000,ylower(pTmpEnv),'g');plot((locsFinal(pTmpEnv)-cycleStart(i))/1000,filteredBreathAmp(pTmpEnv),'m');
                     plot((0:(nBins-1))/(nBins-1)*cycleDuration(i)/1000,resampledTemplateAmp(i,:),'g');ylabel('amp');
                     
                     h(4)=subplot(4,1,4);plot((tBreathingIntervals(pTmpB)-cycleStart(i))/1000,1./breathingIntervals(pTmpB),'.m-');hold on;
@@ -3763,11 +3783,11 @@ classdef sleepAnalysis < recAnalysis
             
             nAvgCycles=numel(~isnan(resampledTemplateAmp));
             
-            figure;plot(normZeroOne(1./mResampledTemplateBI));hold on;plot(normZeroOne(mResampledTemplateBRAC));plot(normZeroOne(mResampledTemplateDB));plot(normZeroOne(mResampledTemplateAmp));legend({'Breathing rate','Breathing rate AC','\delta/\beta','Env'});
+            %figure;plot(normZeroOne(1./mResampledTemplateBI));hold on;plot(normZeroOne(mResampledTemplateBRAC));plot(normZeroOne(mResampledTemplateDB));plot(normZeroOne(mResampledTemplateAmp));legend({'Breathing rate','Breathing rate AC','\delta/\beta','Env'});
             %figure;plot(normZeroOne(sResampledTemplateBI));hold on;plot(normZeroOne(sResampledTemplateDB));plot(normZeroOne(sResampledTemplateAmp));legend({'Breathing rate','\delta/\beta','Env'});
             
             %save data
-            save(obj.files.respirationDBCycle,'yupper','ylower','locsFinal','breathingIntervals','tBreathingIntervals','resampledTemplateBI',...
+            save(obj.files.respirationDBCycle,'yupper','ylower','filteredBreathAmp','locsFinal','breathingIntervals','tBreathingIntervals','resampledTemplateBI',...
                 'resampledTemplateDB','resampledTemplateAmp','mResampledTemplateBI','mResampledTemplateBR','mResampledTemplateDB','mResampledTemplateAmp','mResampledTemplateBRAC',...
                 'sResampledTemplateBI','sResampledTemplateBR','sResampledTemplateDB','sResampledTemplateAmp','sResampledTemplateBRAC','nAvgCycles');
         end
