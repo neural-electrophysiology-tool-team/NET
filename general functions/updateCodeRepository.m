@@ -1,1 +1,0 @@
-[status, result] = system('command')
