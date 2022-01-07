@@ -6,7 +6,7 @@ obj.plotParams.allElecLayoutNames=cellfun(@(x) x(1:end-4),{electrodeFolder.name}
 obj.plotParams.elecLayoutNames4Popup=cellfun(@(x) x(8:end),obj.plotParams.allElecLayoutNames,'UniformOutput',0);
 
 if ~isempty(obj.recordingObjReference)
-    pLayout=find(strcmp(obj.recordingObjReference.layoutName,obj.plotParams.allElecLayoutNames));
+    pLayout=find(strcmp(['layout_',obj.recordingObjReference.layoutName],obj.plotParams.allElecLayoutNames));
 else
     pLayout=[];
 end

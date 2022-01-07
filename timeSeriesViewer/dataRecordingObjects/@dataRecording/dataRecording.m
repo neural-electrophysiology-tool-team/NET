@@ -816,7 +816,6 @@ classdef (Abstract) dataRecording < handle
                     fwrite(fid, uint32(T{pT(i)}*obj.samplingFrequency(1)/1000)+1,'*uint32');
                 end
                 fclose(fid);
-                
             catch
                 nT = [];
                 disp('No triggers found! Trigger file not created.\n');
@@ -889,6 +888,9 @@ classdef (Abstract) dataRecording < handle
                 else
                     if iscell(pathstr) && all(strcmp(pathstr,pathstr{1}))
                         pathstr=pathstr{1};
+                    end
+                    if iscell(name) && all(strcmp(name,name{1}))
+                        name=name{1};
                     end
                     obj.recordingDir=pathstr;
                     if ispc

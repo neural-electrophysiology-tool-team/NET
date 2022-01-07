@@ -110,7 +110,7 @@ classdef sleepAnalysis < recAnalysis
             
             if plotRandomDist
                 hOut.hRose2=polarhistogram(phaseRand*2*pi-mPhaseDB,nBins,'FaceColor',[0.5 0.5 0.5],'FaceAlpha',0.2);
-                hOut.l=legend([hOut.hRose hOut.hPolar hOut.hRose2],'Movement','\delta/\beta','shuffled');
+                hOut.l=legend([hOut.hRose hOut.hPolar hOut.hRose2],'Movement','\delta/\beta','shuffled','mean');
             else
                 hOut.l=legend([hOut.hRose hOut.hPolar],'Movement','\delta/\beta');
             end
@@ -118,6 +118,7 @@ classdef sleepAnalysis < recAnalysis
             hOut.l.Box='off';
             hOut.l.Location='northoutside';
             
+            hOut.hPolarAvg=polarplot([0 0],h.RLim,'LineWidth',2,'Color','k');
             %if ~isempty(rLim4Rose)
             %    set(h_fake,'Visible','off');
             %end
@@ -3792,18 +3793,18 @@ classdef sleepAnalysis < recAnalysis
                 'sResampledTemplateBI','sResampledTemplateBR','sResampledTemplateDB','sResampledTemplateAmp','sResampledTemplateBRAC','nAvgCycles');
         end
     
-    %% plotFreqBandDetection
-    function [h,Z]=plotFreqBandDetection(obj,varargin)
-    
-    parseObj = inputParser;
-    addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
-    addParameter(parseObj,'plotDendrogram',true);
-    addParameter(parseObj,'plotSpectralBands',true);
-    addParameter(parseObj,'savePlots',true);
-    addParameter(parseObj,'freqBandFile',[]);
-    addParameter(parseObj,'cLim',0);
-    addParameter(parseObj,'printLocalCopy',0,@isnumeric);
-    addParameter(parseObj,'hDendro',0);
+        %% plotFreqBandDetection
+        function [h,Z]=plotFreqBandDetection(obj,varargin)
+            
+            parseObj = inputParser;
+            addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
+            addParameter(parseObj,'plotDendrogram',true);
+            addParameter(parseObj,'plotSpectralBands',true);
+            addParameter(parseObj,'savePlots',true);
+            addParameter(parseObj,'freqBandFile',[]);
+            addParameter(parseObj,'cLim',0);
+            addParameter(parseObj,'printLocalCopy',0,@isnumeric);
+            addParameter(parseObj,'hDendro',0);
             addParameter(parseObj,'hSpectra',0);
             addParameter(parseObj,'inputParams',false,@isnumeric);
             parseObj.parse(varargin{:});
