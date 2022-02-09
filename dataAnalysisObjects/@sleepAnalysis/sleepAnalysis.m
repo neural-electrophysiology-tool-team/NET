@@ -2038,6 +2038,7 @@ classdef sleepAnalysis < recAnalysis
             
             parseObj = inputParser;
             addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
+            addParameter(parseObj,'avgOnCh',[],@isnumeric); %uses several averaged channels for d/b extraction
             addParameter(parseObj,'movLongWin',1000*60*30,@isnumeric); %max freq. to examine
             addParameter(parseObj,'movWin',10000,@isnumeric);
             addParameter(parseObj,'movOLWin',9000,@isnumeric);
@@ -2126,14 +2127,22 @@ classdef sleepAnalysis < recAnalysis
                 obj.filt.FN=obj.filt.FN.designNotch;
             end
             
+            loadCh=ch;
+            if ~isempty(avgOnCh)
+                loadCh=avgOnCh; %this can not be moved to other positions
+            end
+            
             fprintf('\nDelta2Beta extraction (%d chunks)-',nChunks);
             for i=1:nChunks
                 fprintf('%d,',i);
-                MLong=obj.currentDataObj.getData(ch,startTimes(i),movLongWin);
+                MLong=obj.currentDataObj.getData(loadCh,startTimes(i),movLongWin);
                 if applyNotch
                     MLong=obj.filt.FN.getFilteredData(MLong); %for 50Hz noise
                 end
                 FMLong=obj.filt.F.getFilteredData(MLong);
+                if ~isempty(avgOnCh)
+                    FMLong=mean(FMLong,1);
+                end
                 
                 FMLong(FMLong<-maxVoltage | FMLong>maxVoltage)=nan; %remove high voltage movement artifacts
                 
@@ -2145,7 +2154,6 @@ classdef sleepAnalysis < recAnalysis
                 betaRatioAll{i}=nan(1,numel(pValid));
                 if any(pValid)
                     [pxx,f] = pwelch(FMLongB(:,pValid),segmentWelchSamples,samplesOLWelch,dftPointsWelch,obj.filt.FFs);
-                    
                     deltaBetaRatioAll{i}(pValid)=(mean(pxx(pfLowBand,:))./mean(pxx(pfHighBand,:)))';
                     deltaRatioAll{i}(pValid)=mean(pxx(pfLowBand,:))';
                     betaRatioAll{i}(pValid)=mean(pxx(pfHighBand,:))';
