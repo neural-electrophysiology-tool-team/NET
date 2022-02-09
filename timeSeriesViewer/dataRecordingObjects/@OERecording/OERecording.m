@@ -242,7 +242,7 @@ classdef OERecording < dataRecording
                 chNumber((2*activeCh(i)+2))=activeCh(i);
             end
             else
-                Disp('All event channels in the recording are empty');
+                disp('All event channels in the recording are empty');
                 T_ms={};
                 chNumber=[];
             end
