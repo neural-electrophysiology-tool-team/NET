@@ -36,6 +36,15 @@ classdef NWBRecording < dataRecording
         
         %class constructor
         function obj = NWBRecording(recordingFile) % This func reads the NWB file and calls getFilesAndExtract to start analyzing. It also makes sure it has all the arguments needed
+            MatNWBPath=dir('dataRecordingObjects/helperFunctions/matnwb');
+            if isempty(MatNWBPath)
+                disp([newline newline 'Please install and follow the instructions of the MatNWB installation from its website:' ...
+                  newline 'https://github.com/NeurodataWithoutBorders/matnwb'...
+                  newline 'The installation should be in the following path:' newline ...
+                  'NET\timeSeriesViewer\dataRecordingObjects\helperFunctions' newline ...
+                  newline newline])
+                return
+            end
             if nargin == 0
                 recordingFile=[];
             elseif nargin>2
