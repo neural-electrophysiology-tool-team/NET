@@ -160,7 +160,7 @@ classdef MEAAnalysis < recAnalysis
             save(obj.files.AIfile,'IA','tA','icA','parAI','-v7.3');
         end
         
-        function obj=getKiloSorting(obj,varargin)
+        function obj=getKiloSorting(obj,ops)
             if ~strcmp(class(obj.currentDataObj),'binaryRecording')
                 fprintf('\nKilo-sort only runs on binaryData class!!!\nYou can use the dataRecording.export2Binary method to convert to this format\n');
                 return;
@@ -186,9 +186,11 @@ classdef MEAAnalysis < recAnalysis
             NT=64+2^round(log2(1024*(128/nCh)))*1024;
             
             % Run the configuration file, it builds the structure of options (ops)
-            ops=makeConfigKiloSort2(obj.currentDataObj.recordingDir,nCh,...
-                'GPU',1,'parfor',1,'NT',NT,'fbinary',[obj.currentDataObj.recordingDir filesep obj.currentDataObj.dataFileNames{1}],...
-                'fs',obj.currentDataObj.samplingFrequency);
+            if nargin==1
+                ops=makeConfigKiloSort2(obj.currentDataObj.recordingDir,nCh,true,...
+                    'GPU',1,'parfor',1,'NT',NT,'fbinary',[obj.currentDataObj.recordingDir filesep obj.currentDataObj.dataFileNames{1}],...
+                    'fs',obj.currentDataObj.samplingFrequency, 'throw_out_channels', 1);
+            end
             
             layoutName=[obj.currentDataObj.layoutName '_JRC.prb'];
             resultsFileName=[obj.currentDataObj.recordingDir filesep obj.currentDataObj.recordingName '_' obj.currentDataObj.layoutName '_JRC_ksort.mat'];
