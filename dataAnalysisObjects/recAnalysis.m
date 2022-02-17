@@ -272,7 +272,12 @@ classdef (Abstract) recAnalysis < handle
             
             
             %get data from excel spread sheet
-            obj.recTable = readtable(obj.excelRecordingDataFileName);
+            
+            if verLessThan('matlab', '9.8')
+                obj.recTable = readtable(obj.excelRecordingDataFileName);
+            else
+                obj.recTable = readtable(obj.excelRecordingDataFileName,'Format','auto');
+            end
             xlsFieldNames=obj.recTable.Properties.VariableNames;
             maxRow=size(obj.recTable,1);
                 
