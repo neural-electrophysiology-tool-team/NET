@@ -279,16 +279,49 @@ classdef OERecording < dataRecording
                 if all(cellfun(@(x) isempty(x),channelNamesAll))
                     error('The data filename format is not familiar to the OERecording class, please check that the files were saved in the right format or change filenames');
                 end
-                channelNamesAll=cellfun(@(x) ['CH' x{1}(2:end)],channelNamesAll,'UniformOutput',0);
-                channelNumbersAll=cellfun(@(x) str2double(x(3:end)),channelNamesAll,'UniformOutput',1);
+%                 channelNamesAll=cellfun(@(x) ['CH' x{1}(2:end)],channelNamesAll,'UniformOutput',0);
+                % specify analog channels
+                settingFile = fileread([obj.recordingDir 'settings.xml']);
+                sectionStart = regexp(settingFile,['<CHANNEL_INFO>'])';
+                sectionEnd = regexp(settingFile,['</CHANNEL_INFO>'])';
+                section = settingFile(sectionStart:sectionEnd);
+                %ADC
+                [lineStart,lineEnd] = regexp(section,['name=' char(34) 'ADC\d*' char(34) ' number=' char(34) '\d*' char(34) ]);
+                if ~isempty(lineStart)
+                    for c=1:length(lineEnd)
+                        lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
+                        Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
+                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
+                        channelNamesAll{cNA_index}{1}=['AD' channelNamesAll{cNA_index}{1}(2:end)]
+                    end
+                end
+                %AUX
+                [lineStart,lineEnd] = regexp(section,['name=' char(34) 'AUX\d*' char(34) ' number=' char(34) '\d*' char(34) ]);
+                if ~isempty(lineStart)
+                    for c=1:length(lineEnd)
+                        lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
+                        Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
+                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
+                        channelNamesAll{cNA_index}{1}=['AU' channelNamesAll{cNA_index}{1}(2:end)]
+                    end
+                end
+                %CH
+                [lineStart,lineEnd] = regexp(section,['name=' char(34) 'CH\d*' char(34) ' number=' char(34) '\d*' char(34) ]);
+                for c=1:length(lineEnd)
+                    lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
+                    Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
+                    cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
+                    channelNamesAll{cNA_index}{1}=['CH' channelNamesAll{cNA_index}{1}(2:end)]
+                end
+                channelNumbersAll=cellfun(@(x) str2double(x{1}(3:end)),channelNamesAll,'UniformOutput',1);
             else
                 channelNamesAll=cellfun(@(x) x{1},channelNamesAll,'UniformOutput',0);
                 channelNumbersAll=cellfun(@(x) str2double(regexp(x,'\d+','match')),channelNamesAll,'UniformOutput',1);
             end
             
             %find channel types analog ch / electrode ch
-            pCh=cellfun(@(x) mean(x([1 2])=='CH')==1,channelNamesAll);
-            pAnalogCh=cellfun(@(x) mean(x([1 2])=='AU')==1 || mean(x([1 2])=='AD')==1,channelNamesAll);
+            pCh=cellfun(@(x) mean(x{1}([1 2])=='CH')==1,channelNamesAll);
+            pAnalogCh=cellfun(@(x) mean(x{1}([1 2])=='AU')==1 || mean(x{1}([1 2])=='AD')==1,channelNamesAll);
             
             obj.channelFilesAnalog=channelFiles(pAnalogCh);
             obj.channelFiles=channelFiles(pCh);

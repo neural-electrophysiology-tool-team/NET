@@ -744,6 +744,7 @@ classdef MEAAnalysis < recAnalysis
             addParameter(parseObj,'overwrite',false,@isnumeric);
             addParameter(parseObj,'inputParams',false,@isnumeric);
             addParameter(parseObj,'trialStartEndDigiTriggerNumbers',[3 4],@isnumeric);
+            addParameter(parseObj,'analogChNum',[],@isnumeric);
             addParameter(parseObj,'noisyAnalog',false,@isnumeric);
             parseObj.parse(varargin{:});
             if parseObj.Results.inputParams
@@ -772,7 +773,9 @@ classdef MEAAnalysis < recAnalysis
             T=load(obj.files.getDigitalTriggers);
             
             disp('Syncing diode signal...');
-            [frameShifts,upCross,downCross,digiTriggers,transitionNotFound]=frameTimeFromDiode(obj.currentDataObj,'trialStartEndDigiTriggerNumbers',trialStartEndDigiTriggerNumbers,'T',T.tTrig,'noisyAnalog',noisyAnalog);
+            [frameShifts,upCross,downCross,digiTriggers,transitionNotFound]=frameTimeFromDiode(obj.currentDataObj,...
+                'trialStartEndDigiTriggerNumbers',trialStartEndDigiTriggerNumbers,...
+                'T',T.tTrig,'noisyAnalog',noisyAnalog,'analogChNum',analogChNum);
             save(saveFileName,'par','frameShifts','upCross','downCross','digiTriggers','transitionNotFound','-v7.3');
             
         end
