@@ -1,7 +1,5 @@
 classdef OERecording < dataRecording
     properties
-        channelNumbersAnalog
-        channelNamesAnalog
         channelFiles
         channelFilesAnalog
         eventFiles
@@ -148,7 +146,7 @@ classdef OERecording < dataRecording
             window_ms=windowSamples*obj.sample_ms;
             
             if isempty(channels) %if no channels are entered, get all channels
-                channels=obj.channelNumbersAnalog;
+                channels=obj.analogChannelNumbers;
             end
             nCh=numel(channels);
             
@@ -248,17 +246,26 @@ classdef OERecording < dataRecording
             if ~iscell(obj.recordingDir)
                 nRecordings=1;
             else
-                nRecordings=numel(obj.recordingDir)
+                nRecordings=numel(obj.recordingDir);
             end
-            for j=1:nRecordings
-                fclose(obj.fid(j));
-                fclose(obj.fidA(j));
-                fclose(obj.fidEvnt(j));
+            if ~isempty(obj.fid)
+                for j=1:nRecordings
+                    fclose(obj.fid(j));
+                end
+            end
+            if ~isempty(obj.fidA)
+                for j=1:nRecordings
+                    fclose(obj.fidA(j));
+                end
+            end
+            if ~isempty(obj.fidEvnt)
+                fclose(obj.fidEvnt);
             end
         end
         
         function obj=extractMetaData(obj)
             
+            fprintf('Extracting meta data from: %s...\n',obj.recordingDir);
             obj.eventFiles=dir([obj.recordingDir filesep '*.' obj.eventFileExtension]);
             
             %get channel information
@@ -266,31 +273,74 @@ classdef OERecording < dataRecording
             channelFiles={channelFiles.name};
             
             channelNamesAll=cellfun(@(x) regexp(x,['[A-Z]+\d+'],'match'),channelFiles,'UniformOutput',0);
-            channelNamesAll=cellfun(@(x) x{1},channelNamesAll,'UniformOutput',0);
-            channelNumbersAll=cellfun(@(x) str2double(regexp(x,'\d+','match')),channelNamesAll,'UniformOutput',1);
+            if all(cellfun(@(x) isempty(x),channelNamesAll))
+                fprintf('The expected file format 100_CHX.continous was not found. Trying the format 100_X.continous...\n');
+                channelNamesAll=cellfun(@(x) regexp(x,['_\d+'],'match'),channelFiles,'UniformOutput',0);
+                if all(cellfun(@(x) isempty(x),channelNamesAll))
+                    error('The data filename format is not familiar to the OERecording class, please check that the files were saved in the right format or change filenames');
+                end
+%                 channelNamesAll=cellfun(@(x) ['CH' x{1}(2:end)],channelNamesAll,'UniformOutput',0);
+                % specify analog channels
+                settingFile = fileread([obj.recordingDir 'settings.xml']);
+                sectionStart = regexp(settingFile,['<CHANNEL_INFO>'])';
+                sectionEnd = regexp(settingFile,['</CHANNEL_INFO>'])';
+                section = settingFile(sectionStart:sectionEnd);
+                %ADC
+                [lineStart,lineEnd] = regexp(section,['name=' char(34) 'ADC\d*' char(34) ' number=' char(34) '\d*' char(34) ]);
+                if ~isempty(lineStart)
+                    for c=1:length(lineEnd)
+                        lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
+                        Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
+                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
+                        channelNamesAll{cNA_index}{1}=['AD' channelNamesAll{cNA_index}{1}(2:end)]
+                    end
+                end
+                %AUX
+                [lineStart,lineEnd] = regexp(section,['name=' char(34) 'AUX\d*' char(34) ' number=' char(34) '\d*' char(34) ]);
+                if ~isempty(lineStart)
+                    for c=1:length(lineEnd)
+                        lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
+                        Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
+                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
+                        channelNamesAll{cNA_index}{1}=['AU' channelNamesAll{cNA_index}{1}(2:end)]
+                    end
+                end
+                %CH
+                [lineStart,lineEnd] = regexp(section,['name=' char(34) 'CH\d*' char(34) ' number=' char(34) '\d*' char(34) ]);
+                for c=1:length(lineEnd)
+                    lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
+                    Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
+                    cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
+                    channelNamesAll{cNA_index}{1}=['CH' channelNamesAll{cNA_index}{1}(2:end)]
+                end
+                channelNumbersAll=cellfun(@(x) str2double(x{1}(3:end)),channelNamesAll,'UniformOutput',1);
+            else
+                channelNamesAll=cellfun(@(x) x{1},channelNamesAll,'UniformOutput',0);
+                channelNumbersAll=cellfun(@(x) str2double(regexp(x,'\d+','match')),channelNamesAll,'UniformOutput',1);
+            end
             
             %find channel types analog ch / electrode ch
-            pCh=cellfun(@(x) mean(x([1 2])=='CH')==1,channelNamesAll);
-            pAnalogCh=cellfun(@(x) mean(x([1 2])=='AU')==1 || mean(x([1 2])=='AD')==1,channelNamesAll);
+            pCh=cellfun(@(x) mean(x{1}([1 2])=='CH')==1,channelNamesAll);
+            pAnalogCh=cellfun(@(x) mean(x{1}([1 2])=='AU')==1 || mean(x{1}([1 2])=='AD')==1,channelNamesAll);
             
             obj.channelFilesAnalog=channelFiles(pAnalogCh);
             obj.channelFiles=channelFiles(pCh);
             
             obj.channelNumbers=channelNumbersAll(pCh);
-            obj.channelNumbersAnalog=channelNumbersAll(pAnalogCh);
+            obj.analogChannelNumbers=channelNumbersAll(pAnalogCh);
             
             obj.channelNames=channelNamesAll(pCh);
-            obj.channelNamesAnalog=channelNamesAll(pAnalogCh);
+            obj.analogChannelNames=channelNamesAll(pAnalogCh);
             
             [obj.channelNumbers,pTmp]=sort(obj.channelNumbers);
             obj.channelFiles=obj.channelFiles(pTmp);
             obj.channelNames=obj.channelNames(pTmp);
             obj.n2s(obj.channelNumbers)=1:numel(obj.channelNumbers);
             
-            [obj.channelNumbersAnalog,pTmp]=sort(obj.channelNumbersAnalog);
+            [obj.analogChannelNumbers,pTmp]=sort(obj.analogChannelNumbers);
             obj.channelFilesAnalog=obj.channelFilesAnalog(pTmp);
-            obj.channelNamesAnalog=obj.channelNamesAnalog(pTmp);
-            obj.n2sA(obj.channelNumbersAnalog)=1:numel(obj.channelNumbersAnalog);
+            obj.analogChannelNames=obj.analogChannelNames(pTmp);
+            obj.n2sA(obj.analogChannelNumbers)=1:numel(obj.analogChannelNumbers);
             
             obj=obj.getFileIdentifiers;
             for i=1:numel(obj.channelFiles)
@@ -304,7 +354,7 @@ classdef OERecording < dataRecording
                 obj.samplingFrequency(i)=header.sampleRate;
                 obj.MicrovoltsPerAD(i)=header.bitVolts;
                 obj.startDate{i}=header.date_created;
-                obj.bufferSize(i)=header.bufferSize;
+                %obj.bufferSize(i)=header.bufferSize(1);
                 obj.blockLength(i)=header.blockLength;
                 obj.dataDescriptionCont{i}=header.description;
                 obj.fileHeaders{i} = header;
@@ -327,7 +377,7 @@ classdef OERecording < dataRecording
                 obj.samplingFrequencyA(i)=header.sampleRate;
                 obj.MicrovoltsPerADA(i)=header.bitVolts;
                 obj.startDateA{i}=header.date_created;
-                obj.bufferSizeA(i)=header.bufferSize;
+                %obj.bufferSizeA(i)=header.bufferSize;
                 obj.blockLengthA(i)=header.blockLength;
                 obj.dataDescriptionContA{i}=header.description;
                 obj.fileHeadersA{i} = header;
@@ -443,7 +493,7 @@ classdef OERecording < dataRecording
             end
             obj.recordingDir=[pathstr filesep name];
             obj.recordingName = name;
-            obj.metaDataFile=[obj.recordingDir filesep obj.recordingName '_metaData'];
+            obj.metaDataFile=[obj.recordingDir filesep obj.recordingName 'OE_metaData.mat'];
             %obj.dataFileNames=dir([pathstr filesep name filesep '*.' obj.fileExtension]);
         end
         

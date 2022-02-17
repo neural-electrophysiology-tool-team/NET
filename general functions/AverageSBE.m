@@ -38,7 +38,7 @@ while size(Group,1)>1,
             Burst1=Group(i,:);
             Burst2=Group(i+1,:);
             nanVals=isnan(Burst1);Burst1(nanVals)=mean(Burst1(~nanVals));nanVals=isnan(Burst2);Burst2(nanVals)=mean(Burst2(~nanVals)); %Verify that there are no NaNs
-            [XCF, Lags, Bounds] = crosscorr2(Burst1, Burst2, BurstSize-1);
+            [XCF, Lags, Bounds] = crosscorr(Burst1, Burst2, BurstSize-1);
             %[XCF,Lags]=xcorr(Burst1, Burst2,BurstSize,'coeff') ;
             [MaxCrossCorrValue,MaxValueLocation]=max(XCF);
             for j=1:2^(step-1),
@@ -79,7 +79,7 @@ while (iteration<=40 & sum(ChangedLocations)>0)
         end
         nanVals=isnan(Burst1);Burst1(nanVals)=mean(Burst1(~nanVals));nanVals=isnan(Burst2);Burst2(nanVals)=mean(Burst2(~nanVals)); %Verify that there are no NaNs
         %cross-correlate the two vectors:
-        [XCF, Lags, Bounds] = crosscorr2(Burst1, Burst2, BurstSize-1);
+        [XCF, Lags, Bounds] = crosscorr(Burst1, Burst2, BurstSize-1);
         %[XCF,Lags]=xcorr(Burst1, Burst2,BurstSize,'coeff') ;
         %find the location of the max value in burst:
         [MaxCrossCorrValue,MaxValueLocation]=max(XCF);

@@ -240,9 +240,9 @@ classdef KwikRecording < dataRecording
       
       if exist([obj.recordingDir filesep obj.recordingName '_metaData.mat'],'file') && ~obj.overwriteMetaData
 %     if exist([obj.recordingDir filesep 'metaData.mat'],'file') && ~obj.overwriteMetaData
-          obj = loadMetaData(obj); %needs recNameHD5
+          obj = obj.loadMetaData; %needs recNameHD5
       else
-          obj = extractMetaData(obj);
+          obj = obj.extractMetaData;
       end
       
       obj.numRecordings = length(obj.info.Groups);
@@ -303,6 +303,9 @@ classdef KwikRecording < dataRecording
       try
         disp('Extracting time stamp information...');
         obj.timestamps = double(h5read(obj.fullFilename, [obj.recNameHD5{1} '/application_data/timestamps']));
+        if isempty(obj.timestamps)
+            error('Time stamp information missing from HD5 file');
+        end
         disp('... done');
       catch
         disp('KwikRecording: timestamps information not available')
@@ -330,6 +333,10 @@ classdef KwikRecording < dataRecording
       catch
         obj.datatype = ['int' num2str(obj.bitDepth)];
       end
+      
+      %get data from open ephys xml settings
+      c=xml2struct([obj.recordingDir filesep 'settings.xml']);
+      obj.startDate=datetime(c.SETTINGS.INFO.DATE.Text,'InputFormat','dd MMM yyyy HH:mm:ss');
       
       disp('saving meta data');
       obj.saveMetaData;

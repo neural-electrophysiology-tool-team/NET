@@ -21,7 +21,7 @@ else
     end
 end
 if installGUILayoutToolBox
-    disp('GUI Layout toolbox is not installed, trying to install...');
+    disp('GUI Layout toolbox is not installed, trying to install uix version 2.3.4...');
     d=which('GUI Layout Toolbox 2.3.4.mltbx');
     installedToolbox = matlab.addons.toolbox.installToolbox(d,true);
 end
@@ -176,6 +176,10 @@ end
                 end
             end
         end
+        if AVG.plotData.plotAnalogChannels
+            AVG.plotData.A=AVG.recordingObj.getAnalogData([],AVG.Params.startTime,AVG.Params.window);
+            AVG.plotData.analogChannelNames=AVG.Params.analogChannelNames;
+        end
         
         %Run the relevant plot method
         AVG.plotData.replot;
@@ -227,6 +231,9 @@ end
         %adjust channels
         AVG.Params.channelNames=AVG.recordingObj.channelNames;
         AVG.Params.channelNumbers=AVG.recordingObj.channelNumbers;
+        AVG.Params.analogChannelNames=AVG.recordingObj.analogChannelNames;
+        AVG.Params.analogChannelNumbers=AVG.recordingObj.analogChannelNumbers;
+        
         AVG.Params.activeChannelPlaces=1:numel(AVG.Params.channelNumbers);
         
         %adjust start time
@@ -1067,7 +1074,7 @@ end
         set(AVG.hTrigger.MainVBox, 'Heights',[50 25 25 25 25 25 50 25 -1]);
         %this line should be after the startTimeEdit uicontrol is defined! 
         
-        mouse_figure(AVG.hMainFigure.hFigure);
+        %mouse_figure(AVG.hMainFigure.hFigure);
     end %createGUI
 %% %%%%%%%%%%%%%%%%%%%%%%%%%% Create Trigger GUI %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

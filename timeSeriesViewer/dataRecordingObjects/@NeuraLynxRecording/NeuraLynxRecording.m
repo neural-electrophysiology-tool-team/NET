@@ -234,7 +234,7 @@ classdef NeuraLynxRecording < dataRecording
             end
             obj.folderMode=true;
             obj=obj.getRecordingFiles(recordingFile);
-            obj.recordingDir=[obj.recordingDir obj.recordingName];
+            obj.recordingDir=[obj.recordingDir filesep obj.recordingName];
             
             if exist([obj.recordingDir '\metaData.mat'],'file')
                 obj=loadMetaData(obj);
@@ -253,7 +253,7 @@ classdef NeuraLynxRecording < dataRecording
         
         function obj=getChannelInformation(obj)
             %Reads recording files from recording directory and extracts file information
-            allFiles=dir([obj.recordingDir '\*.ncs']);
+            allFiles=dir([obj.recordingDir filesep '*.ncs']);
             unsorteddataFileNames={allFiles.name};
             unsorteddataFileNumbers=arrayfun(@(x) str2double(x.name(4:end-4)), allFiles);
             
@@ -265,7 +265,7 @@ classdef NeuraLynxRecording < dataRecording
             nCh=numel(obj.channelNumbers);
             for i=1:nCh
                 waitbar(i / nCh)
-                records=Nlx2MatCSC([obj.recordingDir filesep obj.dataFileNames{i}],[0 0 0 1 0],0,1,[]);
+                records=Nlx2MatCSC_v3([obj.recordingDir filesep obj.dataFileNames{i}],[0 0 0 1 0],0,1,[]);
                 %records=NlxCSC2mat([obj.recordingDir filesep obj.dataFileNames{i}],[0 0 0 1 0],0,1,[]);
                 %Check if using Nlx2MatCSC_v3 is faster
                 obj.nRecordsPerChannel(i) = numel(records);
@@ -284,7 +284,7 @@ classdef NeuraLynxRecording < dataRecording
         function obj=getHeaderInformation(obj) %get parameters from file header
             %get header and first time stamp from recordings
             [timeStamps, header] = Nlx2MatCSC...
-                ([obj.recordingDir '\' obj.dataFileNames{obj.defaultChannelNumberForHearderExtraction}],[1 0 0 0 0],1,1,[]);
+                ([obj.recordingDir filesep obj.dataFileNames{obj.defaultChannelNumberForHearderExtraction}],[1 0 0 0 0],1,1,[]);
             
             for i=1:numel(header)
                 if ~isempty(header{i})

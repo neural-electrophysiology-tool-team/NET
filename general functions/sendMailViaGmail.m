@@ -1,13 +1,16 @@
 function sendMailViaGmail(recipientMail,subject,message)
 
-% Modify these two lines to reflect
-% your account and password.
+% Modify these two lines to reflect your account and password.
 NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
-emailCredentialsFile = fileread([NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'emailsCredentials.txt']);
-emailCredentials = regexp(emailCredentialsFile, '\r\n|\r|\n', 'split');
+if exist([NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'emailsCredentials.txt'],'file')
+    emailCredentialsFile = fileread([NSKToolBoxMainDir filesep 'PCspecificFiles' filesep 'emailsCredentials.txt']);
+    emailCredentials = regexp(emailCredentialsFile, '\r\n|\r|\n', 'split');
+    myaddress = emailCredentials{1};
+    mypassword = emailCredentials{2};
+else
+    message.server.mark@gmail.com
+end
 
-myaddress = emailCredentials{1};
-mypassword = emailCredentials{2};
 
 setpref('Internet','E_mail',myaddress);
 setpref('Internet','SMTP_Server','smtp.gmail.com');
