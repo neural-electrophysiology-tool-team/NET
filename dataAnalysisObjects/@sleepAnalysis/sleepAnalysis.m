@@ -3392,7 +3392,7 @@ classdef sleepAnalysis < recAnalysis
             
             axes(h(1));
             h(3)=imagesc(tSlidingAC(pt)/1000/60/60,autocorrTimes/1000,real(acf(:,pt)),[-0.5 0.5]);
-            ylabel('Autocorr lag [s]');
+            ylabel('\delta/\beta Autocorr lag [s]');
             ylim(xcf_lags([1 end])/1000);%important for panel plots
             yl=ylim;
             xlim(tSlidingAC(pt([1 end]))/1000/60/60); %important for panel plots
@@ -3411,7 +3411,7 @@ classdef sleepAnalysis < recAnalysis
             axes(h(2));
             h(5)=scatter(RAC.tSlidingAC/1000/60/60,RAC.acfPeriodAll/1000,10,[0.8 0.8 1],'filled');hold on;
             h(6)=plot((RAC.tFilteredSlidingPeriod)/1000/60/60,RAC.filteredSlidingPeriod/1000,'-','lineWidth',3);
-            ylabel('Period [s]');
+            ylabel('Respiration period [s]');
             xlabel('Time [h]');
             set(h(2),'Box','on');
             axis tight;
