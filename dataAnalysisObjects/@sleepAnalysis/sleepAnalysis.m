@@ -2038,6 +2038,7 @@ classdef sleepAnalysis < recAnalysis
             
             parseObj = inputParser;
             addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
+            addParameter(parseObj,'avgOnCh',[],@isnumeric); %uses several averaged channels for d/b extraction
             addParameter(parseObj,'movLongWin',1000*60*30,@isnumeric); %max freq. to examine
             addParameter(parseObj,'movWin',10000,@isnumeric);
             addParameter(parseObj,'movOLWin',9000,@isnumeric);
@@ -2126,14 +2127,22 @@ classdef sleepAnalysis < recAnalysis
                 obj.filt.FN=obj.filt.FN.designNotch;
             end
             
+            loadCh=ch;
+            if ~isempty(avgOnCh)
+                loadCh=avgOnCh; %this can not be moved to other positions
+            end
+            
             fprintf('\nDelta2Beta extraction (%d chunks)-',nChunks);
             for i=1:nChunks
                 fprintf('%d,',i);
-                MLong=obj.currentDataObj.getData(ch,startTimes(i),movLongWin);
+                MLong=obj.currentDataObj.getData(loadCh,startTimes(i),movLongWin);
                 if applyNotch
                     MLong=obj.filt.FN.getFilteredData(MLong); %for 50Hz noise
                 end
                 FMLong=obj.filt.F.getFilteredData(MLong);
+                if ~isempty(avgOnCh)
+                    FMLong=mean(FMLong,1);
+                end
                 
                 FMLong(FMLong<-maxVoltage | FMLong>maxVoltage)=nan; %remove high voltage movement artifacts
                 
@@ -2145,7 +2154,6 @@ classdef sleepAnalysis < recAnalysis
                 betaRatioAll{i}=nan(1,numel(pValid));
                 if any(pValid)
                     [pxx,f] = pwelch(FMLongB(:,pValid),segmentWelchSamples,samplesOLWelch,dftPointsWelch,obj.filt.FFs);
-                    
                     deltaBetaRatioAll{i}(pValid)=(mean(pxx(pfLowBand,:))./mean(pxx(pfHighBand,:)))';
                     deltaRatioAll{i}(pValid)=mean(pxx(pfLowBand,:))';
                     betaRatioAll{i}(pValid)=mean(pxx(pfHighBand,:))';
@@ -3384,7 +3392,7 @@ classdef sleepAnalysis < recAnalysis
             
             axes(h(1));
             h(3)=imagesc(tSlidingAC(pt)/1000/60/60,autocorrTimes/1000,real(acf(:,pt)),[-0.5 0.5]);
-            ylabel('Autocorr lag [s]');
+            ylabel('\delta/\beta Autocorr lag [s]');
             ylim(xcf_lags([1 end])/1000);%important for panel plots
             yl=ylim;
             xlim(tSlidingAC(pt([1 end]))/1000/60/60); %important for panel plots
@@ -3403,7 +3411,7 @@ classdef sleepAnalysis < recAnalysis
             axes(h(2));
             h(5)=scatter(RAC.tSlidingAC/1000/60/60,RAC.acfPeriodAll/1000,10,[0.8 0.8 1],'filled');hold on;
             h(6)=plot((RAC.tFilteredSlidingPeriod)/1000/60/60,RAC.filteredSlidingPeriod/1000,'-','lineWidth',3);
-            ylabel('Period [s]');
+            ylabel('Respiration period [s]');
             xlabel('Time [h]');
             set(h(2),'Box','on');
             axis tight;

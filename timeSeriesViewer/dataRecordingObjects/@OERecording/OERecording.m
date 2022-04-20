@@ -234,11 +234,17 @@ classdef OERecording < dataRecording
             timestamps=timestamps-startTime_ms;
             
             pTTL=eventType==3;
+            if numel(activeCh)>0
             for i=1:numel(activeCh)
                 T_ms{(2*activeCh(i)+1)}=timestamps(eventId==1 & ch==activeCh(i) & pTTL & pTime)';%ch1 is 0
                 T_ms{(2*activeCh(i)+2)}=timestamps(eventId==0 & ch==activeCh(i) & pTTL & pTime)';%ch1 is 0
                 chNumber((2*activeCh(i)+1))=activeCh(i);
                 chNumber((2*activeCh(i)+2))=activeCh(i);
+            end
+            else
+                disp('All event channels in the recording are empty');
+                T_ms={};
+                chNumber=[];
             end
         end
         
