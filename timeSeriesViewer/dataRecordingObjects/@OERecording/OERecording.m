@@ -296,32 +296,92 @@ classdef OERecording < dataRecording
                 sectionEnd = regexp(settingFile,['</CHANNEL_INFO>'])';
                 section = settingFile(sectionStart:sectionEnd);
                 %ADC
+                %extract all possible ADC channels from CHANNEL INFO section
                 [lineStart,lineEnd] = regexp(section,['name=' char(34) 'ADC\d*' char(34) ' number=' char(34) '\d*' char(34) ]);
                 if ~isempty(lineStart)
-                    for c=1:length(lineEnd)
-                        lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
+                    ADC1_line = section(lineEnd(1)-2:lineEnd(1)-1); %which line is the first analog channel
+                    ADC1_number = str2num(ADC1_line(regexp(ADC1_line,'\d'))); %what is the CH number of ADC1
+                    % which analog channels were actually recorded from a
+                    % subsection listing channels and record state
+                    [~,recordList] = regexp(settingFile,['<RECORDSTATE.*CH' num2str(ADC1_number-1)]); %find where the analog channels begin
+                    recordListEnd = regexp(settingFile,['</SUBPROCESSOR'])'; %where the aforementioned subsection ends. Not an ideal criterion, but it works
+                    [chStart,chEnd] = regexp(settingFile(recordList+1:recordListEnd(1)),['CH\d*=' char(34) '1' char(34)]); %find which ADCs were recorded
+                    % loops over recorded ADC and generates vector of ch
+                    % numbers
+                    for eA = 1:length(chStart)
+                        segment = [settingFile(recordList+chStart(eA):recordList+chEnd(eA)-1)];
+                        eqSign = strfind(segment,"=");
+                        existingADC(eA) = str2num(segment(3:eqSign-1));
+                    end
+                    %loops over existing ADCs and add prefix AD in
+                    %channelNamesAll array
+                    for c= existingADC-ADC1_number+1
+                        [~,eqQuotMark]=regexp(section(lineStart(c):lineEnd(c)),['number=' char(34)]);
+                        lineSec = section(lineStart(c)+eqQuotMark:lineEnd(c)-1);
                         Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
                         cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll);
                         channelNamesAll{cNA_index}{1}=['AD' channelNamesAll{cNA_index}{1}(2:end)];
                     end
                 end
                 %AUX
+                clear lineStart lineEnd recordList recordListEnd  segment eqSign lineSec Number cNA_index
                 [lineStart,lineEnd] = regexp(section,['name=' char(34) 'AUX\d*' char(34) ' number=' char(34) '\d*' char(34) ]);
                 if ~isempty(lineStart)
-                    for c=1:length(lineEnd)
-                        lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
+                    AUX1_line = section(lineEnd(1)-2:lineEnd(1)-1); %which line is the first analog channel
+                    AUX1_number = str2num(AUX1_line(regexp(AUX1_line,'\d'))); %what is the CH number of ADC1
+                    AUXlast_line = section(lineEnd(end)-2:lineEnd(end)-1); %which line is the last data channel
+                    AUXlast_number = str2num(AUXlast_line(regexp(AUXlast_line,'\d'))); %what is the CH number of CHlast
+                    % which analog channels were actually recorded from a
+                    % subsection listing channels and record state
+                    [~,recordList] = regexp(settingFile,['<RECORDSTATE.*CH' num2str(AUX1_number-1)]); %find where the analog channels begin
+                    [~,recordListEnd] = regexp(settingFile,['<RECORDSTATE.*CH' AUXlast_line]); %where the aforementioned subsection ends. Not an ideal criterion, but it works
+                    [chStart,chEnd] = regexp(settingFile(recordList-1:recordListEnd(1)+4),['CH\d*=' char(34) '1' char(34)]); %find which ADCs were recorded
+                    % loops over recorded ADC and generates vector of ch
+                    % numbers
+                    for eX = 1:length(chStart)
+                        segment = [settingFile(recordList+chStart(eX):recordList+chEnd(eX)-1)];
+                        eqSign = strfind(segment,"=");
+                        existingAUX(eX) = str2num(segment(1:eqSign-1));
+                    end
+                    %loops over existing AAUXs and add prefix AU in
+                    %channelNamesAll array
+                    for c= existingAUX-AUX1_number+1
+                        [~,eqQuotMark]=regexp(section(lineStart(c):lineEnd(c)),['number=' char(34)]);
+                        lineSec = section(lineStart(c)+eqQuotMark:lineEnd(c)-1);
                         Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
                         cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll);
                         channelNamesAll{cNA_index}{1}=['AU' channelNamesAll{cNA_index}{1}(2:end)];
                     end
                 end
                 %CH
+                clear lineStart lineEnd recordList recordListEnd  segment eqSign lineSec Number cNA_index
                 [lineStart,lineEnd] = regexp(section,['name=' char(34) 'CH\d*' char(34) ' number=' char(34) '\d*' char(34) ]);
-                for c=1:length(lineEnd)
-                    lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
-                    Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
-                    cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll);
-                    channelNamesAll{cNA_index}{1}=['CH' channelNamesAll{cNA_index}{1}(2:end)];
+                if ~isempty(lineStart)
+                    CH1_line = section(lineEnd(1)-2:lineEnd(1)-1); %which line is the first analog channel
+                    CH1_number = str2num(CH1_line(regexp(CH1_line,'\d'))); %what is the CH number of CH1
+                    CHlast_line = section(lineEnd(end)-2:lineEnd(end)-1); %which line is the last data channel
+                    CHlast_number = str2num(CHlast_line(regexp(CHlast_line,'\d'))); %what is the CH number of CHlast
+                    % which analog channels were actually recorded from a
+                    % subsection listing channels and record state
+                    [~,recordList] = regexp(settingFile,['<RECORDSTATE.*CH' num2str(CH1_number)]); %find where the analog channels begin
+                    [~,recordListEnd] = regexp(settingFile,['<RECORDSTATE.*CH' CHlast_line]); %where the aforementioned subsection ends. Not an ideal criterion, but it works
+                    [chStart,chEnd] = regexp(settingFile(recordList-1:recordListEnd(1)+4),['CH\d*=' char(34) '1' char(34)]); %find which ADCs were recorded
+                    % loops over recorded ADC and generates vector of ch
+                    % numbers
+                    for eC = 1:length(chStart)
+                        segment = [settingFile(recordList+chStart(eC):recordList+chEnd(eC)-1)];
+                        eqSign = strfind(segment,"=");
+                        existingCH(eC) = str2num(segment(1:eqSign-1));
+                    end
+                    %loops over existing AAUXs and add prefix AU in
+                    %channelNamesAll array
+                    for c= existingCH-CH1_number+1
+                        [~,eqQuotMark]=regexp(section(lineStart(c):lineEnd(c)),['number=' char(34)]);
+                        lineSec = section(lineStart(c)+eqQuotMark:lineEnd(c)-1);
+                        Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
+                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll);
+                        channelNamesAll{cNA_index}{1}=['CH' channelNamesAll{cNA_index}{1}(2:end)];
+                    end
                 end
                 channelNumbersAll=cellfun(@(x) str2double(x{1}(3:end)),channelNamesAll,'UniformOutput',1);
             else
