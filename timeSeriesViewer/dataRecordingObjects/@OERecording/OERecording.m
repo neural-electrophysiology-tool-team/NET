@@ -234,11 +234,17 @@ classdef OERecording < dataRecording
             timestamps=timestamps-startTime_ms;
             
             pTTL=eventType==3;
+            if numel(activeCh)>0
             for i=1:numel(activeCh)
                 T_ms{(2*activeCh(i)+1)}=timestamps(eventId==1 & ch==activeCh(i) & pTTL & pTime)';%ch1 is 0
                 T_ms{(2*activeCh(i)+2)}=timestamps(eventId==0 & ch==activeCh(i) & pTTL & pTime)';%ch1 is 0
                 chNumber((2*activeCh(i)+1))=activeCh(i);
                 chNumber((2*activeCh(i)+2))=activeCh(i);
+            end
+            else
+                disp('All event channels in the recording are empty');
+                T_ms={};
+                chNumber=[];
             end
         end
         
@@ -295,8 +301,8 @@ classdef OERecording < dataRecording
                     for c=1:length(lineEnd)
                         lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
                         Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
-                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
-                        channelNamesAll{cNA_index}{1}=['AD' channelNamesAll{cNA_index}{1}(2:end)]
+                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll);
+                        channelNamesAll{cNA_index}{1}=['AD' channelNamesAll{cNA_index}{1}(2:end)];
                     end
                 end
                 %AUX
@@ -305,8 +311,8 @@ classdef OERecording < dataRecording
                     for c=1:length(lineEnd)
                         lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
                         Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
-                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
-                        channelNamesAll{cNA_index}{1}=['AU' channelNamesAll{cNA_index}{1}(2:end)]
+                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll);
+                        channelNamesAll{cNA_index}{1}=['AU' channelNamesAll{cNA_index}{1}(2:end)];
                     end
                 end
                 %CH
@@ -314,8 +320,8 @@ classdef OERecording < dataRecording
                 for c=1:length(lineEnd)
                     lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
                     Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
-                    cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
-                    channelNamesAll{cNA_index}{1}=['CH' channelNamesAll{cNA_index}{1}(2:end)]
+                    cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll);
+                    channelNamesAll{cNA_index}{1}=['CH' channelNamesAll{cNA_index}{1}(2:end)];
                 end
                 channelNumbersAll=cellfun(@(x) str2double(x{1}(3:end)),channelNamesAll,'UniformOutput',1);
             else
