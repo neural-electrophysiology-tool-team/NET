@@ -97,7 +97,11 @@ end
 if ~isempty(Par.removeOverlap)
     minM=nanmin(varargin{pData},[],1)';
     maxM=nanmax(varargin{pData},[],1)';
-    Par.verticalShift=flipud(cumsum([0;maxM(end:-1:2)-minM(end-1:-1:1)]))'+(nCh:-1:1)*Par.verticalShift;
+    if isempty(Par.verticalShift)
+        Par.verticalShift=flipud(cumsum([0;maxM(end:-1:2)-minM(end-1:-1:1)]))'+(nCh:-1:1);
+    else
+        Par.verticalShift=flipud(cumsum([0;maxM(end:-1:2)-minM(end-1:-1:1)]))'+(nCh:-1:1)*Par.verticalShift;
+    end
     yl=[Par.verticalShift(end)+minM(end) Par.verticalShift(1)+maxM(1)];
 elseif ~isempty(Par.verticalShift)==1 %manual detection
     Par.verticalShift=0:Par.verticalShift:(Par.verticalShift*(nCh-1));
