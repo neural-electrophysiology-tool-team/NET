@@ -298,8 +298,8 @@ classdef OERecording < dataRecording
                     for c=1:length(lineEnd)
                         lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
                         Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
-                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
-                        channelNamesAll{cNA_index}{1}=['AD' channelNamesAll{cNA_index}{1}(2:end)]
+                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll);
+                        channelNamesAll{cNA_index}{1}=['AD' channelNamesAll{cNA_index}{1}(2:end)];
                     end
                 end
                 %AUX
@@ -308,8 +308,8 @@ classdef OERecording < dataRecording
                     for c=1:length(lineEnd)
                         lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
                         Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
-                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
-                        channelNamesAll{cNA_index}{1}=['AU' channelNamesAll{cNA_index}{1}(2:end)]
+                        cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll);
+                        channelNamesAll{cNA_index}{1}=['AU' channelNamesAll{cNA_index}{1}(2:end)];
                     end
                 end
                 %CH
@@ -317,8 +317,8 @@ classdef OERecording < dataRecording
                 for c=1:length(lineEnd)
                     lineSec = section(lineEnd(c)-2:lineEnd(c)-1);
                     Number = str2num(lineSec(regexp(lineSec,'\d')))+1;
-                    cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll)
-                    channelNamesAll{cNA_index}{1}=['CH' channelNamesAll{cNA_index}{1}(2:end)]
+                    cNA_index = cellfun(@(x) strcmp(x{1}(2:end),num2str(Number)),channelNamesAll);
+                    channelNamesAll{cNA_index}{1}=['CH' channelNamesAll{cNA_index}{1}(2:end)];
                 end
                 channelNumbersAll=cellfun(@(x) str2double(x{1}(3:end)),channelNamesAll,'UniformOutput',1);
             else
