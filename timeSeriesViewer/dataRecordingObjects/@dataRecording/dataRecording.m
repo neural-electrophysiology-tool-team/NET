@@ -30,6 +30,7 @@ classdef (Abstract) dataRecording < handle
         
         overwriteMetaData = false; %internal parameter - if true recalculates meta data
         metaDataFile
+        includeOnlyDigitalDataInTriggers = false;
     end
     
     properties (SetAccess=protected) %these are properties that are not synchronized or loaded from meta files
