@@ -6,7 +6,7 @@ obj.plotParams.allElecLayoutNames=cellfun(@(x) x(1:end-4),{electrodeFolder.name}
 obj.plotParams.elecLayoutNames4Popup=cellfun(@(x) x(8:end),obj.plotParams.allElecLayoutNames,'UniformOutput',0);
 
 if ~isempty(obj.recordingObjReference)
-    pLayout=find(strcmp(obj.recordingObjReference.layoutName,obj.plotParams.allElecLayoutNames));
+    pLayout=find(strcmp(['layout_',obj.recordingObjReference.layoutName],obj.plotParams.allElecLayoutNames));
 else
     pLayout=[];
 end
@@ -70,6 +70,15 @@ obj=preparePhysicalElectrodeSpace(obj);
         obj.plotParams.nAllChannels=numel(obj.plotParams.allChannels); %changed 2.8.16 - Mark to enable gaps in channel numbers in layout
         %obj.plotParams.nAllChannels=max(obj.plotParams.allChannels);
 
+        if numel(obj.channelNumbers)~=obj.plotParams.nAllChannels
+            %msgbox('The number of data channels does not fit layout channels!');
+            answer = questdlg('Should I try to ignore channels from the recording?','Electrode missmatch issue','yes','no','no');
+            switch answer
+                case 'yes'
+                case 'no'
+                    return;
+            end
+        end
         
         obj.plotParams.translation=NaN(obj.plotParams.nAllChannels,3);
         for i=1:obj.plotParams.nAllChannels

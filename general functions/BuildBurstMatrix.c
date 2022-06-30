@@ -19,7 +19,7 @@
 void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 {
     double *indexCh, *times, *tTrial;
-    double width;
+    long int width;
     int matClass;
     mwSize i, rowIdx, nNeurons, nTrials, nSpikes, trial, neu, t, ndims[3];
     
@@ -27,7 +27,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
     uint8_T *Muint8;
     double *Mdouble;
     mxLogical *Mlogical;
-    
+                
     /*check if format is correct-help*/
     if ((nrhs<4) | (nrhs>5))
     {
@@ -39,12 +39,18 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
     indexCh = mxGetPr(prhs[0]); /*indexChchannel (4x number of neurons)*/
     times = mxGetPr(prhs[1]); /*t - spikes timings*/
     tTrial = mxGetPr(prhs[2]); /*time of beginnings of trials - same units as times*/
-    width = (mwSize)mxGetScalar(prhs[3]); /*  width of burst window - same units as times  - totla burst window is [tTrial, tTrial+window]*/
+    width = (long int)mxGetScalar(prhs[3]); /*  width of burst window - same units as times  - totla burst window is [tTrial, tTrial+window]*/
     
     rowIdx = (mwSize)mxGetM(prhs[0]);       /* =4  - return number of rows in array*/
     nNeurons = (mwSize)mxGetN(prhs[0]);         /* number of neurions - return number of columns in array.*/
     nSpikes = (mwSize)mxGetN(prhs[1]);         /* total number of spikes*/
     nTrials = (mwSize)mxGetN(prhs[2]);         /* total number of bursts*/
+
+    /*Checks that the window width is positive*/
+    if (!(width>0))
+    {
+        mexErrMsgTxt("\nThe chosen window is not a positive integer\n");
+    }
     
     /*check that input variables are integers*/
     for (i=0;i<nSpikes;i++)
@@ -59,7 +65,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
     
     if (nrhs==5)
     {
-        matClass = (int)mxGetScalar(prhs[4]);
+        matClass = (int)mxGetScalar(prhs[5]);
     }
     else
     {

@@ -48,7 +48,7 @@ end
 function mriViewer_OpeningFcn(hObject, eventdata, handles, varargin)
 handles.output = hObject;
 if nargin<4
-    addpath('D:\PostDoc\Turtle anatomy\TurtleMRIs');
+    addpath('/media/sil2/Experimental/Reptile anatomy data/TurtleMRIs/');
     load turtle03_5_mriViewerData;
     %load turtle03_5_Reduced_mriViewerData
     %load turtle03_5_ReducedOnlyBrain_mriViewerData;
@@ -72,6 +72,8 @@ elseif nargin==5
     handles.gui.pixelSize=varargin{2}; %uM units
 elseif nargin==4
     handles.data=double(varargin{1});
+    handles.surfPatches.faces=[];
+    handles.surfPatches.vertices=[];
 else
     error('incorrect number of inputs! input should be: mriViewer(X), X beind a 3D matrix');
 end
@@ -180,7 +182,12 @@ else
     axes(handles.imagePlot);
     switch handles.gui.section
         case 1
-            handles.gui.p1=imagesc(rot90(squeeze(handles.data(handles.gui.frameNumber,:,:))));
+            net = denoisingNetwork('DnCNN');
+            I=denoiseImage(rot90(squeeze(handles.data(handles.gui.frameNumber,:,:))),net);
+            handles.gui.p1=imagesc(I,[0 10000]);
+            %handles.gui.p1=imagesc(rot90(squeeze(handles.data(handles.gui.frameNumber,:,:))),[0 10000]);
+            %colormap(gca,'jet');
+            %colorbar;
         case 2
             handles.gui.p1=imagesc(rot90(squeeze(handles.data(:,handles.gui.frameNumber,:))));
         case 3

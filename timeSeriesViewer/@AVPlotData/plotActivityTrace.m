@@ -18,7 +18,8 @@ if obj.refreshPlot %for first appearance when shifts were not chosen
     verticalShift=max(nanstd(double(obj.M(:)))*5,eps);
     obj.plotParams.shifts=((size(M,1)-1):-1:0)'*verticalShift;
     set(obj.hPlotControls.verticalShiftEdit,'string',num2str(verticalShift));
-    ylim(obj.hPlotAxis,[obj.plotParams.shifts(end)-1*verticalShift obj.plotParams.shifts(1)+1*verticalShift+eps]);
+    obj.plotParams.yl=[obj.plotParams.shifts(end)-1*verticalShift obj.plotParams.shifts(1)+1*verticalShift+eps];
+    ylim(obj.hPlotAxis,obj.plotParams.yl);
     obj.refreshPlot=0;
 end
 
@@ -31,6 +32,26 @@ if obj.nTrials==1 & obj.plotParams.plotChannelNumbers
 elseif obj.nCh==1 & obj.plotParams.plotChannelNumbers
     hText=text(obj.T(end)*0.99*ones(1,obj.nTrials),M(:,end),num2cell(1:obj.nTrials),...
         'Parent',obj.hPlotAxis,'FontSize',6,'FontWeight','Bold','BackgroundColor','w');
+end
+
+%analog channels are added as regular electrode channels (maybe worth changing in the future).
+if obj.plotAnalogChannels
+    A=squeeze(obj.A);
+    nA=size(A,1);
+    if nA==1
+        A=A';
+    end
+    yl=obj.plotParams.yl;
+    dV=(yl(2)-yl(1))/obj.nCh;
+    A=bsxfun(@plus,bsxfun(@minus,double(A),mean(A,2))*obj.analogScaling,(yl(1)-dV*(1:nA))');
+    
+    obj.hPlot=[obj.hPlot;plot(obj.hPlotAxis,obj.T,A,'k')];
+    hText=[hText;text(obj.T(end)*0.98*ones(1,nA),A(:,end),obj.analogChannelNames,...
+        'Parent',obj.hPlotAxis,'FontSize',6,'FontWeight','Bold','BackgroundColor','w')];
+    
+    ylim(obj.hPlotAxis,[yl(1)-dV*(nA+1) yl(2)]);
+else
+    ylim(obj.hPlotAxis,obj.plotParams.yl);
 end
 
 xlim(obj.hPlotAxis,[obj.T(1) obj.T(end)]);

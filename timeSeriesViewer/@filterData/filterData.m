@@ -119,6 +119,8 @@ classdef filterData
             if round(obj.filterOrder/2)*2~=obj.filterOrder
                 error('Notch must be of even order');
             end
+            obj.filterOrder=2;
+            disp('Notice that filter order is changed to 2 for notch to eliminate ripples');
             obj.vars={'N,F0,Q,Ap',obj.filterOrder,centerFreq,qualityFactor,assbandAttenuation};
             obj=obj.runDesign;
         end

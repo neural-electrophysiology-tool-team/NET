@@ -3,7 +3,7 @@ function [newT,newic]=RemoveEmptyChannels(t,ic)
 % a function that removes empty channels data 
 
 x=[];
-for i=1:length(ic,2)
+for i=1:size(ic,2)
     if ~(ic(4,i)>=ic(3,i))
         x=[x ic([3 4],i)];
     end
