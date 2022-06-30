@@ -288,7 +288,7 @@ classdef OERecording < dataRecording
                 end
 %                 channelNamesAll=cellfun(@(x) ['CH' x{1}(2:end)],channelNamesAll,'UniformOutput',0);
                 % specify analog channels
-                settingFile = fileread([obj.recordingDir 'settings.xml']);
+                settingFile = fileread([obj.recordingDir filesep 'settings.xml']);
                 sectionStart = regexp(settingFile,['<CHANNEL_INFO>'])';
                 sectionEnd = regexp(settingFile,['</CHANNEL_INFO>'])';
                 section = settingFile(sectionStart:sectionEnd);
