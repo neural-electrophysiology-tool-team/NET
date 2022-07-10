@@ -347,6 +347,10 @@ end
         timeSeriesViewer('timeWindowExternalHandles',[AVG.hNav.startTimeEdit AVG.hNav.WindowEdit]);
     end
 
+    function addSyncVideo(hObj,event)
+        
+    end
+
     function CallbackSyncGUI(hObj,event)
         AVG.Params.window=str2num(AVG.Params.timeWindowExternalHandles(2).String);
         AVG.hNav.startTimeEdit.String=AVG.Params.timeWindowExternalHandles(1).String;
@@ -877,7 +881,9 @@ end
         %AVG.hMenubar.fileLoad=uimenu( AVG.hMenubar.hFile, 'Label', 'Load', 'Callback', @CallbackMenuLoad);
         %AVG.hMenubar.fileExit=uimenu( AVG.hMenubar.hFile, 'Label', 'Exit', 'Callback', @CallbackMenuExit);
         AVG.hMenubar.addSyncAV=uimenu(AVG.hMenubar.hFile, 'Label', 'Add synced AV', 'Callback', @addSyncAV);
+        AVG.hMenubar.addSyncVideo=uimenu(AVG.hMenubar.hFile, 'Label', 'Add synced video', 'Callback', @addSyncVideo);
 
+        
         % set plot meuns
         AVG.hMenubar.hPlotType = uimenu(AVG.hMainFigure.hFigure, 'Label', 'Plot' );
         for i=1:length(AVG.Params.PlotList)
