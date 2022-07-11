@@ -326,9 +326,11 @@ classdef OERecording < dataRecording
                 channelNumbersAll=cellfun(@(x) str2double(regexp(x,'\d+','match')),channelNamesAll,'UniformOutput',1);
             end
             
-            %find channel types analog ch / electrode ch
-            pCh=cellfun(@(x) mean(x{1}([1 2])=='CH')==1,channelNamesAll);
-            pAnalogCh=cellfun(@(x) mean(x{1}([1 2])=='AU')==1 || mean(x{1}([1 2])=='AD')==1,channelNamesAll);
+            %find channel types analog ch / electrode ch - Changed on 11/7/22 to the lower lines - consider changing back if a problem occurs.
+            %pCh=cellfun(@(x) mean(x{1}([1 2])=='CH')==1,channelNamesAll);
+            %pAnalogCh=cellfun(@(x) mean(x{1}([1 2])=='AU')==1 || mean(x{1}([1 2])=='AD')==1,channelNamesAll);
+            pCh=cellfun(@(x) mean(x([1 2])=='CH')==1,channelNamesAll);
+            pAnalogCh=cellfun(@(x) mean(x([1 2])=='AU')==1 || mean(x([1 2])=='AD')==1,channelNamesAll);
             
             obj.channelFilesAnalog=channelFiles(pAnalogCh);
             obj.channelFiles=channelFiles(pCh);
