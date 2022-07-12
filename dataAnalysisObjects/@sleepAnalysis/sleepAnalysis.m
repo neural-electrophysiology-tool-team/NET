@@ -1548,6 +1548,20 @@ classdef sleepAnalysis < recAnalysis
                         % Reset the points
                         if size(oldInliers,1)<minTrackingPoints
                             contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
+                            %check if contour box does not exceed image limits
+                            if (contourBox(1)+contourBox(3))>videoReader.Width
+                                contourBox(3)=videoReader.Width-contourBox(1);
+                            end
+                            if (contourBox(2)+contourBox(4))>videoReader.Height
+                                contourBox(4)=videoReader.Height-contourBox(2);
+                            end
+                            if contourBox(1) < 1
+                                contourBox(1)=1;
+                            end
+                            if contourBox(2) < 1
+                                contourBox(2)=1;
+                            end
+                            
                             newPoints = detectMinEigenFeatures(videoFrame, 'ROI', contourBox ); %this function can not receive a polygon only a rectangle along the main axes
                             newPoints = newPoints.Location;
                             in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
