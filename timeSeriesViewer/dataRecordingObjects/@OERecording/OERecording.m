@@ -157,14 +157,21 @@ classdef OERecording < dataRecording
             %generate time stamps for block waveform extraction and extract waveforms from file
             %clear pOutIdx
             for i=1:nWindows
-                pSingleTrialTimeStamps{i}=find(obj.allTimeStamps>=startTime_ms(i)-obj.recordLength & obj.allTimeStamps<(startTime_ms(i)+window_ms)); %find relevant blocks
-                singleTrialTimeStamps=round(obj.allTimeStamps(pSingleTrialTimeStamps{i})/obj.sample_ms)*obj.sample_ms;
+                pSingleTrialTimeStamps{i}=find(obj.allTimeStamps>=startTime_ms(i)-obj.recordLength & obj.allTimeStamps<(startTime_ms(i)+window_ms)); %find relevant blocks in block list
+                singleTrialTimeStamps=round(obj.allTimeStamps(pSingleTrialTimeStamps{i})/obj.sample_ms)*obj.sample_ms; %calculate time stamps in milliseconds
                 recordsPerTrial(i)=numel(singleTrialTimeStamps);
-                timeIdx=bsxfun(@plus,(0:obj.dataSamplesPerRecord-1)*obj.sample_ms,singleTrialTimeStamps);
-                pRecIdx{i,:}=(timeIdx>=startTime_ms(i)) & timeIdx<(startTime_ms(i)+window_ms);
+                timeIdx=bsxfun(@plus,(0:obj.dataSamplesPerRecord-1)*obj.sample_ms,singleTrialTimeStamps); % create a matrix for the times of every sample in ms
+                pRecIdx{i,:}=(timeIdx>=startTime_ms(i)) & timeIdx<(startTime_ms(i)+window_ms); %find time indices within the requested time window (chuncks are 1024 in size so they are usually cut for most time windows)
+                
+                %maybe better to replace with "if pOutIdx{i,1}==0"
+                if sum(sum(pRecIdx{i,:}(:)))==windowSamples+1 %due to rounding issues, there may be an error when there is one sample too much - in this case the last sample is removed
+                    pRecIdx{i,:}(1,find(pRecIdx{i,:}(1,:)==1,1,'first'))=false;
+                end
+                
                 timeIdx=timeIdx';
                 pOutIdx{i,1}=round((timeIdx(pRecIdx{i,:}')-startTime_ms(i))/obj.sample_ms)+windowSamples*(i-1); %round should not be changed to floor or ceil - it creates a weird artifact
             end
+            %this solved a special case that may not be needed anymore - check if the future if can be removed
             if pOutIdx{1}(1)==0
                 pOutIdx{1}=pOutIdx{1}+1;
             end
@@ -326,9 +333,16 @@ classdef OERecording < dataRecording
                 channelNumbersAll=cellfun(@(x) str2double(regexp(x,'\d+','match')),channelNamesAll,'UniformOutput',1);
             end
             
-            %find channel types analog ch / electrode ch
-            pCh=cellfun(@(x) mean(x{1}([1 2])=='CH')==1,channelNamesAll);
-            pAnalogCh=cellfun(@(x) mean(x{1}([1 2])=='AU')==1 || mean(x{1}([1 2])=='AD')==1,channelNamesAll);
+            %find channel types analog ch / electrode ch - Changed on 11/7/22 to the lower lines - consider changing back if a problem occurs.
+            try
+                pCh=cellfun(@(x) mean(x{1}([1 2])=='CH')==1,channelNamesAll);
+                pAnalogCh=cellfun(@(x) mean(x{1}([1 2])=='AU')==1 || mean(x{1}([1 2])=='AD')==1,channelNamesAll);
+            catch ME
+                pCh=cellfun(@(x) mean(x([1 2])=='CH')==1,channelNamesAll);
+                pAnalogCh=cellfun(@(x) mean(x([1 2])=='AU')==1 || mean(x([1 2])=='AD')==1,channelNamesAll);
+                rethrow(ME)
+            end
+            
             
             obj.channelFilesAnalog=channelFiles(pAnalogCh);
             obj.channelFiles=channelFiles(pCh);

@@ -1188,10 +1188,11 @@ classdef sleepAnalysis < recAnalysis
             parseObj = inputParser;
             addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
             addParameter(parseObj,'videoFile',[obj.recTable.VideoFiles{obj.currentPRec}],@(x) exist(x,'file'));
-            addParameter(parseObj,'matroxTrigScheme',obj.recTable.MatroxTrigScheme{obj.currentPRec});
             addParameter(parseObj,'win',180*1000,@isnumeric); %median filter window for extracting optic flow baseline
+            addParameter(parseObj,'useRobustFloatingAvg',1,@isnumeric); %if true uses floating median and MAD, if false uses a regular moving average.
             addParameter(parseObj,'nStd',6,@isnumeric); %MAD (std) threshold for 
             addParameter(parseObj,'nBins',18,@isnumeric);
+            addParameter(parseObj,'digitalVideoSyncCh',5,@isnumeric);
             addParameter(parseObj,'pixelMoveThresh',10,@isnumeric);
             addParameter(parseObj,'overwrite',false,@isnumeric);
             addParameter(parseObj,'nFramesRemoveAfterROIShift',3,@isnumeric);
@@ -1251,71 +1252,29 @@ classdef sleepAnalysis < recAnalysis
                 bboxCenterAll(p2Remove,:)=[];
             end
 
-            startFrameInVideo=cellfun(@(x) str2num(x),strsplit(obj.recTable.FrameRange{obj.currentPRec},'-'),'UniformOutput', 1);
-            if strcmp(matroxTrigScheme,'startD2FramesD1NoEndNoMissed') %correct start trigger (on digi ch 2), no stop trigger, no missed frames (on digi ch 1)
-                pMatrox=1;
-                pStart=2;
-                tAllFrames=tTrig{pMatrox}(1:2:end);
-                tAllFrames(tAllFrames<tTrig{pStart}(1))=[];
-                nFrames=pFramesValid(end);
-                tAllFrames=tAllFrames(1:nFrames);
-                tVideoFrames=tAllFrames(startFrameInVideo(1):startFrameInVideo(2));
-                tAnalyzedFrames=tAllFrames(pFramesValid+startFrameInVideo(1)-1);
-            elseif strcmp(matroxTrigScheme,'D10FromMatroxNoMissed')
-                pMatrox=1;
-                pMatrox10=10;
-                tAllFrames=tTrig{pMatrox}(1:2:end);
-                tAllFrames(tAllFrames<tTrig{pMatrox10}(1))=[];
-                lastStr=strsplit(tTrig_string{pMatrox10}{end},';');
-                lastFrameFromStr=str2num(lastStr{1}(8:end));
-                trigNumDiff=find(tAllFrames<tTrig{pMatrox10}(end),1,'last')~=lastFrameFromStr;
-                if trigNumDiff~=0
-                    warning(['Number of triggers in T1 differs by ' num2str(trigNumDiff) ' trig than what is found from 10 strings-check for missed frames!!!!']);
-                end
-                tVideoFrames=tAllFrames(startFrameInVideo(1):startFrameInVideo(2));
-                tAnalyzedFrames=tAllFrames(pFramesValid+startFrameInVideo(1)-1);
-            elseif strcmp(matroxTrigScheme(1:11),'Lizard4Case')
-                stringNames=tTrig_string{10};
-                tmp=cellfun(@(x) x(8:15),stringNames,'Uniformoutput',0);
-                tmp1=cellfun(@(x) find(x==';'),tmp,'Uniformoutput',0);
-                frameNumber=cell2mat(cellfun(@(x,y) str2double(x(1:(y-1))),tmp,tmp1,'Uniformoutput',0));
-                pStartFrame=find(frameNumber==0);
-                pEndFrame=pStartFrame(3)-1;
-                pStartFrame=pStartFrame(2);
-                tAllFrames=interp1(frameNumber(pStartFrame:pEndFrame),tTrig{10}(pStartFrame:pEndFrame),0:frameNumber(pEndFrame),'linear');
-                tVideoFrames=tAllFrames(startFrameInVideo(1):startFrameInVideo(2));
-                tAnalyzedFrames=tAllFrames(pFramesValid+startFrameInVideo(1)-1);
-            elseif strcmp(matroxTrigScheme,'interpFrom10')
-                stringNames=tTrig_string{10};
-                tmp=cellfun(@(x) x(8:15),stringNames,'Uniformoutput',0);
-                tmp1=cellfun(@(x) find(x==';'),tmp,'Uniformoutput',0);
-                frameNumber=cell2mat(cellfun(@(x,y) str2double(x(1:(y-1))),tmp,tmp1,'Uniformoutput',0));
-                tAllFrames=interp1(frameNumber,tTrig{10},0:frameNumber(end),'linear');
-                tVideoFrames=tAllFrames(startFrameInVideo(1):startFrameInVideo(2));
-                tAnalyzedFrames=tAllFrames(pFramesValid+startFrameInVideo(1)-1);
-            elseif strcmp(matroxTrigScheme,'xxxx')
-                
-                pCameraStart=tTrig{10}(1);
-                pCameraLast=tTrig{10}(end);
-                
-                frameNumberStartString=tTrig_string{10}{1};
-                frameNumberEndString=tTrig_string{10}{end};
-                
-                frameNumberStart=str2num(frameNumberStartString(8:find(frameNumberStartString==';',1,'first')-1));
-                frameNumberEnd=str2num(frameNumberEndString(8:find(frameNumberEndString==';',1,'first')-1));
-                
-                frameShutterTimes=tTrig{1}(find(tTrig{1}>pCameraStart & tTrig{1}<pCameraLast));
-                frameShutterTimes(diff(frameShutterTimes)<2)=[]; %remove off trigger - every trigger is 1ms long and is recorded twice (once for on and once for off)
-                
-                frameShutterTimesAfterLastTrigger=Ts{1}(find(Ts{1}>pCameraLast));
-                frameShutterTimesAfterLastTrigger(diff(frameShutterTimesAfterLastTrigger)<2)=[]; %remove off trigger - every trigger is 1ms long and is recorded twice (once for on and once for off)
-                frameShutterTimesAfterLastTrigger=frameShutterTimesAfterLastTrigger(1:(nFrames-frameNumberEnd));
-                frameShutterTimes=[frameShutterTimes frameShutterTimesAfterLastTrigger];
+            nFramesVideo=parEyeTracking.nFramesVideo;
+            tFrames=tTrig{digitalVideoSyncCh};
+            diffFrames=abs(numel(tFrames)-round(nFramesVideo));
+            if diffFrames==0
+                disp('Number of frames in video and in triggers is equal, proceeding with analysis');
+            elseif diffFrames<110
+                fprintf('\n\nNumber of frames in video and in triggers differs by %d, \nproceeding with analysis assuming uniform distribution of lost frames in video\n',diffFrames);
+                tFrames(round((1:diffFrames)/diffFrames*numel(tFrames)))=[];
+            else
+                error(['Number of frames in video and in trigger (' num2str(digitalVideoSyncCh) ') differs by ' num2str(diffFrames) ', check recording!!!']);
             end
+            
+            tAnalyzedFrames=tFrames(pFramesValid);
+            
             %plot(tAnalyzedFrames/3600000,normZeroOne(validmOF));hold on;plot(tAnalyzedFrames/3600000,normZeroOne(bboxCenterAll));
             winSamples=round(win/1000*(parEyeTracking.frameRate/parEyeTracking.skipFrames));
-            mOFmed=fastmedfilt1d(validmOF,winSamples)';
-            mOFMAD=fastmedfilt1d(abs(validmOF-mOFmed),winSamples)'*1.4826;
+            if useRobustFloatingAvg
+                mOFmed=fastmedfilt1d(validmOF,winSamples)';
+                mOFMAD=fastmedfilt1d(abs(validmOF-mOFmed),winSamples)'*1.4826;
+            else
+                mOFmed=movmean(validmOF,winSamples);
+                mOFMAD=movstd(validmOF,winSamples);
+            end
             tMovement=tAnalyzedFrames(validmOF>(mOFmed+nStd*mOFMAD));
             %plot(tAnalyzedFrames/3600000,validmOF);hold on;plot(tAnalyzedFrames/3600000,mOFmed+nStd*mOFMAD);
             for i=1:numel(TcycleOnset)
@@ -1349,7 +1308,7 @@ classdef sleepAnalysis < recAnalysis
             binCenters=(0:(nBins))/(nBins);binCenters=(binCenters(1:end-1)+binCenters(2:end))/2;
             mPhaseDB=angle(mean(mean(resampledTemplate).*exp(1i.*binCenters*2*pi))); %Mean of circular quantities - wiki
             
-            save(obj.files.syncDBEye,'phaseMov','mPhaseDB','mPhaseMov','phaseAll','phaseAllRand','phaseRand','resampledTemplate','validmOF','tAnalyzedFrames','tVideoFrames','tAllFrames','tMovement','parSyncDBEye','pFramesValid','mOFmed','mOFMAD');
+            save(obj.files.syncDBEye,'phaseMov','mPhaseDB','mPhaseMov','phaseAll','phaseAllRand','phaseRand','resampledTemplate','validmOF','tAnalyzedFrames','tFrames','tMovement','parSyncDBEye','pFramesValid','mOFmed','mOFMAD');
            
         end
         
@@ -1367,6 +1326,7 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'frameForEyePosExtraction',[],@isnumeric);
             addParameter(parseObj,'fractionOfBoxJumpThreshold',0.25,@isnumeric);
             addParameter(parseObj,'manuallyUpdatePoints',true,@isnumeric);
+            addParameter(parseObj,'opticFlowNoiseThreshold',[],@isnumeric)
             addParameter(parseObj,'saveFullOFMatrices',false,@isnumeric);
             addParameter(parseObj,'loadInitialConditions',true,@isnumeric);
             addParameter(parseObj,'skipFramesBoundingBox',30,@isnumeric);
@@ -1501,6 +1461,9 @@ classdef sleepAnalysis < recAnalysis
 
             % optic flow definitions
             opticFlow = opticalFlowLK;
+            if ~isempty('OpticFlowNoiseThreshold')
+                opticFlow.NoiseThreshold=opticFlowNoiseThreshold;
+            end
             
             bboxPoints=[initialFrameSubregion(1) initialFrameSubregion(2);initialFrameSubregion(1) initialFrameSubregion(2)+initialFrameSubregion(4);initialFrameSubregion(1)+initialFrameSubregion(3) initialFrameSubregion(2)+initialFrameSubregion(4);initialFrameSubregion(1)+initialFrameSubregion(3) initialFrameSubregion(2)];                
             bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2];
@@ -1554,8 +1517,9 @@ classdef sleepAnalysis < recAnalysis
             for i=1:nFrames
                 %frame = step(videoReader); this is faster but cant start from an arbitrary frame or jump frames
                 if nonConsecutiveVideo
-                    videoReader.CurrentTime = (pFrames(i)/nFramesVideo)*videoDuration;
                     videoFrame = rgb2gray(videoReader.readFrame);
+                    %videoReader.CurrentTime = (pFrames(i)/nFramesVideo)*videoDuration; %92% of the time is spent on this command.
+                    for j=1:(skipFrames-1),videoReader.readFrame;end %skip to the next frame to read.
                 else
                     videoFrame = step(videoReader);
                     for j=1:numel(pFrames(i+1)-pFrames(i)-1)
@@ -1584,6 +1548,20 @@ classdef sleepAnalysis < recAnalysis
                         % Reset the points
                         if size(oldInliers,1)<minTrackingPoints
                             contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
+                            %check if contour box does not exceed image limits
+                            if (contourBox(1)+contourBox(3))>videoReader.Width
+                                contourBox(3)=videoReader.Width-contourBox(1);
+                            end
+                            if (contourBox(2)+contourBox(4))>videoReader.Height
+                                contourBox(4)=videoReader.Height-contourBox(2);
+                            end
+                            if contourBox(1) < 1
+                                contourBox(1)=1;
+                            end
+                            if contourBox(2) < 1
+                                contourBox(2)=1;
+                            end
+                            
                             newPoints = detectMinEigenFeatures(videoFrame, 'ROI', contourBox ); %this function can not receive a polygon only a rectangle along the main axes
                             newPoints = newPoints.Location;
                             in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
@@ -1714,8 +1692,8 @@ classdef sleepAnalysis < recAnalysis
             parseObj = inputParser;
             addParameter(parseObj,'videoFile',regexp(obj.recTable.VideoFiles{obj.currentPRec},',','split'),@(x) all(isfile(x)));
             addParameter(parseObj,'nFramesVideo',[],@isnumeric);
-            addParameter(parseObj,'startTime',0,@isnumeric); %in seconds
-            addParameter(parseObj,'endTime',Inf,@isnumeric); %in seconds
+            addParameter(parseObj,'startTime',0,@isnumeric); %%%  in seconds  %%%
+            addParameter(parseObj,'endTime',Inf,@isnumeric); %%%  in seconds  %%%
             addParameter(parseObj,'initialFrameSubregion',[],@isnumeric);
             addParameter(parseObj,'frameForChestPosExtraction',[],@isnumeric);
             addParameter(parseObj,'fractionOfBoxJumpThreshold',0.25,@isnumeric);
@@ -1893,9 +1871,10 @@ classdef sleepAnalysis < recAnalysis
             hWB=waitbar(0,'Calculating movement using KLT algorithm...');
             for i=1:nFrames
                 if nonConsecutiveVideo
-                    videoReader.CurrentTime = (pFrames(i)/nFramesVideo)*videoDuration;
+                    %videoReader.CurrentTime = (pFrames(i)/nFramesVideo)*videoDuration;
+                    videoFrame = rgb2gray(videoReader.readFrame);
+                    for j=1:(skipFrames-1),videoReader.readFrame;end %skip to the next frame to read.
                 end
-                videoFrame = rgb2gray(videoReader.readFrame);
                 
                 %{
                 figure;imshow(videoFrame);hold on;plot(bboxCenter(1),bboxCenter(2),'or','markersize',20,'linewidth',3);plot(bboxPoints(:,1),bboxPoints(:,2),'.g','markersize',10);plot(points(:,1),points(:,2),'*b')
