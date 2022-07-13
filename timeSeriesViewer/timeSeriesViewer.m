@@ -376,6 +376,7 @@ end
             set(AVG.hVideoSyncFigure.hMainVBox, 'Heights',[-1 -10]);
             
             AVG.hVideoSyncFigure.hVideoAxis=axes('Parent', AVG.hVideoSyncFigure.hVideoPanel);
+            AVG.hVideoSyncFigure.hVideoAxis.Toolbar.Visible = 'on';
 
             AVG.hVideoSyncFigure.hButttonHBox = uix.HBox('Parent',AVG.hVideoSyncFigure.hButttonPanel, 'Spacing',4, 'Padding',2);
             AVG.hVideoSyncFigure.hLoadVideoPush=uicontrol('Parent', AVG.hVideoSyncFigure.hButttonHBox, 'Callback',@CallbackLoadVideoPush, 'Style','push', 'String','Load','FontSize',12,'FontWeight','Bold','BackgroundColor',[0.8 0.8 0.8]);
