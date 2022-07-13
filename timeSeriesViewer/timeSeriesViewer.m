@@ -3,7 +3,11 @@ function timeSeriesViewer(varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 AVG.recordingObj=[]; %initiate recording object
+AVG.hVideoSyncFigure.hFigure=[];
 AVG.Params.timeWindowExternalHandles=[]; %to sync gui to another one
+AVG.Params.videoSyncFile=[]; %to sync with video file
+AVG.recordingObj=[]; %recording object
+AVG.Params.videoReader=[]; %video reader for syncing video to ephys
 
 %directories
 AVG.Params.NSKToolBoxMainDir=fileparts(which('identifierOfMainDir4NSKToolBox'));
@@ -207,22 +211,7 @@ end
         AVG.Params.endDate=AVG.recordingObj.endDate;
         AVG.Params.recordingTimeLimits=[0 AVG.recordingObj.recordingDuration_ms];
         
-        %adjust trigger related features
-        isTriggerActive=cellfun(@(x) ~isempty(x), AVG.Params.triggers); %empty triggers are automatically set to non-active
-        if sum(isTriggerActive)>0
-            AVG.Params.triggers=AVG.Params.triggers(isTriggerActive);
-            AVG.Params.nTriggers=sum(isTriggerActive);
-            AVG.Params.currentTrigger=AVG.Params.triggers{1}; %set the first trigger as the current trigger
-            [AVG.Params.currentTriggerSorted,AVG.Params.currentTriggerSortedOrder]=sort(AVG.Params.currentTrigger);
-            AVG.Params.nCurrentTriggers=numel(AVG.Params.currentTrigger);
-        else
-            AVG.Params.nTriggers=0;
-            AVG.Params.currentTrigger=[];
-            AVG.Params.nCurrentTriggers=0;
-            AVG.Params.triggers={};
-        end
-        AVG.Params.triggerOffset=AVG.Params.defaultTriggerOffset;
-        createTriggerGUI(); %also updates gui in the case of no triggers
+        initializeTriggers;
         
         %adjust sampling frequency related features
         AVG.Params.samplingFrequency=AVG.recordingObj.samplingFrequency;
@@ -258,6 +247,34 @@ end
         
         %initialize new plot
         AVG.plotData.initializePlot(AVG.Params.currentPlotName,AVG.hMainFigure.hMainAxis,AVG.hPlotProp.hMainPanel);
+        set(AVG.hGen.messageBox,'string','Ready','ForegroundColor','k');
+    end
+
+    function initializeTriggers()
+        %adjust trigger related features
+        set(AVG.hGen.messageBox,'string','Loading triggers','ForegroundColor','r');drawnow;
+        
+        if AVG.hTrigger.hGetTrigFromRawFiles.Value
+            AVG.Params.triggers=AVG.recordingObj.getTrigger(); %this is the most time consuming step
+        else
+            AVG.Params.triggers={};
+        end
+        
+        isTriggerActive=cellfun(@(x) ~isempty(x), AVG.Params.triggers); %empty triggers are automatically set to non-active
+        if sum(isTriggerActive)>0
+            AVG.Params.triggers=AVG.Params.triggers(isTriggerActive);
+            AVG.Params.nTriggers=sum(isTriggerActive);
+            AVG.Params.currentTrigger=AVG.Params.triggers{1}; %set the first trigger as the current trigger
+            [AVG.Params.currentTriggerSorted,AVG.Params.currentTriggerSortedOrder]=sort(AVG.Params.currentTrigger);
+            AVG.Params.nCurrentTriggers=numel(AVG.Params.currentTrigger);
+        else
+            AVG.Params.nTriggers=0;
+            AVG.Params.currentTrigger=[];
+            AVG.Params.nCurrentTriggers=0;
+            AVG.Params.triggers={};
+        end
+        AVG.Params.triggerOffset=AVG.Params.defaultTriggerOffset;
+        createTriggerGUI(); %also updates gui in the case of no triggers
         set(AVG.hGen.messageBox,'string','Ready','ForegroundColor','k');
     end
 
@@ -348,7 +365,137 @@ end
     end
 
     function addSyncVideo(hObj,event)
-        
+        if isempty(AVG.hVideoSyncFigure.hFigure) || ~isvalid(AVG.hVideoSyncFigure.hFigure)
+            AVG.hVideoSyncFigure.hFigure = figure('Position',[AVG.hMainFigure.scrsz(3)*0.4 AVG.hMainFigure.scrsz(4)*0.4 AVG.hMainFigure.scrsz(3)*0.58 AVG.hMainFigure.scrsz(4)*0.48], ...
+                'Name','Activity viewer - video sync', 'NumberTitle','off', 'MenuBar','none', 'Toolbar','none', 'HandleVisibility','off','CloseRequestFcn',@closeSyncedVideoFigure);
+            
+            % Arrange the main interface windows
+            AVG.hVideoSyncFigure.hMainVBox = uix.VBox('Parent',AVG.hVideoSyncFigure.hFigure, 'Spacing',3, 'Padding',1);
+            AVG.hVideoSyncFigure.hButttonPanel = uix.Panel('Parent',AVG.hVideoSyncFigure.hMainVBox, 'Title','Controls');
+            AVG.hVideoSyncFigure.hVideoPanel = uix.Panel('Parent',AVG.hVideoSyncFigure.hMainVBox, 'Title','Video');
+            set(AVG.hVideoSyncFigure.hMainVBox, 'Heights',[-1 -10]);
+            
+            AVG.hVideoSyncFigure.hVideoAxis=axes('Parent', AVG.hVideoSyncFigure.hVideoPanel);
+
+            AVG.hVideoSyncFigure.hButttonHBox = uix.HBox('Parent',AVG.hVideoSyncFigure.hButttonPanel, 'Spacing',4, 'Padding',2);
+            AVG.hVideoSyncFigure.hLoadVideoPush=uicontrol('Parent', AVG.hVideoSyncFigure.hButttonHBox, 'Callback',@CallbackLoadVideoPush, 'Style','push', 'String','Load','FontSize',12,'FontWeight','Bold','BackgroundColor',[0.8 0.8 0.8]);
+            AVG.hVideoSyncFigure.hLoadVideoEdit=uicontrol('Parent', AVG.hVideoSyncFigure.hButttonHBox,'Style','edit', 'String','videoFileName','Callback',@CallbackLoadVideoEdit);
+            AVG.hVideoSyncFigure.hCheckSyncPush=uicontrol('Parent', AVG.hVideoSyncFigure.hButttonHBox, 'Callback',@CallbackCheckSyncPush, 'Style','push', 'String','Check sync.','FontSize',12,'FontWeight','Bold','BackgroundColor',[0.8 0.8 0.8]);
+            AVG.hVideoSyncFigure.hPlayVideoPush=uicontrol('Parent', AVG.hVideoSyncFigure.hButttonHBox, 'Callback',@CallbackRunVideoPush, 'Style','push', 'String','Run video','FontSize',12,'FontWeight','Bold','BackgroundColor',[0.8 0.8 0.8]);
+            AVG.hVideoSyncFigure.hExportIMPlayPush=uicontrol('Parent', AVG.hVideoSyncFigure.hButttonHBox, 'Callback',@CallbackExportIMPlayPush, 'Style','push', 'String','Implay exp.','FontSize',12,'FontWeight','Bold','BackgroundColor',[0.8 0.8 0.8]);
+            set(AVG.hVideoSyncFigure.hButttonHBox, 'Widths',[-1 -3 -1 -1 -1]);
+            %video synchronization was not yet verified
+            AVG.Params.videoSyncVerified=false;
+        else
+            figure(AVG.hVideoSyncFigure.hFigure)
+        end
+    end
+
+    function closeSyncedVideoFigure(hObj,event)
+        delete(AVG.hVideoSyncFigure.hFigure);
+        delete(AVG.Params.videoReader);
+        %close video player objects
+    end
+
+    function CallbackLoadVideoEdit(hObj,event)
+        AVG.hVideoSyncFigure.hCheckSyncPush.BackgroundColor=[0.8 0.8 0.8]; %bring background to origin to show that sync was not checked
+        AVG.Params.videoSyncVerified=false;
+    end
+
+    function CallbackLoadVideoPush(hObj,event)
+        if isempty(AVG.recordingObj)
+            startDir=cd;
+        else
+            startDir=AVG.recordingObj.recordingDir;
+        end
+        [tmpVideoFile,tmpVideoDir]= uigetfile('*.*','Choose the video file',startDir);
+        if tmpVideoFile==0 %no folder chosen
+            msgbox('File was not chosen. Video were not added!','Attention','error','replace');
+        else
+            AVG.hVideoSyncFigure.hLoadVideoEdit.String=fullfile(tmpVideoDir,tmpVideoFile);
+        end
+        AVG.hVideoSyncFigure.hCheckSyncPush.BackgroundColor=[0.8 0.8 0.8]; %bring background to origin to show that sync was not checked
+        AVG.Params.videoSyncVerified=false;
+    end
+
+    function CallbackCheckSyncPush(hObj,event)
+        if AVG.Params.nTriggers==0
+            msgbox('No triggers exist! Please load trigger and try again','Attention','error','replace');
+        else
+            %!!!! Check if can read grey scale video instead of RGB to save space and time ('Grayscale')
+            AVG.Params.videoReader   = VideoReader(AVG.hVideoSyncFigure.hLoadVideoEdit.String);
+            AVG.Params.videoDuration=AVG.Params.videoReader.Duration;
+            AVG.Params.frameRate=AVG.Params.videoReader.FrameRate;
+            AVG.Params.nFramesVideo=round(AVG.Params.videoDuration*AVG.Params.frameRate);
+            
+            AVG.Params.triggerFrameSync=AVG.Params.currentTrigger;
+            diffFrames=numel(AVG.Params.currentTrigger)-round(AVG.Params.nFramesVideo);
+            if diffFrames==0
+                AVG.hVideoSyncFigure.hCheckSyncPush.BackgroundColor=[0 1 0];
+            elseif diffFrames>0
+               msgbox({['Found ' num2str(diffFrames) ' missing frames!!!'],'proceeding with analysis assuming uniform distribution of lost frames in video'},'Attention','error','replace');
+               AVG.Params.triggerFrameSync(round((1:diffFrames)/diffFrames*numel(AVG.Params.triggerFrameSync)))=[];
+               AVG.hVideoSyncFigure.hCheckSyncPush.BackgroundColor=[0.5 0 0];
+            else
+               msgbox({['Found ' num2str(diffFrames) ' extra video frames relative to triggers!!!'],'proceeding under the assumption that the last frames are not relevant!'},'Attention','error','replace');
+               AVG.hVideoSyncFigure.hCheckSyncPush.BackgroundColor=[0.9 0 0];
+            end
+            AVG.Params.videoSyncVerified=true;
+        end
+    end
+
+    function CallbackExportIMPlayPush(hObj,event)
+        hObj.BackgroundColor=[1 0 0];
+
+        if AVG.Params.videoSyncVerified
+            pFrames=find(AVG.Params.triggerFrameSync>AVG.Params.startTime & AVG.Params.triggerFrameSync<(AVG.Params.startTime+AVG.Params.window));
+            nActFrames=numel(pFrames);
+            nFrames=AVG.Params.window/AVG.Params.frameRate;
+            if nActFrames<nFrames-1 %can happen if the there is no video (of full video during the relevant times
+                msgbox(['Missing frames in segment! video exists between ' num2str(AVG.Params.triggerFrameSync(1)) ' - ' num2str(AVG.Params.triggerFrameSync(end))],'Attention','error','replace');
+                return;
+            end
+            AVG.Params.videoReader.CurrentTime = pFrames(1)/AVG.Params.frameRate;
+            frameVid=AVG.Params.videoReader.readFrame;
+            videoMat=zeros([size(frameVid) nActFrames],class(frameVid));
+            videoMat(:,:,:,1)=frameVid;
+            for frames=2:nActFrames
+                videoMat(:,:,:,frames)=AVG.Params.videoReader.readFrame; %generalize to grey scale video.
+            end
+            implay(videoMat,AVG.Params.frameRate);
+        else
+            msgbox('Triggers not synced to video, run sync first','Attention','error','replace');
+        end
+        hObj.BackgroundColor=[0.8 0.8 0.8];
+    end
+
+    function CallbackRunVideoPush(hObj,event)
+        skipFrames=1;
+        hObj.BackgroundColor=[0 1 0];
+        if AVG.Params.videoSyncVerified
+            pFrames=find(AVG.Params.triggerFrameSync>AVG.Params.startTime & AVG.Params.triggerFrameSync<(AVG.Params.startTime+AVG.Params.window));
+            %startFrame=find(AVG.Params.triggerFrameSync>AVG.Params.startTime,1,'first');
+            %endFrame=find(AVG.Params.triggerFrameSync<(AVG.Params.startTime+AVG.Params.window),1,'last');
+            nActFrames=numel(pFrames);
+            nFrames=AVG.Params.window/AVG.Params.frameRate;
+            if nActFrames<nFrames-1 %can happen if the there is no video (of full video during the relevant times
+                msgbox(['Missing frames in segment! video exists between ' num2str(AVG.Params.triggerFrameSync(1)) ' - ' num2str(AVG.Params.triggerFrameSync(end))],'Attention','error','replace');
+                return;
+            end
+            hTmp=line(AVG.hMainFigure.hMainAxis,[0 0],AVG.hMainFigure.hMainAxis.YLim,'color','r');
+            AVG.Params.videoReader.CurrentTime = pFrames(1)/AVG.Params.frameRate;
+            for frames=1:nActFrames
+                frameVid=AVG.Params.videoReader.readFrame; %generalize to grey scale video.
+                imshow(frameVid,'Parent',AVG.hVideoSyncFigure.hVideoAxis);
+                tmpTime=AVG.Params.triggerFrameSync(pFrames(frames))-AVG.Params.startTime;
+                hTmp.XData=[tmpTime tmpTime];
+                drawnow nocallbacks;
+            end
+            delete(hTmp);
+        else
+            msgbox('Triggers not synced to video, run sync first','Attention','error','replace');
+        end
+        hObj.BackgroundColor=[0.8 0.8 0.8];
     end
 
     function CallbackSyncGUI(hObj,event)
@@ -375,14 +522,10 @@ end
 
     function initializeNewRecording
         set(AVG.hGen.messageBox, 'string','Initializing new data','ForegroundColor','r');
-        
-        if AVG.hTrigger.hGetTrigFromRawFiles.Value
-            AVG.Params.triggers=AVG.recordingObj.getTrigger(); %this is the most time consuming step
-        else
-            AVG.Params.triggers={};
-        end
-        
         initializeViewer;
+        if isvalid(AVG.hVideoSyncFigure.hFigure)
+            close(AVG.hVideoSyncFigure.hFigure); %using close evokes the close request function and is better than delete()
+        end
         AVG.plotData.refreshPlot=1;
         updatePlot;
     end
@@ -403,13 +546,6 @@ end
         AVG.plotData.refreshPlot=1;
         updatePlot;
     end
-
-
-
- function CallbackLoadVideo(hObj,event)  %%%%%Samuel  
-        moviePlayerGui;
-        AVG.movieLines=[];
-     end
 
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Mouse Callbacks %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -857,6 +993,17 @@ end
         [AVG.Params.currentTriggerSorted,AVG.Params.currentTriggerSortedOrder]=sort(AVG.Params.currentTrigger);
         AVG.Params.nCurrentTriggers=numel(AVG.Params.currentTrigger);
     end
+
+    function CallbackLoadTriggerData(hObj,Event)
+        if hObj.Value
+            if ~isempty(AVG.recordingObj)
+                initializeTriggers;
+            else
+                hObj.Value=false;
+                msgbox('Can not load triggers since no recording was selected! Select and try again','Attention','error','replace');
+            end
+        end
+    end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%% Create GUI %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     function createAVGUI(figH)
@@ -1045,7 +1192,7 @@ end
         AVG.hTrigger.hBackward=uicontrol('Parent',AVG.hTrigger.navigationHBox,'Callback',{@CallbackTriggerDirectionPush,1}, 'Style','push', 'String','>>');
         set(AVG.hTrigger.navigationHBox, 'Widths',[-1 40 -1]);
         
-        AVG.hTrigger.hGetTrigFromRawFiles=uicontrol('Parent', AVG.hTrigger.MainVBox, 'HorizontalAlignment','left','Style','check', 'String','load trig. data','value',AVG.Params.loadTriggerDefault);
+        AVG.hTrigger.hGetTrigFromRawFiles=uicontrol('Parent', AVG.hTrigger.MainVBox, 'HorizontalAlignment','left','Style','check', 'String','load trig. data','value',AVG.Params.loadTriggerDefault,'Callback',{@CallbackLoadTriggerData});
         
         AVG.hTrigger.OffsetHBox=uix.HBox('Parent', AVG.hTrigger.MainVBox, 'Padding', 4, 'Spacing', 4);
         AVG.hTrigger.hOffsetTxt=uicontrol('Parent', AVG.hTrigger.OffsetHBox, 'HorizontalAlignment','left','Style','text', 'String','Offset [ms]');
