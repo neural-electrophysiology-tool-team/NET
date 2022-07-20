@@ -1244,6 +1244,9 @@ classdef sleepAnalysis < recAnalysis
             validmOF=mOF;
             if ~isempty(pbboxUpdate) || ~isempty(p2RemoveShifts)
                 p2Remove=union(p2RemoveShifts,pbboxUpdate)';
+                if size(p2Remove,1)>1
+                    p2Remove=p2Remove';
+                end
                 p2Remove=bsxfun(@plus,p2Remove,(0:nFramesRemoveAfterROIShift-1)');
                 p2Remove=unique(p2Remove(:));
                 
