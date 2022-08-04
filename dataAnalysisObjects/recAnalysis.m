@@ -25,7 +25,7 @@ classdef (Abstract) recAnalysis < handle
         xlsSheet=1;
         startCol=1;
         figResJPG=300;
-        defaultXlsFile='\\storage.laur.corp.brain.mpg.de\Data_3\Shein-IdelsonMark\DCMEA.xlsx';
+        defaultXlsFile='/media/sil2/Data/Lizard/Stellagama/brainStatesSS.xlsx';
     end
     
     methods

@@ -228,6 +228,9 @@ classdef sleepAnalysis < recAnalysis
                 obj.filt.FN=obj.filt.FN.designNotch;
             end
             
+            if isempty(accCh)
+                error('No acceleromenter channel entered! Can not find analog data!');
+            end
             fprintf('\nAccelerometer data extraction (%d chunks)-',nChunks);
             for i=1:nChunks
                 fprintf('%d,',i);
@@ -777,6 +780,7 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'saveFigures',1,@isnumeric);
             addParameter(parseObj,'rLim4Rose',[],@isnumeric);
             addParameter(parseObj,'RoseAlpha',0.9,@isnumeric);
+            addParameter(parseObj,'randAlpha',0.4,@isnumeric);
             addParameter(parseObj,'noBackground',0,@isnumeric);
             addParameter(parseObj,'printLocalCopy',0,@isnumeric);
             addParameter(parseObj,'h',0,@ishandle);
@@ -806,7 +810,7 @@ classdef sleepAnalysis < recAnalysis
             
             if h==0
                 fH=figure;
-                h=axes;
+                h=polaraxes;
             else
                 saveFigures=0;
                 axes(h);
@@ -818,31 +822,28 @@ classdef sleepAnalysis < recAnalysis
                 delete(hTmp)
                 set(h, 'Nextplot','add');hold on;
             end
-
-            hOut.hRose=rose(phaseMov*2*pi-mPhaseDB,parSyncDBEye.nBins);
-            hOut.hRose.Color=[0.9 0.078 0.184];
-            XdataRose = get(hOut.hRose,'Xdata');XdataRose=reshape(XdataRose,[4,numel(XdataRose)/4]);
-            YdataRose = get(hOut.hRose,'Ydata');YdataRose=reshape(YdataRose,[4,numel(YdataRose)/4]);
-            hOut.hPatch=patch(XdataRose,YdataRose,[0.9 0.078 0.184]);
-            set(hOut.hPatch,'FaceAlpha',RoseAlpha);
-            %set(h,'color','k');
-            maxSamplesInBin=max(max(sqrt(XdataRose.^2+YdataRose.^2)));hold on;
             
-            hOut.hPolar=polar([0 (1:parSyncDBEye.nBins)/parSyncDBEye.nBins]*pi*2-mPhaseDB,[mResampledTemplate(end) mResampledTemplate]/(max(mResampledTemplate/maxSamplesInBin)));
+            hOut.hAxes=h;
+            hOut.hRose=polarhistogram(phaseMov*2*pi-mPhaseDB,parSyncDBEye.nBins);
+            hOut.hRose.FaceColor=[0.9 0.078 0.184];
+            hOut.hRose.FaceAlpha=RoseAlpha;
+            h.ThetaTick=[0:90:330];
+            hold on;
+                        
+            maxSamplesInBin=h.RLim(2);
+            
+            hOut.hPolar=polarplot([0 (1:parSyncDBEye.nBins)/parSyncDBEye.nBins]*pi*2-mPhaseDB,[mResampledTemplate(end) mResampledTemplate]/(max(mResampledTemplate/maxSamplesInBin)));
             hOut.hPolar.LineWidth=2;
             hOut.hPolar.Color=cMap(1,:,:);
-            
-            uistack(hOut.hPatch, 'top');
-            
-            delete(findall(h, 'String', '30', '-or','String','60', '-or','String','120', '-or','String','150', '-or','String','210', '-or','String','240', '-or','String','300', '-or','String','330'));
-            
+
             hOut.l=legend([hOut.hRose hOut.hPolar],'SWC','OF');
             hOut.l.Color=[1 1 1];
             hOut.l.Box='off';
                         
             if plotRandomDist
-                hOut.hRose2=rose(phaseRand*2*pi-mPhaseDB,parSyncDBEye.nBins);
-                hOut.hRose2.Color=[0.5 0.5 0.5];
+                hOut.hRose2=polarhistogram(phaseRand*2*pi-mPhaseDB,parSyncDBEye.nBins);
+                hOut.hRose2.FaceColor=[0.5 0.5 0.5];
+                hOut.hRose2.FaceAlpha=randAlpha;
             end
             
             %if ~isempty(rLim4Rose)
@@ -1610,6 +1611,34 @@ classdef sleepAnalysis < recAnalysis
                         end
                     else
                         if manuallyUpdatePoints
+                            
+                            f=figure('position',[100 100 1200 600]);
+                            subplot(1,3,1:2);imshow(videoFrame);
+                            h = imrect(gca);
+                            frameSubregion=h.getPosition;
+                            
+                            subplot(1,3,3);imshow(videoFrame(frameSubregion(2):(frameSubregion(2)+frameSubregion(4)),frameSubregion(1):(frameSubregion(1)+frameSubregion(3)),:));
+                            title('Selected region - press any key');
+                            pause;
+                            close(f);
+                            bboxPoints=[frameSubregion(1) frameSubregion(2);frameSubregion(1) frameSubregion(2)+frameSubregion(4);frameSubregion(1)+frameSubregion(3) frameSubregion(2)+frameSubregion(4);frameSubregion(1)+frameSubregion(3) frameSubregion(2)];                
+                            bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2];
+                            contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
+                            newPoints = detectMinEigenFeatures(videoFrame, 'ROI', contourBox ); %this function can not receive a polygon only a rectangle along the main axes
+                            newPoints = newPoints.Location;
+                            in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
+                            points=newPoints(in,:);
+                            if isempty(points)
+                                disp('No polygon selected, try again!!!');
+                                in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
+                                points=newPoints(in,:);
+                            end
+                            setPoints(pointTracker,points);
+                            %initialize(pointTracker, points, initFrame);
+                            oldPoints = points; %all new added points are tracked
+                            visiblePoints = points; %all new added points are tracked
+                            
+                            %{
                             f=figure('position',[100 100 1200 600]);
                             subplot(1,3,1:2);imshow(videoFrame);
                             [xi, yi] = ginput(1);
@@ -1624,7 +1653,7 @@ classdef sleepAnalysis < recAnalysis
                             [xInd,yInd,OFBox]=obj.recalculateSampledImageArea4OpticFlow(xInd,yInd,bboxCenter,frameWidth,frameHeight);
                             %opticFlow.reset;
                             
-                            contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
+                            %contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
                             newPoints = detectMinEigenFeatures(videoFrame, 'ROI', contourBox ); %this function can not receive a polygon only a rectangle along the main axes
                             newPoints = newPoints.Location;
                             in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
@@ -1638,6 +1667,7 @@ classdef sleepAnalysis < recAnalysis
                             title('Points lost. Selected region - press any key');
                             pause;
                             close(f);
+                            %}
 
                         else
                             disp(['Tracking analysis stopped at ' num2str(i) '/' num2str(nFrames) ' since all tracking points were lost']);
@@ -1753,12 +1783,19 @@ classdef sleepAnalysis < recAnalysis
                 return;
             end
             
-            if exist(obj.files.chestTracking,'file') & loadInitialConditions
-                load(obj.files.chestTracking,'parChestTracking');
-                startTime=parChestTracking.startTime;
-                endTime=parChestTracking.endTime;
-                initialFrameSubregion=parChestTracking.initialFrameSubregion;
+            if exist(obj.files.chestTracking,'file') && loadInitialConditions
+                CTF=load(obj.files.chestTracking,'parChestTracking');
+                if startTime==0
+                    startTime=CTF.parChestTracking.startTime;
+                end
+                if endTime==Inf
+                    endTime=CTF.parChestTracking.startTime;
+                end
+                if startTime==CTF.parChestTracking.startTime
+                    initialFrameSubregion=CTF.parChestTracking.initialFrameSubregion;
+                end
                 parChestTracking.startTime=startTime;
+                parChestTracking.startTime=endTime;
                 parChestTracking.initialFrameSubregion=initialFrameSubregion;
             end
             
@@ -1826,11 +1863,6 @@ classdef sleepAnalysis < recAnalysis
             %initialization of video reader/converter objects
             videoReader = VideoReader(videoFile); %initiate video obj since number of frames was already read (not allowed by matlab)
             videoReader.CurrentTime = startTime;
-            if skipFrames~=1
-                nonConsecutiveVideo=true;
-            else
-                nonConsecutiveVideo=false;
-            end
             
             bboxPoints=[initialFrameSubregion(1) initialFrameSubregion(2);initialFrameSubregion(1) initialFrameSubregion(2)+initialFrameSubregion(4);initialFrameSubregion(1)+initialFrameSubregion(3) initialFrameSubregion(2)+initialFrameSubregion(4);initialFrameSubregion(1)+initialFrameSubregion(3) initialFrameSubregion(2)];                
             bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2];
@@ -1873,16 +1905,14 @@ classdef sleepAnalysis < recAnalysis
             
             hWB=waitbar(0,'Calculating movement using KLT algorithm...');
             for i=1:nFrames
-                if nonConsecutiveVideo
-                    %videoReader.CurrentTime = (pFrames(i)/nFramesVideo)*videoDuration;
-                    videoFrame = rgb2gray(videoReader.readFrame);
-                    for j=1:(skipFrames-1),videoReader.readFrame;end %skip to the next frame to read.
-                end
+                %videoReader.CurrentTime = (pFrames(i)/nFramesVideo)*videoDuration;
+                videoFrame = rgb2gray(videoReader.readFrame);
+                for j=1:(skipFrames-1),videoReader.readFrame;end %skip to the next frame to read.
                 
                 %{
                 figure;imshow(videoFrame);hold on;plot(bboxCenter(1),bboxCenter(2),'or','markersize',20,'linewidth',3);plot(bboxPoints(:,1),bboxPoints(:,2),'.g','markersize',10);plot(points(:,1),points(:,2),'*b')
                 %}
-
+                
                 % Track the points. Note that some points may be lost.
                 previousPoints=points;
                 [points, isFound] = step(pointTracker, videoFrame);
@@ -1960,6 +1990,11 @@ classdef sleepAnalysis < recAnalysis
                             newPoints = newPoints.Location;
                             in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
                             points=newPoints(in,:);
+                            if isempty(points)
+                                disp('No polygon selected, try again!!!');
+                                in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
+                                points=newPoints(in,:);
+                            end
                             setPoints(pointTracker,points);
                             %initialize(pointTracker, points, initFrame);
                             oldPoints = points; %all new added points are tracked
@@ -3599,6 +3634,82 @@ classdef sleepAnalysis < recAnalysis
                 'filteredSlidingPeriod','tFilteredSlidingPeriod');
         end
         
+         %% plotRespirationDBCycle
+        function h=plotRespirationDBCycle(obj,varargin)
+            %sleepAnalysis.plotRespirationDBCycle - input parameters: 
+            parseObj = inputParser;
+            parseObj.FunctionName='sleepAnalysis\plotRespirationDBCycle';
+            addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
+            addParameter(parseObj,'videoFile',regexp(obj.recTable.VideoFiles{obj.currentPRec},',','split'),@(x) all(isfile(x)));
+            addParameter(parseObj,'tStart',0,@isnumeric);
+            addParameter(parseObj,'win',obj.currentDataObj.recordingDuration_ms,@isnumeric);
+            addParameter(parseObj,'saveFigures',1,@isnumeric);
+            addParameter(parseObj,'printLocalCopy',0,@isnumeric);
+            addParameter(parseObj,'h',0);
+            
+            addParameter(parseObj,'inputParams',false,@isnumeric);
+            parseObj.parse(varargin{:});
+            if parseObj.Results.inputParams
+                disp(parseObj.Results);
+                return;
+            end
+            
+            %evaluate all input parameters in workspace
+            for i=1:numel(parseObj.Parameters)
+                eval([parseObj.Parameters{i} '=' 'parseObj.Results.(parseObj.Parameters{i});']);
+            end
+            
+            dbAutocorrFile=[obj.currentAnalysisFolder filesep 'dbAutocorr_ch' num2str(ch) '.mat'];
+            obj.checkFileRecording(dbAutocorrFile,'Autocorr analysis missing, please first run getDelta2BetaAC');
+            DBAC=load(dbAutocorrFile);
+            
+            %if win+tStart>obj.currentDataObj.recordingDuration_ms, win=obj.currentDataObj.recordingDuration_ms-tStart; end
+            %pt=find(tSlidingAC>=tStart & tSlidingAC<=(tStart+win+parDbAutocorr.movingAutoCorrWin/2));
+            %tSlidingAC=tSlidingAC-tSlidingAC(pt(1));
+            
+            [~,videoFileName]=fileparts(videoFile);
+            respirationAutocorrFile=[obj.currentAnalysisFolder filesep 'respirationAC_' videoFileName '.mat'];
+            obj.checkFileRecording(respirationAutocorrFile,'Autocorr analysis missing, please first run getRespirationAC');
+            RAC=load(respirationAutocorrFile);
+            
+            respirationAutocorrFile=[obj.currentAnalysisFolder filesep 'getRespirationDBCycle.mat'];
+            obj.checkFileRecording(respirationAutocorrFile,'Autocorr analysis missing, please first run getRespirationDBCycle');
+            RDB=load(respirationAutocorrFile);
+            
+            if h==0
+                fH=figure;
+                h=axes;
+            else
+                saveFigures=0;
+                axes(h);
+            end            
+            angles=(0:(numel(RDB.mResampledTemplateDB)-1))/(numel(RDB.mResampledTemplateDB)-1)*(2*pi)-pi;
+            
+            %find valid experiments
+            peak2VallyDiff=DBAC.peak2VallyDiff;
+            nValidCycles=sum(all(~isnan(RDB.resampledTemplateBI)'));
+            
+            title(['Valid sleep cycles=',num2str(nValidCycles),' ;peak2VallyDiff=',peak2VallyDiff])
+            plot(angles,normZeroOne(RDB.mResampledTemplateDB),'lineWidth',3);hold on;%DB
+            plot(angles,normZeroOne(RDB.mResampledTemplateAmp),'lineWidth',3);%breathing amplitude
+            plot(angles,normZeroOne(RDB.mResampledTemplateBR),'lineWidth',3); %breating rate from intervals
+            plot(angles,normZeroOne(RDB.mResampledTemplateBRAC),'lineWidth',3); %breathing rate from autocorr
+            hL=legend({'\delta/\beta','Norm. Breath. Amp.','Norm. Breath. rate','Norm. Breath. rate (AC)'},'location','northoutside');
+            set(h,'XTick',[-pi -pi/2 0 pi/2 pi],'XTickLabel',{'-\pi','-\pi/2','0','\pi/2','\pi'});
+            xlim([-pi pi]);
+            xlabel('Phase');ylabel('norm. intensity');xlabel('Phase');
+            
+            if saveFigures
+                set(fH,'PaperPositionMode','auto');
+                fileName=[obj.currentPlotFolder filesep 'respDB_ch' num2str(DBAC.parDbAutocorr.ch) '_t' num2str(DBAC.parDbAutocorr.tStart) '_w' num2str(DBAC.parDbAutocorr.win)];
+                print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
+                if printLocalCopy
+                    fileName=[cd filesep obj.recTable.Animal{obj.currentPRec} '_Rec' num2str(obj.currentPRec) 'respDB_ch' num2str(DBAC.parDbAutocorr.ch) '_t' num2str(DBAC.parDbAutocorr.tStart) '_w' num2str(DBAC.parDbAutocorr.win)];
+                    print(fileName,'-djpeg',['-r' num2str(obj.figResJPG)]);
+                end
+            end
+        end
+        
         %% getRespirationDBCycle
         function [data]=getRespirationDBCycle(obj,varargin)
             %sleepAnalysis.getRespirationAC - input parameters: ch,tStart,win,movOLWin,XCFLag,movingAutoCorrWin,movingAutoCorrOL
@@ -3639,7 +3750,7 @@ classdef sleepAnalysis < recAnalysis
             end
             
             %select video file
-            if numel(videoFile)>=1
+            if numel(videoFile)>1
                 videoFile=videoFile{1};
                 fprintf('\nMultiple video files identified. Using this one:\n%s\n',videoFile);
             else
@@ -3760,11 +3871,11 @@ classdef sleepAnalysis < recAnalysis
                 %}
             end
             
-            mResampledTemplateBI=nanmean(resampledTemplateBI);
-            mResampledTemplateBR=1./nanmean(resampledTemplateBI);
-            mResampledTemplateBRAC=1./nanmean(resampledTemplateBP);
-            mResampledTemplateDB=nanmean(resampledTemplateDB);
-            mResampledTemplateAmp=nanmean(resampledTemplateAmp);
+            mResampledTemplateBI=nanmean(resampledTemplateBI); %breathing intervals
+            mResampledTemplateBR=1./nanmean(resampledTemplateBI); %breathing rate from intervals
+            mResampledTemplateBRAC=1./nanmean(resampledTemplateBP); %breathing rate from autocorr
+            mResampledTemplateDB=nanmean(resampledTemplateDB); %delta to beta
+            mResampledTemplateAmp=nanmean(resampledTemplateAmp);%breathing amplitude.
             
             sResampledTemplateBI=nanstd(resampledTemplateBI);
             sResampledTemplateBR=1./nanstd(resampledTemplateBI);
