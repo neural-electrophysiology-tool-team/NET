@@ -3750,11 +3750,15 @@ classdef sleepAnalysis < recAnalysis
             end
             
             %select video file
-            if numel(videoFile)>=1 %check that there is at least one active video
-                videoFile=videoFile{1};
-                fprintf('\nMultiple video files identified. Using this one:\n%s\n',videoFile);
-            else
+            if numel(videoFile)==0 %check that there is at least one active video
                 error('Video file missing! Please check data table or provide name');
+            else
+                if numel(videoFile)>1
+                    fprintf('\nMultiple video files identified. Using this one:\n%s\n',videoFile);
+                end
+                if iscell(videoFile)
+                    videoFile=videoFile{1};
+                end
             end
             [~,videoFileName]=fileparts(videoFile);
             obj.files.respirationAutocorr=[obj.currentAnalysisFolder filesep 'respirationAC_' videoFileName '.mat'];
