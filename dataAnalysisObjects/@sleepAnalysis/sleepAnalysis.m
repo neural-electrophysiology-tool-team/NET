@@ -3750,7 +3750,7 @@ classdef sleepAnalysis < recAnalysis
             end
             
             %select video file
-            if numel(videoFile)>1
+            if numel(videoFile)>=1 %check that there is at least one active video
                 videoFile=videoFile{1};
                 fprintf('\nMultiple video files identified. Using this one:\n%s\n',videoFile);
             else
