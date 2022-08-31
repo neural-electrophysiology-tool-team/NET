@@ -68,14 +68,39 @@ classdef MEAAnalysis < recAnalysis
                         fileSepTransitions(end)=[];
                     end
                     if ~folderFound
-                        error('Visual stimulation folder was not found!!! Notice the the name of the folder should be visualStimulation');
+                        disp('Visual stimulation folder was not found!!! Notice the the name of the folder should be visualStimulation%n');
+                        disp('Searching for the file in main directory...');
+                        %new method: use matfile to find which has VSMetaData in it
+                        D=dir([obj.currentExpFolder filesep '*.mat']); %get files from main directory of recording
+                        filNamesOnly={D.name}; %make cell list of all MAT-files in the folder
+                        fileContent=cellfun(@(y) whos('-file',[obj.currentExpFolder filesep y]), filNamesOnly, 'UniformOutput', 0); %read the contents of each file
+                        % Loop through the files and check for the VSMetaData.
+                        for z=1:length(fileContent)
+                            if strcmp(fileContent{z}(1).class,"struct")
+                                temp=fileContent{z}.name; %for files containing more than one variable, this will take the first one only. This is fine since the VStim file only has VSMetaData in it.
+                                if strcmp(temp,'VSMetaData');
+                                    isVS = z;
+                                else
+                                    continue
+                                end
+                            elseif strcmp(fileContent{z}(1).class,"VS_fullFieldFlash")
+                                isVS= z;
+                            else
+                                continue
+                            end
+                        end
+
                     end
                 else
                     VSFileLocation=[obj.currentExpFolder filesep 'visualStimulation'];
                 end
                 fprintf('Visual stimulation folder set as:\n %s\n',VSFileLocation); 
-                %find visual stimulation file according to recording file name
-                VSFile=dir([VSFileLocation filesep '*.mat']);
+                if exist('isVS','var')
+                    VSFile=dir([MA.currentExpFolder filesep filNamesOnly{isVS}]); %load the correct file
+                else
+                    %find visual stimulation file according to recording file name
+                    VSFile=dir([VSFileLocation filesep '*.mat']);
+                end
                 dateNumber=datenum({VSFile.date},'dd-mmm-yyyy HH:MM:SS');
                 VSFile={VSFile.name}; %do not switch with line above
 
