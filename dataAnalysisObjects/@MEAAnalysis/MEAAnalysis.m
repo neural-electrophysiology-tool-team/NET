@@ -91,12 +91,13 @@ classdef MEAAnalysis < recAnalysis
                         end
 
                     end
+                    VSFileLocation=[obj.currentExpFolder];
                 else
                     VSFileLocation=[obj.currentExpFolder filesep 'visualStimulation'];
                 end
                 fprintf('Visual stimulation folder set as:\n %s\n',VSFileLocation); 
                 if exist('isVS','var')
-                    VSFile=dir([MA.currentExpFolder filesep filNamesOnly{isVS}]); %load the correct file
+                    VSFile=dir([obj.currentExpFolder filesep filNamesOnly{isVS}]); %load the correct file
                 else
                     %find visual stimulation file according to recording file name
                     VSFile=dir([VSFileLocation filesep '*.mat']);
