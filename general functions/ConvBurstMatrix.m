@@ -32,7 +32,12 @@ else
     error('The only supported shapes are ''full'' and ''same''');
 end
 
-%Calculate convolution
-for i=1:NBursts
-    MC(i,:,:)=convn(squeeze(M(i,:,:)),kern,shape);
+if NBursts==1
+    MC(1,:,:)=convn(squeeze(M(1,:,:))',kern,shape);
+else
+    for i=1:NBursts
+        MC(i,:,:)=convn(squeeze(M(i,:,:)),kern,shape);
+    end
 end
+
+%Calculate convolution

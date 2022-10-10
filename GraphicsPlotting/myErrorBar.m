@@ -1,4 +1,4 @@
-function [h,hE,hB]=myErrorBar(x,y,dy,width,varargin);
+function [h,hE,hB]=myErrorBar(x,y,dy,width,varargin)
 %[hE,hB]=myErrorBar(x,y,dy,width,varargin)
 %width [0-1] - the width in normalize units of the relative fraction of the bar (e.g. width=1 -> error bar in size of bar), leave empty [] if needed.
 %[h,hE,hB]=myErrorBar(1:8,Int,Int+IntStd,0.4,'Bfacecolor',[0.3 0.3 0.3],'BLinewidth',5,'Ecolor','k');
@@ -76,7 +76,7 @@ set(hhE(2),'xdata',xD(:));	% update error bars on the figure
 
 %update axis arguments
 set(h,'xtick',x);
-set(h,axisVarArgIn{:});
+axes(h,axisVarArgIn{:});
 
 
 

@@ -823,28 +823,39 @@ classdef sleepAnalysis < recAnalysis
                 set(h, 'Nextplot','add');hold on;
             end
             
+            %plot histogram relative to db
+            histColor=[0.9 0.078 0.184];
             hOut.hAxes=h;
             hOut.hRose=polarhistogram(phaseMov*2*pi-mPhaseDB,parSyncDBEye.nBins);
-            hOut.hRose.FaceColor=[0.9 0.078 0.184];
+            hOut.hRose.FaceColor=histColor;
             hOut.hRose.FaceAlpha=RoseAlpha;
             h.ThetaTick=[0:90:330];
             hold on;
+            
+            hOut.hRoseAvg=polarplot([mPhaseMov-mPhaseDB mPhaseMov-mPhaseDB],[0 h.RLim(2)],'k');
+            hOut.hRoseAvg.Color=histColor;
                         
             maxSamplesInBin=h.RLim(2);
             
+            %plot db relative to mean db
             hOut.hPolar=polarplot([0 (1:parSyncDBEye.nBins)/parSyncDBEye.nBins]*pi*2-mPhaseDB,[mResampledTemplate(end) mResampledTemplate]/(max(mResampledTemplate/maxSamplesInBin)));
             hOut.hPolar.LineWidth=2;
             hOut.hPolar.Color=cMap(1,:,:);
+            %plot mean db
+            hOut.hPolarAvg=polarplot([0 0],[0 h.RLim(2)],'k');
+            hOut.hPolarAvg.Color=cMap(1,:,:);
 
-            hOut.l=legend([hOut.hRose hOut.hPolar],'SWC','OF');
-            hOut.l.Color=[1 1 1];
-            hOut.l.Box='off';
-                        
+            %legend and random hist
             if plotRandomDist
                 hOut.hRose2=polarhistogram(phaseRand*2*pi-mPhaseDB,parSyncDBEye.nBins);
                 hOut.hRose2.FaceColor=[0.5 0.5 0.5];
                 hOut.hRose2.FaceAlpha=randAlpha;
+                hOut.l=legend([hOut.hRose hOut.hRose2 hOut.hPolar hOut.hRoseAvg],'SWC','Shuff','OF','Avg. SWC');
+            else
+                hOut.l=legend([hOut.hRose hOut.hPolar hOut.hRoseAvg],'SWC','OF','Avg. SWC');
             end
+            hOut.l.Color=[1 1 1];
+            hOut.l.Box='off';
             
             %if ~isempty(rLim4Rose)
             %    set(h_fake,'Visible','off');
@@ -2682,7 +2693,9 @@ classdef sleepAnalysis < recAnalysis
             f.Children(3).XTickLabel={};
             
             axes(h(4));
-            plot(t_ms/1000/60/60,HAng);hold on;
+            if exist('HAng','var')
+                plot(t_ms/1000/60/60,HAng);hold on;
+            end
             yl=ylim;
             line([TcycleMid;TcycleMid]/1000/60/60,yl'*ones(1,numel(TcycleMid)),'color','g');
             line([TcycleOnset;TcycleOnset]/1000/60/60,yl'*ones(1,numel(TcycleMid)),'color','r');

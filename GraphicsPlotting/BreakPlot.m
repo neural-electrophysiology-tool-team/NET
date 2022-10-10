@@ -1,5 +1,5 @@
 function h=BreakPlot(y_break_start,y_break_end,break_type,axes_handle)
-% BreakPlot(x,y,y_break_start,y_break_end,break_type)
+% BreakPlot(y_break_start,y_break_end,break_type)
 % Produces a plot who's y-axis skips to avoid unecessary blank space
 %axis_handle is obtained by get(gca).
 % 
