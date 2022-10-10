@@ -7,5 +7,8 @@ end
 nSpk=cellfun(@(x) numel(x),c);
 cumSpk=cumsum(nSpk);
 ic=[neuronNames;[1 cumSpk(1:end-1)+1];cumSpk];
+if size(c{1},2) ~= size(c,2)
+    c=c';
+end
 t=cell2mat(c);
 t=t(:)';

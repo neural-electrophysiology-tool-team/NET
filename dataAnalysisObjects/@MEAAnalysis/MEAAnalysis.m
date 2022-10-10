@@ -46,7 +46,7 @@ classdef MEAAnalysis < recAnalysis
 
         
         %% getVStimParams - still under development
-        function [obj,VST]=getVStimParams(obj,VSFile)
+        function [VST]=getVStimParams(obj,VSFile)
             %extract the visual stimulation parameters from parameter file
             nParentFolders2Check=2;
             folderFound=false;
@@ -116,7 +116,7 @@ classdef MEAAnalysis < recAnalysis
                     obj.VST.(VS.props{i,1})=VS.props{i,2};
                 end
             end
-            if nargout>1
+            if nargout>0
                 VST=obj.VST;
             end
         end
