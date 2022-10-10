@@ -1272,7 +1272,7 @@ classdef sleepAnalysis < recAnalysis
             diffFrames=abs(numel(tFrames)-round(nFramesVideo));
             if diffFrames==0
                 disp('Number of frames in video and in triggers is equal, proceeding with analysis');
-            elseif diffFrames<110
+            elseif diffFrames<160
                 fprintf('\n\nNumber of frames in video and in triggers differs by %d, \nproceeding with analysis assuming uniform distribution of lost frames in video\n',diffFrames);
                 tFrames(round((1:diffFrames)/diffFrames*numel(tFrames)))=[];
             else
@@ -1291,6 +1291,8 @@ classdef sleepAnalysis < recAnalysis
                 mOFMAD=movstd(validmOF,winSamples);
             end
             tMovement=tAnalyzedFrames(validmOF>(mOFmed+nStd*mOFMAD));
+            tMovAmp=validmOF(validmOF>(mOFmed+nStd*mOFMAD));
+            
             %plot(tAnalyzedFrames/3600000,validmOF);hold on;plot(tAnalyzedFrames/3600000,mOFmed+nStd*mOFMAD);
             for i=1:numel(TcycleOnset)
                 cycleDuration=TcycleOffset(i)-TcycleOnset(i);
@@ -1323,7 +1325,7 @@ classdef sleepAnalysis < recAnalysis
             binCenters=(0:(nBins))/(nBins);binCenters=(binCenters(1:end-1)+binCenters(2:end))/2;
             mPhaseDB=angle(mean(mean(resampledTemplate).*exp(1i.*binCenters*2*pi))); %Mean of circular quantities - wiki
             
-            save(obj.files.syncDBEye,'phaseMov','mPhaseDB','mPhaseMov','phaseAll','phaseAllRand','phaseRand','resampledTemplate','validmOF','tAnalyzedFrames','tFrames','tMovement','parSyncDBEye','pFramesValid','mOFmed','mOFMAD');
+            save(obj.files.syncDBEye,'phaseMov','mPhaseDB','mPhaseMov','phaseAll','phaseAllRand','phaseRand','resampledTemplate','validmOF','tAnalyzedFrames','tFrames','tMovement','tMovAmp','parSyncDBEye','pFramesValid','mOFmed','mOFMAD');
            
         end
         
@@ -2723,6 +2725,7 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
             addParameter(parseObj,'preSW',1000,@isnumeric);
             addParameter(parseObj,'winSW',2500,@isnumeric);
+            addParameter(parseObj,'maxShW2Analyze',1000,@isnumeric); %if empty [] - analyzes all
             addParameter(parseObj,'overwrite',0,@isnumeric);
                     
             addParameter(parseObj,'inputParams',false,@isnumeric);
@@ -2755,13 +2758,25 @@ classdef sleepAnalysis < recAnalysis
             obj.checkFileRecording(sharpWavesFile,'Sharp wave file missing, please run getSharpWaves');
             load(sharpWavesFile);
             
+            if isempty(obj.filt)
+                obj.getFilters;
+            end
+            
             %determine new length based on downsampling factor
             winSW=ceil(winSW/obj.filt.DS4Hz.downSamplingFactor)*obj.filt.DS4Hz.downSamplingFactor;
             
-            nSW=min(1000,numel(tSW));
+            if isempty(maxShW2Analyze)
+                nSW=numel(tSW);
+            else
+                nSW=min(1000,numel(tSW));
+            end
+            
             [allRaw,tRaw]=obj.currentDataObj.getData(ch,tSW(1:nSW)-preSW,winSW);
             [allDS4Hz,tDS4Hz]=obj.filt.DS4Hz.getFilteredData(allRaw);
             [allFHR,tFHR]=obj.filt.FHR.getFilteredData(allRaw);
+            
+            maxNegativeShWAmp=min(allDS4Hz,[],3);
+            maxPosShWAmp=max(allDS4Hz,[],3);
             
             allSWAbsAI=squeeze(mean(abs(reshape(permute(allFHR,[3,1,2]),[obj.filt.DS4Hz.downSamplingFactor  size(allFHR,3)/obj.filt.DS4Hz.downSamplingFactor nSW])),1))';
             meanProfiles.mSWAbsAI=mean(allSWAbsAI);
@@ -2788,7 +2803,7 @@ classdef sleepAnalysis < recAnalysis
             imagesc(10*log10(FAall));
             imagesc(flipud(FAallLog));
             %}
-            save(obj.files.sharpWaveAnalysis,'allSWAbsAI','meanProfiles','parSharpWavesAnalysis');
+            save(obj.files.sharpWaveAnalysis,'allSWAbsAI','meanProfiles','parSharpWavesAnalysis','maxNegativeShWAmp','maxPosShWAmp');
         end
         
         
