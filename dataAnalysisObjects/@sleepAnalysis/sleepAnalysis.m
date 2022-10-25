@@ -352,6 +352,121 @@ classdef sleepAnalysis < recAnalysis
             save(obj.files.dayTimeOnRecTime,'sleepStartEnd','recordingStartTimeClock','referenceClock','startSleepFromRef_h','parDayTimeOnRecTime','manualLightAnnotation');
         end
         
+             %% getDayTimeInRecTime
+        function [par]=plotAccMovVsDaytime(obj,varargin)
+            %% parameter and settings
+            obj.checkFileRecording;
+            
+            parseObj = inputParser;
+            addParameter(parseObj,'lightsOff','19:00:00'); %reference for lights on/off
+            addParameter(parseObj,'lightsOn','7:00:00'); %reference for lights on/off
+            addParameter(parseObj,'recordingStartDate',obj.currentDataObj.startDate{1},@isstr);
+            addParameter(parseObj,'bin_ms',1000*60*60); %Time bin for analysis
+            addParameter(parseObj,'binOL_ms',1000*60*10); %Time bin for analysis
+            addParameter(parseObj,'res_ms',1000); %Time resolution of the analysis [ms]
+            addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
+            addParameter(parseObj,'hAxes',[]);
+            addParameter(parseObj,'plotNightTimeShading',true,@isnumeric);
+            addParameter(parseObj,'plotInRecordingTime',false,@isnumeric); %if to plot in recording clock or global time.
+            addParameter(parseObj,'plotResults',true,@isnumeric);
+            addParameter(parseObj,'overwrite',false,@isnumeric);
+            addParameter(parseObj,'inputParams',false,@isnumeric);     
+            
+            parseObj.parse(varargin{:});
+            if parseObj.Results.inputParams
+                disp(parseObj.Results);
+                return;
+            end
+            
+            %make parameter structure
+            par=parseObj.Results;
+            
+            if isempty(par.recordingStartDate)
+                fprintf('Could not run analysis since the startDate property of the recording object is missing!\nPlease run again while adding it manually as input\n');
+            end
+            
+            %check if analysis was already done done
+            %{
+            obj.files.getAccMovVsDaytime=[obj.currentAnalysisFolder filesep 'plotAccMovVsDaytime.mat'];
+            if exist(obj.files.getAccMovVsDaytime,'file') & ~overwrite
+                if nargout==1
+                    data=load(obj.files.getAccMovVsDaytime);
+                else
+                    disp('getAccMovVsDaytime analysis already exists');
+                end
+                return;
+            end
+            %}
+            
+            dbRatioFile=[obj.currentAnalysisFolder filesep 'lizMov.mat'];
+            obj.checkFileRecording(dbRatioFile,'Lizard movement analysis missing, please first run getLizardMovements');
+            lizMov=load(dbRatioFile); %load data 
+            
+            %time at recording start
+            startDatetime=datetime(par.recordingStartDate);%,'InputFormat','dd MMM yyyy HH:mm:ss');
+            recStartFromMidnigh=calendarDuration(0,0,0,hour(startDatetime),minute(startDatetime),second(startDatetime));
+            fprintf('Using start recording date: %s\n',startDatetime);
+            
+            %get accelerometer movement
+            duration=obj.currentDataObj.recordingDuration_ms;
+            if duration<par.bin_ms
+                error('The chosen window size is longer than the recording duration!!! Cant perform analysis!')
+            end
+            par.startTimes=0:(par.binOL_ms):(duration-par.bin_ms+par.binOL_ms-1);
+            par.movTimesMS=par.startTimes+par.bin_ms/2;
+            binnedMov=squeeze(BuildBurstMatrixA([1;1;1;numel(lizMov.t_mov_ms)],round(lizMov.t_mov_ms/par.res_ms),lizMov.movAll,round(par.startTimes/par.res_ms),round(par.bin_ms/par.res_ms)));
+            par.movMean=mean(binnedMov,2);
+            par.movStd=std(binnedMov,1,2);
+            par.monMeanNorm=normZeroOne(par.movMean);
+            
+            %lights on off
+            lightsOnDatetime=datetime(par.lightsOn,'InputFormat','HH:mm:ss');
+            lightsOffDatetime=datetime(par.lightsOff,'InputFormat','HH:mm:ss');
+
+            par.lightsOnFromMidnigh=calendarDuration(0,0,1,hour(lightsOnDatetime),minute(lightsOnDatetime),second(lightsOnDatetime));
+            par.lightsOffFromMidnigh=calendarDuration(0,0,0,hour(lightsOffDatetime),minute(lightsOffDatetime),second(lightsOffDatetime));
+            
+            %recording dates
+            hours=floor(par.movTimesMS/1000/60/60);
+            minutes=floor(par.movTimesMS)/1000/60-hours*60;
+            seconds=floor(par.movTimesMS)/1000-hours*60*60-minutes*60;
+            par.movDatetime=calendarDuration(0,0,0,hours,minutes,seconds);
+            
+            movDatetimeFromLightsOff=par.movDatetime+recStartFromMidnigh-par.lightsOffFromMidnigh;
+            movDatetimeFromMidnight=par.movDatetime+recStartFromMidnigh;
+                      
+            par.xStartTime=hour(startDatetime)+minute(startDatetime)/60+second(startDatetime)/3600;
+            par.xHours=par.xStartTime+hours+minutes/60+seconds/3600;
+            par.xlightsOff=hour(lightsOffDatetime)+minute(lightsOffDatetime)/60+second(lightsOffDatetime)/3600;
+            par.xlightsOn=24+hour(lightsOnDatetime)+minute(lightsOnDatetime)/60+second(lightsOnDatetime)/3600;
+            
+            if par.plotResults
+                if isempty(par.hAxes)
+                    figure;
+                    par.hAxes=axes;
+                else
+                    axes(par.hAxes);
+                end
+                if ~par.plotInRecordingTime
+                    plot(par.xHours,par.movMean','linewidth',2);
+                else
+                    plot(par.movTimesMS/1000/60/60,par.movMean','linewidth',2);
+                end
+                yl=ylim;
+                if par.plotNightTimeShading
+                    if ~par.plotInRecordingTime
+                        hP1=patch([par.xlightsOff par.xlightsOn par.xlightsOn par.xlightsOff],[yl(1) yl(1) yl(2) yl(2)],'k','facealpha',0.1,'lineStyle','none');
+                    else
+                        hP1=patch([par.xlightsOff-par.xStartTime par.xlightsOn-par.xStartTime par.xlightsOn-par.xStartTime...
+                            par.xlightsOff-par.xStartTime],[yl(1) yl(1) yl(2) yl(2)],'k','facealpha',0.1,'lineStyle','none');
+                    end
+                end
+                ylabel('Movement [AU]');
+                xlabel('Time [h]');
+                l=legend(hP1,'Lights off');
+            end
+        end
+        
         %% getSpikeSTAs
         function data=getSpikeSTAs(obj,varargin)
             %% parameter and settings
