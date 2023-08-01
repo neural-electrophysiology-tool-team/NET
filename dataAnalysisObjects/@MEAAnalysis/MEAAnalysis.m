@@ -79,13 +79,14 @@ classdef MEAAnalysis < recAnalysis
                 dateNumber=datenum({VSFile.date},'dd-mmm-yyyy HH:MM:SS');
                 VSFile={VSFile.name}; %do not switch with line above
 
-                tmpFileParts=strsplit(obj.currentDataFiles{1}(1:end-9),filesep);
+                tmpFileParts=strsplit(obj.currentDataFiles{1}(1:end-7),filesep);
                 validVSFile=[];
                 for i=1:numel(VSFile)
                     if contains(VSFile{i}(1:end-4),tmpFileParts{end},'IgnoreCase',true) || ...
                        contains(tmpFileParts{end},VSFile{i}(1:end-4),'IgnoreCase',true) || ...
                        contains(VSFile{i}(1:end-4),tmpFileParts{end-1},'IgnoreCase',true) || ...
-                       contains(tmpFileParts{end-1},VSFile{i}(1:end-4),'IgnoreCase',true)
+                       contains(tmpFileParts{end-1},VSFile{i}(1:end-4),'IgnoreCase',true) || ...
+                       contains(tmpFileParts{end},VSFile{i}(1:end-7),'IgnoreCase',true)
                         validVSFile=VSFile{i};
                        break;
                     end

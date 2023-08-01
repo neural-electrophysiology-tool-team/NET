@@ -2285,6 +2285,7 @@ classdef sleepAnalysis < recAnalysis
                             visiblePoints = points; %all new added points are tracked
                             visiblePointsOld = points;
                         else
+                            
                             disp(['Tracking analysis stopped at ' num2str(i) '/' num2str(nFrames) ' since all tracking points were lost']);
                             parChestTracking.pStopDue2LostPoints=i;
                             bboxCenterAll(i:end,:)=[];
@@ -3585,7 +3586,7 @@ classdef sleepAnalysis < recAnalysis
             movingAutoCorrOLSamples=movingAutoCorrOL/timeBin;
             autoCorrTimeBin=(movingAutoCorrWin-movingAutoCorrOL);
             BetaRatioForSlidingAutocorr = buffer(bufferedDelta2BetaRatio,movingAutoCorrWinSamples,movingAutoCorrOLSamples,'nodelay');
-            tSlidingAC=(movingAutoCorrWin/2):(movingAutoCorrWin-movingAutoCorrOL):(t_ms(end)-movingAutoCorrWin/2+movingAutoCorrWin-movingAutoCorrOL);
+            tSlidingAC=(t_ms(1)+movingAutoCorrWin/2):(movingAutoCorrWin-movingAutoCorrOL):(t_ms(end)-movingAutoCorrWin/2+movingAutoCorrWin-movingAutoCorrOL);
             if (numel(tSlidingAC)-size(BetaRatioForSlidingAutocorr,2))==1 %weird special case, happened only once in a long recording
                 tSlidingAC=tSlidingAC(1:end-1);
             end

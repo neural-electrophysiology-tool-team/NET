@@ -223,7 +223,7 @@ classdef (Abstract) recAnalysis < handle
             disp(T);
         end
         
-        %% convertExcelToNewFormat
+        %% convertExcelToNewFormat - required for loading data my Mike that used a different excel file format
         function obj=convertTableToNewFormat(obj)
             xlsFieldNames=obj.recTable.Properties.VariableNames;
             
@@ -282,9 +282,7 @@ classdef (Abstract) recAnalysis < handle
             
             %General rules for formatting excel files:
             %1) All title names will be extracted as fields, except if they have a 'x_' as a first letters
-            %2) If an line does not contain data, it has to have 1 in the exclude colomn
-            %3) If a field has a 
-            
+            %2) If a line does not contain data, it has to have 1 in the exclude colomn
             
             %get data from excel spread sheet
             
@@ -313,7 +311,10 @@ classdef (Abstract) recAnalysis < handle
                 nonExludedRows(p2Remove)=[];
             end
             obj.nTotalRecordings=numel(nonExludedRows);
-            
+
+            %remove all the excluded rows
+            obj.recTable=obj.recTable(nonExludedRows,:);
+
             %check if critical fields for all analysis exist
             pFolder=find(strcmp(obj.relevantFieldsXls,'folder'));
             pMEAfiles=find(strcmp(obj.relevantFieldsXls,'MEAfiles'));
@@ -374,7 +375,9 @@ classdef (Abstract) recAnalysis < handle
                 end
                 pRec=find(all(pRec==1,1));
                 nRec=numel(pRec);
-                
+                if nRec>1
+                    disp([num2str(nRec) 'recordings match the selected criteria.']);
+                end
                 if nRec>0
                     %collect all files in case multiple files were inserted (comma separated) or group format and couple folder with file name
                     allFullFiles=[];multipleFiles={''};
