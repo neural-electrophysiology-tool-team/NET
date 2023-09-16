@@ -3461,16 +3461,22 @@ classdef sleepAnalysis < recAnalysis
             hold on;
             
             x=[(tStartSleep-tStart)/1000/60/60 (tEndSleep-tStart)/1000/60/60 (tEndSleep-tStart)/1000/60/60 (tStartSleep-tStart)/1000/60/60];
-            W=0.03;
-            y=yl(2)+W*[diff(yl) diff(yl) diff(yl)*3 diff(yl)*3];
-            h(4)=patch(x,y,[0.2 0.2 0.2],'Clipping','off','lineStyle','none','FaceAlpha',0.5); 
-            text((x(1)+x(2))/2,(y(1)+y(3))/2,'E-Sleep','HorizontalAlignment','center','VerticalAlignment','middle');
-            h(7)=line(xlim,[period/1000 period/1000],'color',[1 0.8 0.8]);
+            if ~isempty(x)
+                W=0.03;
+                y=yl(2)+W*[diff(yl) diff(yl) diff(yl)*3 diff(yl)*3];
+                h(4)=patch(x,y,[0.2 0.2 0.2],'Clipping','off','lineStyle','none','FaceAlpha',0.5);
+                text((x(1)+x(2))/2,(y(1)+y(3))/2,'E-Sleep','HorizontalAlignment','center','VerticalAlignment','middle');
+                h(7)=line(xlim,[period/1000 period/1000],'color',[1 0.8 0.8]);
+            else
+                disp('sleep time was not determined and not shown in plot!');
+            end
 
             axes(h(2));
-            
+
             h(5)=scatter(tSlidingAC(pSleepSlidingAC)/1000/60/60,acfPeriodAll(pSleepSlidingAC)/1000,5,[0.8 0.8 1],'filled');hold on;
-            h(6)=plot((tFilteredSlidingPeriod-tStart)/1000/60/60,filteredSlidingPeriod/1000,'-','lineWidth',3);
+            if ~isempty(tFilteredSlidingPeriod)
+                h(6)=plot((tFilteredSlidingPeriod-tStart)/1000/60/60,filteredSlidingPeriod/1000,'-','lineWidth',3);
+            end
             ylabel('Period [s]');
             xlabel('Time [h]');
             set(h(2),'Box','on');
@@ -3480,10 +3486,11 @@ classdef sleepAnalysis < recAnalysis
             marg=diff(yl)*0.02;
             ylim([yl(1)-marg,yl(2)+marg]);
             h(8:9)=line([parDbAutocorr.tStart parDbAutocorr.tStart;parDbAutocorr.tStart+parDbAutocorr.win parDbAutocorr.tStart+parDbAutocorr.win]'/1000/60/60,[yl;yl]','color',[0.8 1 0.8]);
-
-            h(10)=line([bestSleepTime/1000/60/60,bestSleepTime/1000/60/60],yl,'color','k');
+            if ~isempty(bestSleepTime)
+                h(10)=line([bestSleepTime/1000/60/60,bestSleepTime/1000/60/60],yl,'color','k');
+            end
             linkaxes(h(1:2),'x');
-            
+
             if saveFigures
                 set(fSAC,'PaperPositionMode','auto');
                 fileName=[obj.currentPlotFolder filesep 'dbSAC_ch' num2str(parDbAutocorr.ch) '_t' num2str(parDbAutocorr.tStart) '_w' num2str(parDbAutocorr.win)];
@@ -3494,7 +3501,7 @@ classdef sleepAnalysis < recAnalysis
                 end
             end
         end
-                
+
         %% getDelta2BetaAC
         function [data]=getDelta2BetaAC(obj,varargin)
             %sleepAnalysis.getDelta2BetaAC - input parameters: ch,tStart,win,movOLWin,XCFLag,movingAutoCorrWin,movingAutoCorrOL
