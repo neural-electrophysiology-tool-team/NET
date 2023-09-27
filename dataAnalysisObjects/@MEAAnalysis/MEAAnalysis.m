@@ -361,7 +361,9 @@ classdef MEAAnalysis < recAnalysis
             
             parseObj = inputParser;
             addParameter(parseObj,'pot',100,@isnumeric); %the potential matrix [channels,time]
-            addParameter(parseObj,'electrodePitch',100,@isnumeric);
+            addParameter(parseObj,'ch',[],@isnumeric); %the channel numbers in potential matrix
+            addParameter(parseObj,'electrodePitch',obj.currentDataObj.electrodePitch,@isnumeric);
+            addParameter(parseObj,'preMs',0,@isnumeric);
             addParameter(parseObj,'frameRate',30,@isnumeric);
             addParameter(parseObj,'videoQuality',90,@isnumeric);
             addParameter(parseObj,'positionRealSpace',[],@isnumeric);
@@ -370,6 +372,7 @@ classdef MEAAnalysis < recAnalysis
             addParameter(parseObj,'saveData',false,@isnumeric); %to only calculate CSD without making movie
             addParameter(parseObj,'makeMovie',true,@isnumeric);
             addParameter(parseObj,'saveFullMatrices',false,@isnumeric);
+            addParameter(parseObj,'saveFileName','',@isstr);
             addParameter(parseObj,'overwrite',false,@isnumeric);
             addParameter(parseObj,'inputParams',false,@isnumeric);
             parseObj.parse(varargin{:});
@@ -381,10 +384,12 @@ classdef MEAAnalysis < recAnalysis
             end
             %make parameter structure
             par=parseObj.Results;
-            par.saveFileName=obj.getFileName(dbstack,par.saveFileName); %extracts file save name
+            if isempty(par.saveFileName)
+                par.saveFileName=obj.getFileName(dbstack,par.saveFileName); %extracts file save name
+            end
             
             %save/load data
-            if exist(par.saveFileName,'file') & ~par.overwrite
+            if isfile(par.saveFileName) & ~par.overwrite
                 if nargout==1
                     data=load(par.saveFileName);
                 else
@@ -396,114 +401,129 @@ classdef MEAAnalysis < recAnalysis
             
             %%
             
-            
-            [nNeu,nCh,nSamples]=size(pot);
-            timeSamples=(1:nSamples)/Fs*1000-preMs;
-            spikeSample=round(preMs/1000*Fs);
-            
+            Fs=obj.currentDataObj.samplingFrequency(1);
+
+            [nCh,nSamples]=size(par.pot);
+            if isempty(par.ch)
+                par.ch=1:nCh;
+            end
+
+            timeSamples=(1:nSamples)/Fs*1000-par.preMs;
+            %spikeSample=round(par.preMs/1000*Fs);
+
             %calculate electrode positions
-            elecPos=NaN(nCh,3);
-            En2=En;
-            for i=1:nCh
-                [n,m]=find(En2==ch(i));
-                if ~isempty(n)
-                    elecPos(i,:)=[m n ch(i)];
-                else
-                    elecPos(i,:)=ch(i);
-                end
-            end
-            elecPos(:,1:2)=elecPos(:,1:2)*electrodePitch;
-            
-            if saveData
-                mkdir(dataFolder);
-                disp(['Data will be saved in ' dataFolder]);
-            end
-            
-            samplingPosX=min(elecPos(:,1)):10:max(elecPos(:,1));
-            samplingPosY=min(elecPos(:,2)):10:max(elecPos(:,2));
-            [XuM,YuM]=meshgrid(samplingPosX,samplingPosY);
-            CSD=zeros(size(WF));
-            
-            for i=1:nNeu
-                mM=squeeze(WF(i,:,:));
-                k = kcsd2d(elecPos(:,1:2), mM(elecPos(:,3),:), 'manage_data', 0, 'X', XuM, 'Y', YuM);
-                
-                if strcmp(dataType,'CSD')
-                    dynamics=k.CSD_est;
-                elseif strcmp(dataType,'pot')
-                    dynamics=k.pots_est;
-                else
-                    error('The parameter dataType was not chosen correctly');
-                end
-                
-                for j=1:nCh
-                    [pTmpX,pTmpY]=find(XuM==elecPos(j,1) & YuM==elecPos(j,2));
-                    CSD(i,j,:)=dynamics(pTmpX,pTmpY,:);
-                end
-                
-                %[hPlot,scaleFac]=activityTracePhysicalSpacePlot([],1:120,squeeze(CSDelec(i,:,:)),En);
-                %[hPlot,scaleFac]=activityTracePhysicalSpacePlot([],1:120,squeeze(WF(i,:,:)),En);
-                if saveFullMatrices
-                    save([dataFolder filesep 'CSD_Neuron_' num2str(neuronNames(1,i)) '-' num2str(neuronNames(2,i))],'dynamics','dataType','preMs','Fs','XuM','YuM','elecPos');
-                end
-                
-                if makeMovie
-                    mn=min(min(min(dynamics(:,:,(spikeSample+40):end),[],1),[],2),[],3);
-                    mx=max(max(max(dynamics(:,:,(spikeSample+40):end),[],1),[],2),[],3);
-                    l=max(abs([mn,mx]));
-                    cLim=[-l l];
-                    
-                    
-                    writerObj = VideoWriter([dataFolder filesep dataType '_neu' num2str(neuronNames(1,i)) '_' num2str(neuronNames(2,i)) '.mp4'],'MPEG-4');
-                    writerObj.FrameRate=frameRate;
-                    writerObj.Quality=videoQuality;
-                    open(writerObj);
-                    
-                    F=figure('position',[50 50 550 500],'color','w');h=axes;
-                    imagesc(XuM(1,:),YuM(:,1),squeeze(dynamics(:,:,i)),cLim);set(gca,'YDir','normal');hold on;
-                    plot(elecPos(:,1),elecPos(:,2),'.');
-                    %text(elecPos(:,1),elecPos(:,2),num2str(elecPos(:,3)));
-                    cb=colorbar;
-                    set(cb,'position',[0.9167    0.7600    0.0117    0.1650],'Ticks',round([-l 0 l]));
-                    cb.Label.Position=[4.2 0 0];
-                    ylab=ylabel(cb,dataType);
-                    ylab.Position=[4.2 0 0];
-                    
-                    xlabel('\mum');
-                    ylabel('\mum');
-                    
-                    axis equal tight;
-                    set(h,'nextplot','replacechildren');
-                    set(F,'Renderer','zbuffer');
-                    
-                    if isempty(positionRealSpace)
-                        [~,pPeak]=min(min(min(dynamics(:,:,(spikeSample-10):(spikeSample+10)),[],1),[],2),[],3);
-                        CSDSpikePeak=squeeze(mean(dynamics(:,:,(spikeSample-10+pPeak-5):(spikeSample-10+pPeak+5)),3));
-                        [ySpk,xSpk] = find(CSDSpikePeak == min(min(CSDSpikePeak)));
-                        cellBodyPos=[XuM(1,xSpk) YuM(ySpk,1)];
+            if isempty(obj.currentDataObj.chLayoutPositions)
+
+                elecPos=NaN(nCh,3);
+                En2=obj.currentDataObj.chLayoutNumbers;
+                for i=1:nCh
+                    [n,m]=find(En2==par.ch(i));
+                    if ~isempty(n)
+                        elecPos(i,:)=[m n par.ch(i)];
                     else
-                        cellBodyPos=positionRealSpace(:,i);
+                        elecPos(i,:)=par.ch(i);
                     end
-                    
-                    for j=1:nSamples
-                        tmpImg=squeeze(dynamics(:,:,j));
-                        
-                        h(1)=imagesc(XuM(1,:),YuM(:,1),tmpImg,cLim);hold on;
-                        h(2)=plot(elecPos(:,1),elecPos(:,2),electrodeMarker,'color',[0.8 0.8 0.8]);
-                        h(3)=line([XuM(1,1) XuM(1,end)],[cellBodyPos(2) cellBodyPos(2)],'color','k');
-                        h(4)=line([cellBodyPos(1) cellBodyPos(1)],[YuM(1,1) YuM(end,1)],'color','k');
-                        
-                        title([num2str(timeSamples(j),'% 10.1f') ' ms']);
-                        
-                        frame = getframe(F);
-                        writeVideo(writerObj,frame);
-                        delete(h);
-                    end
-                    close(writerObj);
-                    close(F);
                 end
+                elecPos(:,1:2)=elecPos(:,1:2)*electrodePitch;
+            else
+                elecPos=[obj.currentDataObj.chLayoutPositions(:,par.ch)' (par.ch)'];
             end
-            
+
+            dX_um=10;
+            samplingPosX=(min(elecPos(:,1))-dX_um) : dX_um : (max(elecPos(:,1))+dX_um);
+            samplingPosY=(min(elecPos(:,2))-dX_um) : dX_um : (max(elecPos(:,2))+dX_um);
+            [XuM,YuM]=meshgrid(samplingPosX,samplingPosY);
+            CSD=zeros(size(par.pot));
+
+            k = kcsd2d(elecPos(:,1:2), par.pot, 'manage_data', 0, 'X', XuM, 'Y', YuM, 'sigma', 100);
+            if strcmp(par.dataType,'CSD')
+                dynamics=k.CSD_est;
+            elseif strcmp(par.dataType,'pot')
+                dynamics=k.pots_est;
+            else
+                error('The parameter dataType was not chosen correctly');
+            end
+
+            for j=1:nCh
+                %[pTmpX,pTmpY]=find(XuM==elecPos(j,1) & YuM==elecPos(j,2),1,'first');
+                [~,pTmp]=pdist2([XuM(:) YuM(:)],elecPos(j,1:2),'euclidean','Smallest',1);
+                [pTmpX,pTmpY]=ind2sub(size(XuM),pTmp);
+                CSD(j,:)=dynamics(pTmpX,pTmpY,:);
+            end
+
+            if par.saveData
+                mkdir(par.dataFolder);
+                disp(['Data will be saved in ' par.dataFolder]);
+            end
+
+            %[hPlot,scaleFac]=activityTracePhysicalSpacePlot([],1:120,squeeze(CSDelec(i,:,:)),En);
+            %[hPlot,scaleFac]=activityTracePhysicalSpacePlot([],1:120,squeeze(WF(i,:,:)),En);
+            if par.saveFullMatrices
+                save([dataFolder filesep 'CSD_Neuron_' num2str(neuronNames(1,i)) '-' num2str(neuronNames(2,i))],'dynamics','dataType','preMs','Fs','XuM','YuM','elecPos');
+            end
+
+            if par.makeMovie
+                mn=min(min(min(dynamics,[],1),[],2),[],3);
+                mx=max(max(max(dynamics,[],1),[],2),[],3);
+                l=max(abs([mn,mx]));
+                cLim=[-l l];
+
+                writeVideo2File=0;
+                if writeVideo2File==1
+                    writerObj = VideoWriter([obj.currentAnalysisFolder filesep par.dataType '.mp4']);
+                    writerObj.FrameRate=par.frameRate;
+                    writerObj.Quality=par.videoQuality;
+                    open(writerObj);
+                end
+                F=figure('position',[50 50 550 500],'color','w');h=axes;
+                imagesc(XuM(1,:),YuM(:,1),squeeze(dynamics(:,:,1)),cLim);set(gca,'YDir','normal');hold on;
+                plot(elecPos(:,1),elecPos(:,2),'.');
+                %text(elecPos(:,1),elecPos(:,2),num2str(elecPos(:,3)));
+                cb=colorbar;
+                set(cb,'position',[0.9167    0.7600    0.0117    0.1650],'Ticks',round([-l 0 l]));
+                cb.Label.Position=[4.2 0 0];
+                ylab=ylabel(cb,par.dataType);
+                ylab.Position=[4.2 0 0];
+
+                xlabel('\mum');
+                ylabel('\mum');
+
+                axis equal tight;
+                set(h,'nextplot','replacechildren');
+                set(F,'Renderer','zbuffer');
+
+                if isempty(par.positionRealSpace)
+                    [~,pPeak]=min(min(min(dynamics,[],1),[],2),[],3);
+                    CSDSpikePeak=squeeze(mean(dynamics,3));
+                    [ySpk,xSpk] = find(CSDSpikePeak == min(min(CSDSpikePeak)));
+                    cellBodyPos=[XuM(1,xSpk) YuM(ySpk,1)];
+                else
+                    cellBodyPos=par.positionRealSpace(:,i);
+                end
+
+                for j=1:nSamples
+                    tmpImg=squeeze(dynamics(:,:,j));
+
+                    h(1)=imagesc(XuM(1,:),YuM(:,1),tmpImg,cLim);hold on;
+                    h(2)=plot(elecPos(:,1),elecPos(:,2),par.electrodeMarker,'color',[0.8 0.8 0.8]);
+                    h(3)=line([XuM(1,1) XuM(1,end)],[cellBodyPos(2) cellBodyPos(2)],'color','k');
+                    h(4)=line([cellBodyPos(1) cellBodyPos(1)],[YuM(1,1) YuM(end,1)],'color','k');
+
+                    title([num2str(timeSamples(j),'% 10.1f') ' ms']);
+                    frame = getframe(F);
+                    if writeVideo2File==1
+                        writeVideo(writerObj,frame);
+                    else
+                        drawnow;
+                    end
+                    delete(h);
+                end
+                if writeVideo2File==1
+                    close(writerObj);
+                end
+                close(F);
+            end
+
         end
         
         function [saveFileName,funName]=getFileName(obj,funName,saveFileName)

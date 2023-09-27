@@ -22,7 +22,7 @@ function varargout = mriViewer(varargin)
 
 % Edit the above text to modify the response to help mriViewer
 
-% Last Modified by GUIDE v2.5 02-Jan-2013 18:07:31
+% Last Modified by GUIDE v2.5 27-Sep-2023 19:10:12
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -48,8 +48,9 @@ end
 function mriViewer_OpeningFcn(hObject, eventdata, handles, varargin)
 handles.output = hObject;
 if nargin<4
-    addpath('/media/sil2/Experimental/Reptile anatomy data/TurtleMRIs/');
+    addpath('/media/sil1/Data/MRI');
     load turtle03_5_mriViewerData;
+    %load PogonaMRI_Matlab.mat;
     %load turtle03_5_Reduced_mriViewerData
     %load turtle03_5_ReducedOnlyBrain_mriViewerData;
     handles.data=turtleMRI;
@@ -172,10 +173,14 @@ if get(handles.manualAngle,'value')
     %sliceImg(pValid) = interp3(handles.data,Y(pValid),X(pValid),Z(pValid),'linear');
 
     sliceImg=sliceImg(handles.gui.minValidI:handles.gui.maxValidI,handles.gui.minValidJ:handles.gui.maxValidJ);
-    
-    %update mri slice plot
     axes(handles.imagePlot);
-    imagesc(flipud(sliceImg));
+    if handles.norm3Std.Value
+        tmp=sort(sliceImg(:));
+        imagesc(flipud(sliceImg),[tmp(round(numel(tmp)*0.05)) tmp(round(numel(tmp)*0.95))]);
+    else
+        imagesc(flipud(sliceImg));
+    end
+    %update mri slice plot
     axis image;
     disp('Finished calculating interpolation');
 else
@@ -469,3 +474,12 @@ function interpolationMenu_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in norm3Std.
+function norm3Std_Callback(hObject, eventdata, handles)
+% hObject    handle to norm3Std (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of norm3Std
