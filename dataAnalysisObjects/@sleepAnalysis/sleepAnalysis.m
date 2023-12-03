@@ -2351,7 +2351,7 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'win',0,@isnumeric); %if 0 uses the whole recording duration
             addParameter(parseObj,'deltaBandCutoff',5,@isnumeric);
             addParameter(parseObj,'betaBandLowCutoff',10,@isnumeric);
-            addParameter(parseObj,'betaBandHighCutoff',17,@isnumeric);
+            addParameter(parseObj,'betaBandHighCutoff',30,@isnumeric);
             addParameter(parseObj,'applyNotch',0,@isnumeric);
             addParameter(parseObj,'saveSpectralProfiles',0,@isnumeric);
             addParameter(parseObj,'maxVoltage',1500,@isnumeric);
@@ -3104,7 +3104,7 @@ classdef sleepAnalysis < recAnalysis
             load(sharpWaveAnalysisFile); %load data
             
             if h==0
-                f=figure('Position',[100 100 500 900]);
+                f=figure('Position',[100 100 300 600]);
                 h(1)=subaxis(f,2,1,1,'S',0.01,'ML',0.15);
                 h(2)=subaxis(f,2,1,2,'S',0.01,'ML',0.15);
             else
@@ -3143,6 +3143,7 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'nTestSegments',20,@isnumeric);
             addParameter(parseObj,'minPeakWidth',200,@isnumeric);
             addParameter(parseObj,'minPeakInterval',1000,@isnumeric);
+            addParameter(parseObj,'scaleEstimator',[],@isnumeric);
             addParameter(parseObj,'crossCorrAmp',0.1,@isnumeric);
             addParameter(parseObj,'crossCorrProminence',0.2,@isnumeric);
             addParameter(parseObj,'detectOnlyDuringSWS',true);
@@ -3182,22 +3183,32 @@ classdef sleepAnalysis < recAnalysis
                 return;
             end
 
-            slowCyclesFile=[obj.currentAnalysisFolder filesep 'slowCycles_ch' num2str(ch) '.mat'];
-
-            obj.checkFileRecording(slowCyclesFile,'slow cycle analysis missing, please first run getSlowCycles');
-            load(slowCyclesFile); %load data
-            obj.getFilters;
-            nCycles=numel(TcycleOnset);
-            if ~isempty(startEnds)
-                %Not written yet - for awake states, selection needs to be done.
+            if detectOnlyDuringSWS
+                slowCyclesFile=[obj.currentAnalysisFolder filesep 'slowCycles_ch' num2str(ch) '.mat'];
+                obj.checkFileRecording(slowCyclesFile,'slow cycle analysis missing, please first run getSlowCycles');
+                load(slowCyclesFile); %load data
             else
-                if nCycles<nTestSegments
-                    fprintf('The number of cycles is very low (%d)! changing the number of tested segments to be the same\n',nCycles);
-                    nTestSegments=nCycles;
+                if isempty(startEnds)
+                    startEnds=[0 obj.currentDataObj.recordingDuration_ms];
                 end
-                pCycle=sort(randperm(nCycles,nTestSegments));
+                seg=min(60000,startEnds(2)-startEnds(1));
+                startEnds(2)=startEnds(2)-seg;
+                TcycleOnset=startEnds(1):seg:startEnds(2);
+                TcycleMid=TcycleOnset+seg;
+                %better for wakefulness-'MinPeakHeight',0.1,'MinPeakProminence',0.2,'WidthReference','halfprom'
             end
-            
+            TOn=TcycleOnset;
+            TWin=TcycleMid-TcycleOnset;
+            nCycles=numel(TOn);
+
+
+            if nCycles<nTestSegments
+                fprintf('The number of cycles is very low (%d)! changing the number of tested segments to be the same\n',nCycles);
+                nTestSegments=nCycles;
+            end
+            pCycle=sort(randperm(nCycles,nTestSegments));
+
+            obj.getFilters;
             Mtest=cell(nTestSegments,1);
             tTest=cell(nTestSegments,1);
             for i=1:numel(pCycle)
@@ -3210,12 +3221,19 @@ classdef sleepAnalysis < recAnalysis
             tTest=cell2mat(tTest);
 
             sortedMtest=sort(Mtest);
-            scaleEstimator=sortedMtest(round(percentile4ScaleEstimation/100*numel(sortedMtest)));
+            if isempty(scaleEstimator)
+                scaleEstimator=sortedMtest(round(percentile4ScaleEstimation/100*numel(sortedMtest)));
+            end
             tmpFs=obj.filt.DS4Hz.filteredSamplingFrequency;
             
             [peakVal,peakTime,peakWidth,peakProminance]=findpeaks(-Mtest,...
                 'MinPeakHeight',-scaleEstimator,'MinPeakDistance',minPeakInterval/1000*tmpFs,'MinPeakProminence',-scaleEstimator/2,'MinPeakWidth',minPeakWidth/1000*tmpFs,'WidthReference','halfprom');
             
+            if isempty(peakVal)
+                disp('No Sharp waves with the given specification were found in the test data set!!!! Run again with different parameters');
+                return;
+            end
+
             [allSW,tSW]=obj.currentDataObj.getData(ch,tTest(peakTime)-preTemplate,winTemplate);
             [FLallSW,tFLallSW]=obj.filt.DS4Hz.getFilteredData(allSW);
             
@@ -3225,56 +3243,28 @@ classdef sleepAnalysis < recAnalysis
             [~,pTemplatePeak]=min(template);
             peakLagSamples=ccEdge-pTemplatePeak;
             
-            if detectOnlyDuringSWS
-                TOn=TcycleOnset;
-                TWin=TcycleMid-TcycleOnset;
-            else
-                seg=60000;
-                TOn=0:seg:(obj.currentDataObj.recordingDuration_ms-seg);
-                TWin=seg*ones(1,numel(TOn));
-                nCycles=numel(TOn);
-            end
             fprintf('Detecting sharp waves on section (/%d): ',nCycles);
-            if isempty(startEnds)
-                absolutePeakTimes=cell(nCycles,1);
-                for i=1:nCycles
-                    fprintf([repmat('\b',[1 strlength(num2str(i-1))]),'%d'],i);
-                    [tmpM,tmpT]=obj.currentDataObj.getData(ch,TOn(i),TWin(i));
-                    [tmpFM,tmpFT]=obj.filt.DS4Hz.getFilteredData(tmpM);
-                    
-                    [C]=xcorrmat(squeeze(tmpFM),template);
-                    C=C(numel(tmpFM)-ccEdge:end-ccEdge);
-                    %C=xcorr(squeeze(tmpFM),template,'coeff');
-                    
-                    [~,peakTime]=findpeaks(C,'MinPeakHeight',crossCorrAmp,'MinPeakProminence',crossCorrProminence,'WidthReference','halfprom');
-                    peakTime(peakTime<=pTemplatePeak)=[]; %remove peaks at the edges where templates is not complete
-                    absolutePeakTimes{i}=tmpFT(peakTime-peakLagSamples)'+TOn(i);
-                    
-                    %{
+            absolutePeakTimes=cell(nCycles,1);
+            for i=1:nCycles
+                fprintf([repmat('\b',[1 strlength(num2str(i-1))]),'%d'],i);
+                [tmpM,tmpT]=obj.currentDataObj.getData(ch,TOn(i),TWin(i));
+                [tmpFM,tmpFT]=obj.filt.DS4Hz.getFilteredData(tmpM);
+
+                [C]=xcorrmat(squeeze(tmpFM),template);
+                C=C(numel(tmpFM)-ccEdge:end-ccEdge);
+                %C=xcorr(squeeze(tmpFM),template,'coeff');
+
+                [~,peakTime]=findpeaks(C,'MinPeakHeight',crossCorrAmp,'MinPeakProminence',crossCorrProminence,'WidthReference','halfprom');
+                peakTime(peakTime<=pTemplatePeak)=[]; %remove peaks at the edges where templates is not complete
+                absolutePeakTimes{i}=tmpFT(peakTime-peakLagSamples)'+TOn(i);
+
+                %{
                         h(1)=subplot(3,1,1);plot(tmpFT,squeeze(tmpFM));hold on;plot(absolutePeakTimes{i}-TOn(i),zeros(1,numel(absolutePeakTimes{i})),'or');
                         h(2)=subplot(3,1,2);plot(1:numel(tmpFM),squeeze(tmpFM));hold on;plot(peakTime-peakLagSamples,zeros(1,numel(peakTime)),'or');
                         h(3)=subplot(3,1,3);plot((1:numel(C)),C);hold on;plot(peakTime,zeros(numel(peakTime),1),'or');linkaxes(h(2:3),'x');
-                    %}
-                end
-                tSW=cell2mat(absolutePeakTimes);
-            else
-                
-                nCycles=size(startEnds,2);
-                absolutePeakTimes=cell(nCycles);
-                for i=1:nCycles
-                    fprintf([repmat('\b',[1 strlength(num2str(i-1))]),'%d'],i);
-                    [tmpM,tmpT]=obj.currentDataObj.getData(ch,startEnds(1,i),startEnds(2,i)-startEnds(1,i));
-                    [tmpFM,tmpFT]=obj.filt.DS4Hz.getFilteredData(tmpM);
-                    
-                    [C]=xcorrmat(squeeze(tmpFM),template);
-                    C=C(numel(tmpFM)-ccEdge:end-ccEdge);
-                    %C=xcorr(squeeze(tmpFM),template,'coeff');
-                    
-                    [~,peakTime]=findpeaks(C,'MinPeakHeight',0.1,'MinPeakProminence',0.2,'WidthReference','halfprom');
-                    peakTime(peakTime<=pTemplatePeak)=[]; %remove peaks at the edges where templates is not complete
-                    absolutePeakTimes{i}=tmpFT(peakTime-pTemplatePeak)'+startEnds(1,i);
-                end
+                %}
             end
+
             tSW=cell2mat(absolutePeakTimes);
             fprintf('Done!\n');
             save(obj.files.sharpWaves,'tSW','parSharpWaves');
@@ -3382,7 +3372,7 @@ classdef sleepAnalysis < recAnalysis
                 axes(h);
             end
             
-            lineHandles = stem(xcf_lags/1000,real(xcf),'filled','r-o');
+            lineHandles = stem(autocorrTimes/1000,real(xcf),'filled','r-o');
             set(lineHandles(1),'MarkerSize',4);
             grid('on');
             xlabel('Period [s]');
@@ -3416,6 +3406,7 @@ classdef sleepAnalysis < recAnalysis
             parseObj.FunctionName='sleepAnalysis\plotDelta2BetaSlidingAC';
             addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
             addParameter(parseObj,'tStart',0,@isnumeric);
+            addParameter(parseObj,'corrCLim',[-0.5 0.5],@isnumeric); %the color limits for auto correlations
             addParameter(parseObj,'win',obj.currentDataObj.recordingDuration_ms,@isnumeric);
             addParameter(parseObj,'saveFigures',1,@isnumeric);
             addParameter(parseObj,'printLocalCopy',0,@isnumeric);
@@ -3450,9 +3441,9 @@ classdef sleepAnalysis < recAnalysis
             end
             
             axes(h(1));
-            h(3)=imagesc(tSlidingAC(pt)/1000/60/60,autocorrTimes/1000,real(acf(:,pt)),[-0.5 0.5]);
+            h(3)=imagesc(tSlidingAC(pt)/1000/60/60,autocorrTimes/1000,real(acf(:,pt)),corrCLim);
             ylabel('Autocorr lag [s]');
-            ylim(xcf_lags([1 end])/1000);%important for panel plots
+            ylim(autocorrTimes([1 end])/1000);%important for panel plots
             yl=ylim;
             xlim(tSlidingAC(pt([1 end]))/1000/60/60); %important for panel plots
             xl=xlim;
@@ -3510,10 +3501,10 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'ch',obj.recTable.defaulLFPCh(obj.currentPRec),@isnumeric);
             addParameter(parseObj,'tStart',0,@isnumeric); %ms
             addParameter(parseObj,'win',obj.currentDataObj.recordingDuration_ms,@isnumeric);%ms
-            addParameter(parseObj,'maxPeriodBand',20,@isnumeric);
+            addParameter(parseObj,'maxPeriodBand',20,@isnumeric); %the frequency band around AC peak to look for it 
             addParameter(parseObj,'movOLWin',4000,@isnumeric);
             addParameter(parseObj,'MinPeakProminenceLimit',0.04,@isnumeric);
-            addParameter(parseObj,'XCFLag',500000,@isnumeric);
+            addParameter(parseObj,'XCFLagIntialEstimation',500000,@isnumeric);% xcf lag in ms
             addParameter(parseObj,'movingAutoCorrWin',1000*1000,@isnumeric);
             addParameter(parseObj,'movingAutoCorrOL',900*1000,@isnumeric);
             addParameter(parseObj,'oscilDurationMovingWin',60*60*1000,@isnumeric);
@@ -3557,18 +3548,27 @@ classdef sleepAnalysis < recAnalysis
             %cross correlation analysis
             pOscillation=find(t_ms>tStart & t_ms<(tStart+win));
             timeBin=(parDBRatio.movWin-parDBRatio.movOLWin);
-            XCFLagSamples=XCFLag/timeBin;
-            [xcf,xcf_lags,xcf_bounds]=crosscorr(bufferedDelta2BetaRatio(pOscillation),bufferedDelta2BetaRatio(pOscillation),XCFLagSamples);
+
+            %sliding autocorr analysis
+            movingAutoCorrWinSamples=movingAutoCorrWin/timeBin;
+            movingAutoCorrOLSamples=movingAutoCorrOL/timeBin;
+            autoCorrTimeBin=(movingAutoCorrWin-movingAutoCorrOL);
+            BetaRatioForSlidingAutocorr = buffer(bufferedDelta2BetaRatio,movingAutoCorrWinSamples,movingAutoCorrOLSamples,'nodelay');
+            tSlidingAC=(t_ms(1)+movingAutoCorrWin/2):(movingAutoCorrWin-movingAutoCorrOL):(t_ms(end)-movingAutoCorrWin/2+movingAutoCorrWin-movingAutoCorrOL);
+            if (numel(tSlidingAC)-size(BetaRatioForSlidingAutocorr,2))==1 %weird special case, happened only once in a long recording
+                tSlidingAC=tSlidingAC(1:end-1);
+            end
+            %R=xcorrmat(BetaRatioForSlidingAutocorr,BetaRatioForSlidingAutocorr,autoCorrSamples);
+            acfSamples=floor(movingAutoCorrWinSamples/2);
             
-            xcf_lags=xcf_lags*1000;
-            %calculate periodicity
+            [xcf,autoCorrSamples,xcf_bounds]=crosscorr(bufferedDelta2BetaRatio(pOscillation),bufferedDelta2BetaRatio(pOscillation),acfSamples);
             
             %find first vally and peak in the autocorrelation function
-            [~,pPeak] = findpeaks(xcf(XCFLagSamples+1:end),'MinPeakProminence',0.1);
-            [~,pVally] = findpeaks(-xcf(XCFLagSamples+1:end),'MinPeakProminence',0.1);
+            [~,pPeak] = findpeaks(xcf(acfSamples+1:end),'MinPeakProminence',0.1);
+            [~,pVally] = findpeaks(-xcf(acfSamples+1:end),'MinPeakProminence',0.1);
             if isempty(pPeak) %if peak is weak, try a different value
-                [~,pPeak] = findpeaks(xcf(XCFLagSamples+1:end),'MinPeakProminence',MinPeakProminenceLimit);
-                [~,pVally] = findpeaks(-xcf(XCFLagSamples+1:end),'MinPeakProminence',MinPeakProminenceLimit);
+                [~,pPeak] = findpeaks(xcf(acfSamples+1:end),'MinPeakProminence',MinPeakProminenceLimit);
+                [~,pVally] = findpeaks(-xcf(acfSamples+1:end),'MinPeakProminence',MinPeakProminenceLimit);
                 disp(['Prominance for peak detection was reduced to ' num2str(MinPeakProminenceLimit) ' due to low periodicity values!!!']);
             end
 
@@ -3581,34 +3581,23 @@ classdef sleepAnalysis < recAnalysis
                 fprintf('\nCount not complete the run. No prominent oscillations detected in the data!!!\n');
                 return;
             else
-                pPeriod=pPeak(1)+XCFLagSamples;
-                period=xcf_lags(pPeriod);
-                pAntiPeriod=pVally(1)+XCFLagSamples;
-                vallyPeriod=xcf_lags(pAntiPeriod);
+                pPeriod=pPeak(1)+acfSamples;
+                period=autoCorrSamples(pPeriod)*timeBin; %the period in ms
+                pAntiPeriod=pVally(1)+acfSamples;
+                vallyPeriod=autoCorrSamples(pAntiPeriod)*timeBin; %the vally in ms
                 peak2VallyDiff=xcf(pPeriod)-xcf(pAntiPeriod);
             end
             
-            %sliding autocorr analysis
-            movingAutoCorrWinSamples=movingAutoCorrWin/timeBin;
-            movingAutoCorrOLSamples=movingAutoCorrOL/timeBin;
-            autoCorrTimeBin=(movingAutoCorrWin-movingAutoCorrOL);
-            BetaRatioForSlidingAutocorr = buffer(bufferedDelta2BetaRatio,movingAutoCorrWinSamples,movingAutoCorrOLSamples,'nodelay');
-            tSlidingAC=(t_ms(1)+movingAutoCorrWin/2):(movingAutoCorrWin-movingAutoCorrOL):(t_ms(end)-movingAutoCorrWin/2+movingAutoCorrWin-movingAutoCorrOL);
-            if (numel(tSlidingAC)-size(BetaRatioForSlidingAutocorr,2))==1 %weird special case, happened only once in a long recording
-                tSlidingAC=tSlidingAC(1:end-1);
-            end
-            %R=xcorrmat(BetaRatioForSlidingAutocorr,BetaRatioForSlidingAutocorr,autoCorrSamples);
-            
-            acfSamples=floor(movingAutoCorrWinSamples/2);
-            acf=zeros(size(BetaRatioForSlidingAutocorr,1)+1,size(BetaRatioForSlidingAutocorr,2));
+            maxACSample=size(BetaRatioForSlidingAutocorr,1)+1;
+            acf=zeros(maxACSample,size(BetaRatioForSlidingAutocorr,2));
             peak2VallyDiffSliding=zeros(1,size(BetaRatioForSlidingAutocorr,2));
             for i=1:size(BetaRatioForSlidingAutocorr,2)
                 [acf(:,i),autoCorrSamples] = crosscorr(BetaRatioForSlidingAutocorr(:,i),BetaRatioForSlidingAutocorr(:,i),acfSamples);
                 %calculate peak2VallyDiff for different times
                 acf(:,i)=smooth(acf(:,i),10,'moving');
                 
-                [acfPeakAll(i),acfPeriodAll(i)]=max(acf((acfSamples+pPeak(1)-maxPeriodBand):(acfSamples+pPeak(1)+maxPeriodBand),i));
-                [acfVallyAll(i),acfAntiPeriodAll(i)]=min(acf((acfSamples+pVally(1)-maxPeriodBand):(acfSamples+pVally(1)+maxPeriodBand),i));
+                [acfPeakAll(i),acfPeriodAll(i)]=max( acf(max(acfSamples+pPeak(1)-maxPeriodBand,1) : min(acfSamples+pPeak(1)+maxPeriodBand,maxACSample) , i));
+                [acfVallyAll(i),acfAntiPeriodAll(i)]=min( acf(max(acfSamples+pVally(1)-maxPeriodBand,1) : min(acfSamples+pVally(1)+maxPeriodBand,maxACSample) , i));
                 peak2VallyDiffSliding(i)=acfPeakAll(i)-acfVallyAll(i);
                 
                 %{
@@ -3626,9 +3615,11 @@ classdef sleepAnalysis < recAnalysis
                 %}
             end
             autocorrTimes=autoCorrSamples*timeBin;
-            acfPeriodAll=autocorrTimes((acfPeriodAll+acfSamples+pPeak(1)-maxPeriodBand-1));
+            pAC=acfPeriodAll+acfSamples+pPeak(1)-maxPeriodBand-1;
+            pAC(pAC>maxACSample)=maxACSample;
+            acfPeriodAll=autocorrTimes(pAC);
             
-            oscilDurationMovingSamples=oscilDurationMovingWin/autoCorrTimeBin;
+            oscilDurationMovingSamples=round(oscilDurationMovingWin/autoCorrTimeBin);
             tmpOscDuration=peak2VallyDiffSliding>oscilDurationThresh;
             filtOscilDuration = medfilt1(double(tmpOscDuration),oscilDurationMovingSamples);
             if all(filtOscilDuration==0)
@@ -3664,17 +3655,15 @@ classdef sleepAnalysis < recAnalysis
             end
 
             smoothingSamples=round(smoothingDuration/autoCorrTimeBin);
-            if isMATLABReleaseOlderThan("R2022b")
-                filteredSlidingPeriod=smooth(tSlidingAC(pSleepSlidingAC),acfPeriodAll(pSleepSlidingAC),smoothingSamples,'moving');
-            else
-                filteredSlidingPeriod=smooth(tSlidingAC(pSleepSlidingAC),smoothingSamples,'moving');
-            end
+            %if isMATLABReleaseOlderThan("R2022b"),end
+            filteredSlidingPeriod=smooth(tSlidingAC(pSleepSlidingAC),acfPeriodAll(pSleepSlidingAC),smoothingSamples,'moving');
+
             edgeSamples=tSlidingAC(pSleepSlidingAC)<=(tSlidingAC(pSleepSlidingAC(1))+smoothingDuration/2) | tSlidingAC(pSleepSlidingAC)>=(tSlidingAC(pSleepSlidingAC(end))-smoothingDuration/2);
             filteredSlidingPeriod(edgeSamples)=[];
             tFilteredSlidingPeriod=tSlidingAC(pSleepSlidingAC(~edgeSamples))';
             
             %save data
-            save(obj.files.dbAutocorr,'parDbAutocorr','xcf','xcf_lags','xcf_bounds','BetaRatioForSlidingAutocorr','autoCorrTimeBin','autocorrTimes','timeBin',...
+            save(obj.files.dbAutocorr,'parDbAutocorr','xcf','xcf_bounds','BetaRatioForSlidingAutocorr','autoCorrTimeBin','autocorrTimes','timeBin',...
                 'pPeriod','period','acf','vallyPeriod','peak2VallyDiff','pSleepDBRatio','pSleepSlidingAC','acfPeakAll','acfVallyAll','peak2VallyDiffSliding','tSlidingAC','acfPeriodAll',...
                 'tStartSleep','tEndSleep','filteredSlidingPeriod','tFilteredSlidingPeriod','pSleepSlidingAC','pSleepDBRatioAC','bestSleepTime');
         end
