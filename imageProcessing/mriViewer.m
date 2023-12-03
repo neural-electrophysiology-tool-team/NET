@@ -176,7 +176,7 @@ if get(handles.manualAngle,'value')
     axes(handles.imagePlot);
     if handles.norm3Std.Value
         tmp=sort(sliceImg(:));
-        imagesc(flipud(sliceImg),[tmp(round(numel(tmp)*0.05)) tmp(round(numel(tmp)*0.95))]);
+        imagesc(flipud(sliceImg),[tmp(round(numel(tmp)*0.01)) tmp(round(numel(tmp)*0.99))]);
     else
         imagesc(flipud(sliceImg));
     end
@@ -189,7 +189,9 @@ else
         case 1
             net = denoisingNetwork('DnCNN');
             I=denoiseImage(rot90(squeeze(handles.data(handles.gui.frameNumber,:,:))),net);
-            handles.gui.p1=imagesc(I,[0 10000]);
+            tmp=sort(I(:));
+            handles.gui.p1=imagesc(I,[tmp(round(numel(tmp)*0.01)) tmp(round(numel(tmp)*0.99))]);
+
             %handles.gui.p1=imagesc(rot90(squeeze(handles.data(handles.gui.frameNumber,:,:))),[0 10000]);
             %colormap(gca,'jet');
             %colorbar;
