@@ -34,6 +34,7 @@ plotColorBar=1;
 plotProb=0;
 limits1=[];
 limits2=[];
+removeZeros=false;
 
 
 % Output list of default variables
@@ -112,6 +113,12 @@ x2r=interp1(edges2,1:numel(edges2),X2(:),'nearest','extrap');
 D=accumarray([x1r x2r],1,[nBinBins1 nBinBins2])';
 if plotProb
     D=D./sum(D);
+end
+
+if removeZeros
+    zeroX=find(edges1>0,1,'first');
+    zeroY=find(edges2>0,1,'first');
+    D(zeroY,zeroX)=0;
 end
 
 if plotResults %plot results

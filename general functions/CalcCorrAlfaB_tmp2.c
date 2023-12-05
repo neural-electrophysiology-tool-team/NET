@@ -5,7 +5,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include "mex.h"
-
+#include "matrix.h"
 
 /* Function calculates the mean value of a string*/
 

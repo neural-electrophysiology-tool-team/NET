@@ -525,7 +525,7 @@ if plotClassPerNeuron
     spikeMarker(:,pTmp)=min(lowpassWF(:));
     spikeMarker(:,pTmp+1)=max(lowpassWF(:));
     
-    for i=1:nNeurons;
+    for i=1:nNeurons,
         h1=subplot(3,4,[1 11]);
         [hPlot,scaleFac]=activityTracePhysicalSpacePlot(h1,obj.currentDataObj.channelNumbers,squeeze(avgRawWF(i,:,:)),En,'traceColor','r','averageSubstruction',1);hold on;
         activityTracePhysicalSpacePlot(h1,obj.currentDataObj.channelNumbers,squeeze(baselineSubstractedSIF(i,:,:)),En,'scaleFac',scaleFac,'DrawElectrodeNumbers',1,'averageSubstruction',1);
