@@ -1129,7 +1129,6 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'outputVideo',[]);
             addParameter(parseObj,'outputFrameRate',10);
             addParameter(parseObj,'opticFlowFile',[]);
-            addParameter(parseObj,'plotOnlyOpticFlow',[]);
             addParameter(parseObj,'OFlineColor','black');
             addParameter(parseObj,'ampOFLine',50);
             addParameter(parseObj,'showOnlyEye',true);
@@ -1148,22 +1147,20 @@ classdef sleepAnalysis < recAnalysis
             for i=1:numel(parseObj.Parameters)
                 eval([parseObj.Parameters{i} '=' 'parseObj.Results.(parseObj.Parameters{i});']);
             end
-                                        
+                            
+            dbRatioFile=[obj.currentAnalysisFolder filesep 'dbRatio_ch' num2str(ch) '.mat'];
+            obj.checkFileRecording(dbRatioFile,'delta to beta file missing, please first run getDBRatio');
+            DB=load(dbRatioFile); %load data
+            
             [~,videoFileName]=fileparts(videoFile);
             eyeTrackingFile=[obj.currentAnalysisFolder filesep 'eyeTracking_' videoFileName '.mat'];
             obj.checkFileRecording(eyeTrackingFile,'Eye tracking analysis missing, please first run getEyeMovement');
             ET=load(eyeTrackingFile,'parEyeTracking','pFrames','mOF','pbboxUpdate','bboxCenterAll'); %load data
-
-            if ~plotOnlyOpticFlow
-                syncDBEyeFile=[obj.currentAnalysisFolder filesep 'syncDBEye_' videoFileName '.mat'];
-                obj.checkFileRecording(syncDBEyeFile,'sync eye to beta 2 delta file missing, please first run getSyncedDBEyeMovements');
-                sync=load(syncDBEyeFile); %load data
-
-                dbRatioFile=[obj.currentAnalysisFolder filesep 'dbRatio_ch' num2str(ch) '.mat'];
-                obj.checkFileRecording(dbRatioFile,'delta to beta file missing, please first run getDBRatio');
-                DB=load(dbRatioFile); %load data
-            end
-
+            
+            syncDBEyeFile=[obj.currentAnalysisFolder filesep 'syncDBEye_' videoFileName '.mat'];
+            obj.checkFileRecording(syncDBEyeFile,'sync eye to beta 2 delta file missing, please first run getSyncedDBEyeMovements');
+            sync=load(syncDBEyeFile); %load data
+            
             if ~showOnlyEye
                 videoReader = VideoReader(videoFile); %initiate video obj since number of frames was already read (not allowed by matlab)
             end
@@ -1322,7 +1319,7 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'useRobustFloatingAvg',1,@isnumeric); %if true uses floating median and MAD, if false uses a regular moving average.
             addParameter(parseObj,'nStd',6,@isnumeric); %MAD (std) threshold for 
             addParameter(parseObj,'nBins',18,@isnumeric);
-            addParameter(parseObj,'digitalVideoSyncCh',[],@isnumeric);
+            addParameter(parseObj,'digitalVideoSyncCh',5,@isnumeric);
             addParameter(parseObj,'pixelMoveThresh',10,@isnumeric);
             addParameter(parseObj,'overwrite',false,@isnumeric);
             addParameter(parseObj,'nFramesRemoveAfterROIShift',3,@isnumeric);
@@ -1368,33 +1365,9 @@ classdef sleepAnalysis < recAnalysis
             obj.checkFileRecording(slowCyclesFile,'slow cycles file missing, please first run getSlowCycles');
             load(slowCyclesFile); %load data
             
-            nFramesVideo=parEyeTracking.nFramesVideo;
-            if isempty(digitalVideoSyncCh)
-                [~,digitalVideoSyncCh]=min(abs(nFramesVideo-cellfun(@(x) numel(x),tTrig)));
-                fprintf('Trigger channel %d was selected\n',digitalVideoSyncCh);
-            end
-            tFrames=tTrig{digitalVideoSyncCh};
-
-            if numel(find(diff(tFrames)>1000))==2
-                fprintf('Exactly two >1 sec gaps found in triggers. Removing irrelevant triggers before and after gaps\n'); %this may happen when recording with reptiLearn
-                pStartEnd=find(diff(tFrames)>1000 | diff(tFrames)<-1000);
-                tFrames=tFrames((pStartEnd(1)+1):pStartEnd(2));
-            end
-            diffFrames=abs(numel(tFrames)-round(nFramesVideo));
-
-            %check the trigger with number of frames equal to video
-            if diffFrames==0
-                disp('Number of frames in video and in triggers is equal, proceeding with analysis');
-            elseif diffFrames<160
-                fprintf('\n\nNumber of frames in video and in triggers differs by %d, \nproceeding with analysis assuming uniform distribution of lost frames in video\n',diffFrames);
-                tFrames(round((1:diffFrames)/diffFrames*numel(tFrames)))=[];
-            else
-                error(['Number of frames in video and in trigger (' num2str(digitalVideoSyncCh) ') differs by ' num2str(diffFrames) ', check recording!!!']);
-            end
-
             %remove frames that are close to a ROI shift and frames with large shifts
             p2RemoveShifts=find(sqrt(diff(bboxCenterAll(:,1)).^2+diff(bboxCenterAll(:,2)).^2)>pixelMoveThresh)+1;
-            pFramesValid=round(pFrames);
+            pFramesValid=pFrames;
             validmOF=mOF;
             if ~isempty(pbboxUpdate) || ~isempty(p2RemoveShifts)
                 p2Remove=union(p2RemoveShifts,pbboxUpdate)';
@@ -1403,13 +1376,26 @@ classdef sleepAnalysis < recAnalysis
                 end
                 p2Remove=bsxfun(@plus,p2Remove,(0:nFramesRemoveAfterROIShift-1)');
                 p2Remove=unique(p2Remove(:));
-
+                
                 validmOF(p2Remove)=[];
                 pFramesValid(p2Remove)=[];
                 bboxCenterAll(p2Remove,:)=[];
             end
-            tAnalyzedFrames=tFrames(pFramesValid);
 
+            nFramesVideo=parEyeTracking.nFramesVideo;
+            tFrames=tTrig{digitalVideoSyncCh};
+            diffFrames=abs(numel(tFrames)-round(nFramesVideo));
+            if diffFrames==0
+                disp('Number of frames in video and in triggers is equal, proceeding with analysis');
+            elseif diffFrames<160
+                fprintf('\n\nNumber of frames in video and in triggers differs by %d, \nproceeding with analysis assuming uniform distribution of lost frames in video\n',diffFrames);
+                tFrames(round((1:diffFrames)/diffFrames*numel(tFrames)))=[];
+            else
+                error(['Number of frames in video and in trigger (' num2str(digitalVideoSyncCh) ') differs by ' num2str(diffFrames) ', check recording!!!']);
+            end
+            
+            tAnalyzedFrames=tFrames(pFramesValid);
+            
             %plot(tAnalyzedFrames/3600000,normZeroOne(validmOF));hold on;plot(tAnalyzedFrames/3600000,normZeroOne(bboxCenterAll));
             winSamples=round(win/1000*(parEyeTracking.frameRate/parEyeTracking.skipFrames));
             if useRobustFloatingAvg
@@ -1421,14 +1407,13 @@ classdef sleepAnalysis < recAnalysis
             end
             tMovement=tAnalyzedFrames(validmOF>(mOFmed+nStd*mOFMAD));
             tMovAmp=validmOF(validmOF>(mOFmed+nStd*mOFMAD));
-
+            
             %plot(tAnalyzedFrames/3600000,validmOF);hold on;plot(tAnalyzedFrames/3600000,mOFmed+nStd*mOFMAD);
-            %plot(tAnalyzedFrames/3600000,normalize(validmOF),'.-');hold on;plot(t_ms/3600000,normalize(bufferedDelta2BetaRatio),'.-');
             for i=1:numel(TcycleOnset)
                 cycleDuration=TcycleOffset(i)-TcycleOnset(i);
                 pTmp=find(tMovement>(TcycleMid(i)-cycleDuration/2) & tMovement<(TcycleMid(i)+cycleDuration/2));
                 phaseAll{i}=(tMovement(pTmp)-(TcycleMid(i)-cycleDuration/2))/cycleDuration;
-
+                
                 shufTimes=rand(1,numel(pTmp))*cycleDuration;
                 phaseAllRand{i}=shufTimes/cycleDuration;
                 
@@ -1597,7 +1582,7 @@ classdef sleepAnalysis < recAnalysis
             addParameter(parseObj,'frameForEyePosExtraction',[],@isnumeric);
             addParameter(parseObj,'fractionOfBoxJumpThreshold',0.25,@isnumeric);
             addParameter(parseObj,'manuallyUpdatePoints',true,@isnumeric);
-            addParameter(parseObj,'opticFlowNoiseThreshold',[],@isnumeric);
+            addParameter(parseObj,'opticFlowNoiseThreshold',[],@isnumeric)
             addParameter(parseObj,'saveFullOFMatrices',false,@isnumeric);
             addParameter(parseObj,'loadInitialConditions',true,@isnumeric);
             addParameter(parseObj,'skipFramesBoundingBox',30,@isnumeric);
@@ -1732,7 +1717,7 @@ classdef sleepAnalysis < recAnalysis
 
             % optic flow definitions
             opticFlow = opticalFlowLK;
-            if ~isempty(opticFlowNoiseThreshold)
+            if ~isempty('OpticFlowNoiseThreshold')
                 opticFlow.NoiseThreshold=opticFlowNoiseThreshold;
             end
             
@@ -1759,14 +1744,10 @@ classdef sleepAnalysis < recAnalysis
             initialize(pointTracker, points, initFrame);
             
             if plotTracking
-                videoPlayer = vision.VideoPlayer('Position',[100 100 [size(initFrame, 2), size(initFrame, 1)]+30]);
-            else
-                videoPlayer = [];
+                videoPlayer  = vision.VideoPlayer('Position',[100 100 [size(initFrame, 2), size(initFrame, 1)]+30]);
             end
             if saveTrackingVideo
                videoWriter = vision.VideoFileWriter(trackingFileName,'FrameRate',30);
-            else
-               videoWriter=[];
             end
             %savePlottedTracking
             
@@ -1787,130 +1768,129 @@ classdef sleepAnalysis < recAnalysis
             mOF=zeros(1,nFrames);
             skipBoundingBoxInSkip=round(skipFramesBoundingBox/skipFrames);
             parEyeTracking.skipBoundingBoxInSkip=skipBoundingBoxInSkip;
-
-            try
-                hWB=waitbar(0,'Calculating optic flow');
-                for i=1:nFrames
-                    %frame = step(videoReader); this is faster but cant start from an arbitrary frame or jump frames
-                    if nonConsecutiveVideo
-                        videoFrame = rgb2gray(videoReader.readFrame);
-                        %videoReader.CurrentTime = (pFrames(i)/nFramesVideo)*videoDuration; %92% of the time is spent on this command.
-                        for j=1:(skipFrames-1),videoReader.readFrame;end %skip to the next frame to read.
+            
+            hWB=waitbar(0,'Calculating optic flow');
+            for i=1:nFrames
+                %frame = step(videoReader); this is faster but cant start from an arbitrary frame or jump frames
+                if nonConsecutiveVideo
+                    videoFrame = rgb2gray(videoReader.readFrame);
+                    %videoReader.CurrentTime = (pFrames(i)/nFramesVideo)*videoDuration; %92% of the time is spent on this command.
+                    for j=1:(skipFrames-1),videoReader.readFrame;end %skip to the next frame to read.
                     else
-                        videoFrame = step(videoReader);
-                        for j=1:numel(pFrames(i+1)-pFrames(i)-1)
-                            step(videoReader);
+                    videoFrame = step(videoReader);
+                    for j=1:numel(pFrames(i+1)-pFrames(i)-1)
+                        step(videoReader);
                         end
                     end
-                    %{
+                %{
                 figure;imshow(videoFrame);hold on;plot(bboxCenter(1),bboxCenter(2),'or','markersize',20,'linewidth',3);plot(bboxPoints(:,1),bboxPoints(:,2),'.g','markersize',10);plot(points(:,1),points(:,2),'*b')
                     %}
-                    if mod(i,skipBoundingBoxInSkip)==0
-                        waitbar(i/nFrames,hWB);
-
-                        % Track the points. Note that some points may be lost.
-                        [points, isFound] = step(pointTracker, videoFrame);
-                        visiblePoints = points(isFound, :);
-                        oldInliers = oldPoints(isFound, :);
-
-                        if size(visiblePoints, 1) >= 2 % need at least 2 points to ensure we are still reliably tracking the object
-
-                            % Estimate the geometric transformation between the old points and the new points and eliminate outliers
-                            [xform, oldInliers, visiblePoints] = estimateGeometricTransform(oldInliers, visiblePoints, 'similarity', 'MaxDistance', 4);
-
-                            % Apply the transformation to the bounding box points
-                            bboxPoints = transformPointsForward(xform, bboxPoints);
-
-                            % Reset the points
-                            if size(oldInliers,1)<minTrackingPoints
-                                contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
-                                %check if contour box does not exceed image limits
-                                if (contourBox(1)+contourBox(3))>videoReader.Width
-                                    contourBox(3)=videoReader.Width-contourBox(1);
+                if mod(i,skipBoundingBoxInSkip)==0
+                    waitbar(i/nFrames,hWB);
+                    
+                    % Track the points. Note that some points may be lost.
+                    [points, isFound] = step(pointTracker, videoFrame);
+                    visiblePoints = points(isFound, :);
+                    oldInliers = oldPoints(isFound, :);
+                    
+                    if size(visiblePoints, 1) >= 2 % need at least 2 points to ensure we are still reliably tracking the object
+                        
+                        % Estimate the geometric transformation between the old points and the new points and eliminate outliers
+                        [xform, oldInliers, visiblePoints] = estimateGeometricTransform(oldInliers, visiblePoints, 'similarity', 'MaxDistance', 4);
+                        
+                        % Apply the transformation to the bounding box points
+                        bboxPoints = transformPointsForward(xform, bboxPoints);
+                        
+                        % Reset the points
+                        if size(oldInliers,1)<minTrackingPoints
+                            contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
+                            %check if contour box does not exceed image limits
+                            if (contourBox(1)+contourBox(3))>videoReader.Width
+                                contourBox(3)=videoReader.Width-contourBox(1);
                                 end
-                                if (contourBox(2)+contourBox(4))>videoReader.Height
-                                    contourBox(4)=videoReader.Height-contourBox(2);
+                            if (contourBox(2)+contourBox(4))>videoReader.Height
+                                contourBox(4)=videoReader.Height-contourBox(2);
                                 end
-                                if contourBox(1) < 1
-                                    contourBox(1)=1;
+                            if contourBox(1) < 1
+                                contourBox(1)=1;
                                 end
-                                if contourBox(2) < 1
-                                    contourBox(2)=1;
+                            if contourBox(2) < 1
+                                contourBox(2)=1;
                                 end
-
-                                newPoints = detectMinEigenFeatures(videoFrame, 'ROI', contourBox ); %this function can not receive a polygon only a rectangle along the main axes
-                                newPoints = newPoints.Location;
-                                in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
-                                points=newPoints(in,:);
-                                setPoints(pointTracker,points);
-                                %initialize(pointTracker, points, initFrame);
-                                oldPoints = points; %all new added points are tracked
-                                visiblePoints = points; %all new added points are tracked
+                            
+                            newPoints = detectMinEigenFeatures(videoFrame, 'ROI', contourBox ); %this function can not receive a polygon only a rectangle along the main axes
+                            newPoints = newPoints.Location;
+                            in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
+                            points=newPoints(in,:);
+                            setPoints(pointTracker,points);
+                            %initialize(pointTracker, points, initFrame);
+                            oldPoints = points; %all new added points are tracked
+                            visiblePoints = points; %all new added points are tracked
                             else
-                                oldPoints = visiblePoints;
-                                setPoints(pointTracker, oldPoints);
+                            oldPoints = visiblePoints;
+                            setPoints(pointTracker, oldPoints);
                             end
-                            %update Bounding box - check if box position was moved considerably and update accordingly
-                            bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2]; %calculate center
-                            if sqrt((bboxCenter(1)-bboxCenterOld(1)).^2+(bboxCenter(2)-bboxCenterOld(2)).^2) > bboxShiftDistanceThreshold %check if box moved too much such that its position should be updated
-                                bboxPointsOld=bboxPoints; %update old (current) box to new box
-                                %update the indices to be used for optic flow extraction
-                                bboxCenterOld=bboxCenter; %update old box center
-                                pbboxUpdate=[pbboxUpdate i];
-                                [xInd,yInd,OFBox]=obj.recalculateSampledImageArea4OpticFlow(xInd,yInd,bboxCenter,frameWidth,frameHeight);
-                                %opticFlow.reset;
+                        %update Bounding box - check if box position was moved considerably and update accordingly
+                        bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2]; %calculate center
+                        if sqrt((bboxCenter(1)-bboxCenterOld(1)).^2+(bboxCenter(2)-bboxCenterOld(2)).^2) > bboxShiftDistanceThreshold %check if box moved too much such that its position should be updated
+                            bboxPointsOld=bboxPoints; %update old (current) box to new box
+                            %update the indices to be used for optic flow extraction
+                            bboxCenterOld=bboxCenter; %update old box center
+                            pbboxUpdate=[pbboxUpdate i];
+                            [xInd,yInd,OFBox]=obj.recalculateSampledImageArea4OpticFlow(xInd,yInd,bboxCenter,frameWidth,frameHeight);
+                            %opticFlow.reset;
                             end
-
-                            if plotTracking
-                                % Insert a bounding box around the object being tracked
-                                bboxPolygon = reshape(bboxPoints', 1, []);
-                                bboxPolygonOld = reshape(bboxPointsOld', 1, []);
-                                OFboxPolygon = reshape(OFBox', 1, []);
-
-                                videoFramePlot = insertShape(videoFrame, 'Polygon', bboxPolygon,'LineWidth', 2);
-                                videoFramePlot = insertShape(videoFramePlot, 'Polygon', bboxPolygonOld,'LineWidth', 2,'color','r');
-                                videoFramePlot = insertShape(videoFramePlot, 'Polygon', OFboxPolygon,'LineWidth', 2,'color','g');
-
-                                % Display tracked points
-                                videoFramePlot = insertMarker(videoFramePlot, visiblePoints, '+','Color', 'white');
-
-                                % Display the annotated video frame using the video player object
-                                step(videoPlayer, videoFramePlot);
-
-                                if saveTrackingVideo %save tracked video
-                                    step(videoWriter, videoFramePlot);
-                                end
+                        
+                        if plotTracking
+                            % Insert a bounding box around the object being tracked
+                            bboxPolygon = reshape(bboxPoints', 1, []);
+                            bboxPolygonOld = reshape(bboxPointsOld', 1, []);
+                            OFboxPolygon = reshape(OFBox', 1, []);
+                            
+                            videoFramePlot = insertShape(videoFrame, 'Polygon', bboxPolygon,'LineWidth', 2);
+                            videoFramePlot = insertShape(videoFramePlot, 'Polygon', bboxPolygonOld,'LineWidth', 2,'color','r');
+                            videoFramePlot = insertShape(videoFramePlot, 'Polygon', OFboxPolygon,'LineWidth', 2,'color','g');
+                            
+                            % Display tracked points
+                            videoFramePlot = insertMarker(videoFramePlot, visiblePoints, '+','Color', 'white');
+                            
+                            % Display the annotated video frame using the video player object
+                            step(videoPlayer, videoFramePlot);
+                            
+                            if saveTrackingVideo %save tracked video
+                                step(videoWriter, videoFramePlot);
+                            end
                             end
                         else
-                            if manuallyUpdatePoints
-
-                                f=figure('position',[100 100 1200 600]);
-                                subplot(1,3,1:2);imshow(videoFrame);
-                                h = imrect(gca);
-                                frameSubregion=h.getPosition;
-
-                                subplot(1,3,3);imshow(videoFrame(frameSubregion(2):(frameSubregion(2)+frameSubregion(4)),frameSubregion(1):(frameSubregion(1)+frameSubregion(3)),:));
-                                title('Selected region - press any key');
-                                pause;
-                                close(f);
-                                bboxPoints=[frameSubregion(1) frameSubregion(2);frameSubregion(1) frameSubregion(2)+frameSubregion(4);frameSubregion(1)+frameSubregion(3) frameSubregion(2)+frameSubregion(4);frameSubregion(1)+frameSubregion(3) frameSubregion(2)];
-                                bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2];
-                                contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
-                                newPoints = detectMinEigenFeatures(videoFrame, 'ROI', contourBox ); %this function can not receive a polygon only a rectangle along the main axes
-                                newPoints = newPoints.Location;
+                        if manuallyUpdatePoints
+                            
+                            f=figure('position',[100 100 1200 600]);
+                            subplot(1,3,1:2);imshow(videoFrame);
+                            h = imrect(gca);
+                            frameSubregion=h.getPosition;
+                            
+                            subplot(1,3,3);imshow(videoFrame(frameSubregion(2):(frameSubregion(2)+frameSubregion(4)),frameSubregion(1):(frameSubregion(1)+frameSubregion(3)),:));
+                            title('Selected region - press any key');
+                            pause;
+                            close(f);
+                            bboxPoints=[frameSubregion(1) frameSubregion(2);frameSubregion(1) frameSubregion(2)+frameSubregion(4);frameSubregion(1)+frameSubregion(3) frameSubregion(2)+frameSubregion(4);frameSubregion(1)+frameSubregion(3) frameSubregion(2)];                
+                            bboxCenter=[(bboxPoints(3,1)+bboxPoints(1,1))/2 (bboxPoints(3,2)+bboxPoints(1,2))/2];
+                            contourBox=round([min(bboxPoints(:,1)) min(bboxPoints(:,2))  max(bboxPoints(:,1))-min(bboxPoints(:,1)) max(bboxPoints(:,2))-min(bboxPoints(:,2))]);
+                            newPoints = detectMinEigenFeatures(videoFrame, 'ROI', contourBox ); %this function can not receive a polygon only a rectangle along the main axes
+                            newPoints = newPoints.Location;
+                            in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
+                            points=newPoints(in,:);
+                            if isempty(points)
+                                disp('No polygon selected, try again!!!');
                                 in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
                                 points=newPoints(in,:);
-                                if isempty(points)
-                                    disp('No polygon selected, try again!!!');
-                                    in = inpolygon(newPoints(:,1),newPoints(:,2),bboxPoints(:,1),bboxPoints(:,2));
-                                    points=newPoints(in,:);
                                 end
-                                setPoints(pointTracker,points);
-                                %initialize(pointTracker, points, initFrame);
-                                oldPoints = points; %all new added points are tracked
-                                visiblePoints = points; %all new added points are tracked
-
-                                %{
+                            setPoints(pointTracker,points);
+                            %initialize(pointTracker, points, initFrame);
+                            oldPoints = points; %all new added points are tracked
+                            visiblePoints = points; %all new added points are tracked
+                            
+                            %{
                             f=figure('position',[100 100 1200 600]);
                             subplot(1,3,1:2);imshow(videoFrame);
                             [xi, yi] = ginput(1);
@@ -1939,51 +1919,39 @@ classdef sleepAnalysis < recAnalysis
                             title('Points lost. Selected region - press any key');
                             pause;
                             close(f);
-                                %}
+                            %}
 
-                            else
-                                disp(['Tracking analysis stopped at ' num2str(i) '/' num2str(nFrames) ' since all tracking points were lost']);
-                                parEyeTracking.pStopDue2LostPoints=i;
-                                mOF(i:end)=[];
-                                bboxCenterAll(i:end,:)=[];
-                                pFrames(i:end)=[];
-                                break; %stop for loop
-                            end
+                        else
+                            disp(['Tracking analysis stopped at ' num2str(i) '/' num2str(nFrames) ' since all tracking points were lost']);
+                            parEyeTracking.pStopDue2LostPoints=i;
+                            mOF(i:end)=[];
+                            bboxCenterAll(i:end,:)=[];
+                            pFrames(i:end)=[];
+                            break; %stop for loop
                         end
-
                     end
-                    im = videoFrame(yInd,xInd);
-                    tmpOF=opticFlow.estimateFlow(im);
-                    tmpOFM=tmpOF.Magnitude;
-                    if removeBorderOF
-                        tmpOFM(pBorder)=0;
-                    end
-
-                    if saveFullOFMatrices
-                        allOF(:,:,i) = tmpOFM;
-                        allIm(:,:,i) = im;
-                    end
-
-                    mOF(i)=mean(mean(abs(tmpOFM))); %mean velocity for every pixel
-                    bboxCenterAll(i,:)=bboxCenter;
-
+                    
                 end
-                close(hWB);
-            catch
-                runStoppedAtFrame=i;
-                save(obj.files.eyeTracking,'runStoppedAtFrame','mOF','allOF','allIm','pbboxUpdate','parEyeTracking','pFrames','bboxCenterAll','initialFrameSubregion','frameRate','nFramesVideo');
-                obj.cleanVideoObj(pointTracker,videoReader,videoWriter,videoPlayer);
+                im = videoFrame(yInd,xInd);
+                tmpOF=opticFlow.estimateFlow(im);
+                tmpOFM=tmpOF.Magnitude;
+                if removeBorderOF
+                    tmpOFM(pBorder)=0;
+                    end
+                
+                if saveFullOFMatrices
+                    allOF(:,:,i) = tmpOFM;
+                    allIm(:,:,i) = im;
+                    end
+                
+                mOF(i)=mean(mean(abs(tmpOFM))); %mean velocity for every pixel
+                bboxCenterAll(i,:)=bboxCenter;
+                
             end
-
+            close(hWB);
+            
             save(obj.files.eyeTracking,'mOF','allOF','allIm','pbboxUpdate','parEyeTracking','pFrames','bboxCenterAll','initialFrameSubregion','frameRate','nFramesVideo');
-
-            % Clean uprelease(videoReader);
-            obj.cleanVideoObj(pointTracker,videoReader,videoWriter,videoPlayer,nonConsecutiveVideo,saveTrackingVideo,plotTracking);
-
-        end
-
-        %Helper function to getEyeMovements - should be changed to static method - does not require object
-        function cleanVideoObj(obj,pointTracker,videoReader,videoWriter,videoPlayer,nonConsecutiveVideo,saveTrackingVideo,plotTracking)
+            
             % Clean uprelease(videoReader);
             release(pointTracker);
             if nonConsecutiveVideo
@@ -1991,17 +1959,17 @@ classdef sleepAnalysis < recAnalysis
             else
                 release(videoReader);
             end
-
+            
             if saveTrackingVideo %save tracked video
                 release(videoWriter);
             end
             if plotTracking
                 release(videoPlayer);
             end
-
+            
         end
 
-        %% getRespirationMovements
+         %% getRespirationMovements
         function [data]=getRespirationMovements(obj,varargin)
             %% parameter and settings
             obj.checkFileRecording;
@@ -2285,7 +2253,6 @@ classdef sleepAnalysis < recAnalysis
                             visiblePoints = points; %all new added points are tracked
                             visiblePointsOld = points;
                         else
-                            
                             disp(['Tracking analysis stopped at ' num2str(i) '/' num2str(nFrames) ' since all tracking points were lost']);
                             parChestTracking.pStopDue2LostPoints=i;
                             bboxCenterAll(i:end,:)=[];
